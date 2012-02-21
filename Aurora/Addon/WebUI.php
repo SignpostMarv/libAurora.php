@@ -1475,6 +1475,26 @@ namespace Aurora\Addon{
 			));
 		}
 
+//!	PHP doesn't do const arrays :(
+/**
+*	@return array The validator array to be passed to Aurora::Addon::WebUI::makeCallToAPI() when making group notice-related calls.
+*/
+		protected static function GroupNoticeValidatorArray(){
+			static $validator = array('object'=>array(array(
+				'GroupID'       => array('string'=>array()),
+				'NoticeID'      => array('string'=>array()),
+				'Timestamp'     => array('integer'=>array()),
+				'FromName'      => array('string'=>array()),
+				'Subject'       => array('string'=>array()),
+				'Message'       => array('string'=>array()),
+				'HasAttachment' => array('boolean'=>array()),
+				'ItemID'        => array('string'=>array()),
+				'AssetType'     => array('integer'=>array()),
+				'ItemName'      => array('string'=>array())
+			)));
+			return $validator;
+		}
+
 //!	Get group notices for the specified groups
 /**
 *	@param integer $start start point of iterator. negatives are supported (kinda).
@@ -1498,18 +1518,7 @@ namespace Aurora\Addon{
 				'Groups' => $groupIDs
 			), array(
 				'Total' => array('integer'=>array()),
-				'GroupNotices' => array('array'=>array(array('object'=>array(array(
-					'GroupID'       => array('string'=>array()),
-					'NoticeID'      => array('string'=>array()),
-					'Timestamp'     => array('integer'=>array()),
-					'FromName'      => array('string'=>array()),
-					'Subject'       => array('string'=>array()),
-					'Message'       => array('string'=>array()),
-					'HasAttachment' => array('boolean'=>array()),
-					'ItemID'        => array('string'=>array()),
-					'AssetType'     => array('integer'=>array()),
-					'ItemName'      => array('string'=>array())
-				)))))
+				'GroupNotices' => array('array'=>array(self::GroupNoticeValidatorArray()))
 			));
 
 			$groupNotices = array();
@@ -1544,18 +1553,7 @@ namespace Aurora\Addon{
 				'Count' => $count
 			), array(
 				'Total' => array('integer'=>array()),
-				'GroupNotices' => array('array'=>array(array('object'=>array(array(
-					'GroupID'       => array('string'=>array()),
-					'NoticeID'      => array('string'=>array()),
-					'Timestamp'     => array('integer'=>array()),
-					'FromName'      => array('string'=>array()),
-					'Subject'       => array('string'=>array()),
-					'Message'       => array('string'=>array()),
-					'HasAttachment' => array('boolean'=>array()),
-					'ItemID'        => array('string'=>array()),
-					'AssetType'     => array('integer'=>array()),
-					'ItemName'      => array('string'=>array())
-				)))))
+				'GroupNotices' => array('array'=>array(self::GroupNoticeValidatorArray()))
 			));
 
 			$groupNotices = array();
@@ -1575,6 +1573,34 @@ namespace Aurora\Addon{
 			}
 
 			return $asArray ? $groupNotices : WebUI\GetNewsFromGroupNotices::r($this, $start, $result->Total, array(), $groupNotices);
+		}
+
+//!	Get individual group notice
+
+		public function GetGroupNotice($uuid){
+			if(is_string($uuid) === false){
+				throw new InvalidArgumentException('Group notice ID should be specified as string.');
+			}else if(preg_match(self::regex_UUID, $uuid) !== 1){
+				throw new InvalidArgumentException('Group notice ID should be a valid UUID');
+			}
+			$groupNotice = $this->makeCallToAPI('GetGroupNotice', array(
+				'NoticeID' => strtolower($uuid)
+			), array(
+				'GroupNotice' => self::GroupNoticeValidatorArray()
+			))->GroupNotice;
+			
+			return WebUI\GroupNoticeData::r(
+				$groupNotice->GroupID,
+				$groupNotice->NoticeID,
+				$groupNotice->Timestamp,
+				$groupNotice->FromName,
+				$groupNotice->Subject,
+				$groupNotice->Message,
+				$groupNotice->HasAttachment,
+				$groupNotice->ItemID,
+				$groupNotice->AssetType,
+				$groupNotice->ItemName
+			);
 		}
 
 //!	PHP doesn't do const arrays :(
