@@ -1576,7 +1576,10 @@ namespace Aurora\Addon{
 		}
 
 //!	Get individual group notice
-
+/**
+*	@param string $uuid UUID of the group notice you wish to fetch
+*	@return object Instance of Aurora\Addon\WebUI\GroupNoticeData
+*/
 		public function GetGroupNotice($uuid){
 			if(is_string($uuid) === false){
 				throw new InvalidArgumentException('Group notice ID should be specified as string.');
