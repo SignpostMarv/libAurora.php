@@ -980,6 +980,32 @@ namespace Aurora\Addon{
 			return new WebUI\SearchUserResults($results);
 		}
 
+//!	Attempt to get the number of recently online users filtering the query by the method arguments
+/**
+*	@param integer $secondsAgo The maximum number of seconds ago that the user would have logged in to include in the query
+*	@param boolean $stillOnline TRUE includes users still online, FALSE otherwise
+*	@return integer The number of recently online users filtered by the method arguments
+*/
+		public function RecentlyOnlineUsers($secondsAgo=0, $stillOnline=false){
+			if(is_string($secondsAgo) && ctype_digit($secondsAgo) === true){
+				$secondsAgo = (integer)$secondsAgo;
+			}
+			
+			if(is_integer($secondsAgo) === false){
+				throw new InvalidArgumentException('secondsAgo must be specified as integer.');
+			}else if($secondsAgo < 0){
+				throw new InvalidArgumentException('secondsAgo must be greater than or equal to zero.');
+			}else if(is_bool($stillOnline) === false){
+				throw new InvalidArgumentException('stillOnline must be specified as a boolean.');
+			}
+			return $this->makeCallToAPI('RecentlyOnlineUsers', array(
+				'secondsAgo'  => $secondsAgo,
+				'stillOnline' => $stillOnline ? 1 : 0
+			), array(
+				'result' => array('integer'=>array())
+			))->result;
+		}
+
 //!	Attempt to fetch all Abuse Reports.
 /**
 *	@param integer $start start point for abuse reports
