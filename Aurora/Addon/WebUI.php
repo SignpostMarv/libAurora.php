@@ -1235,6 +1235,67 @@ namespace Aurora\Addon{
 			return $asArray ? $response : WebUI\GetRegions::r($this, null, $flags, $start, $has ? null : $result->Total, $sortRegionName, $sortLocX, $sortLocY, $response);
 		}
 
+//!	Get a list of regions in the AuroraSim install at the specified x/y coordinates that also match the specified flags.
+/**
+*	@param integer $x x-axis coordinates of region
+*	@param integer $y y-axis coordinates of region
+*	@param integer $flags inclusive region flags
+*	@param integer $excludeFlags exclusive region flags
+*	@param integer $scopeID region scope ID
+*	@return object returns an instance of Aurora::Addon::WebUI::GetRegions, although may return a child class later
+*/
+		public function GetRegionsByXY($x, $y, $flags=null, $excludeFlags=null, $scopeID='00000000-0000-0000-0000-000000000000'){
+			if(isset($flags) === false){
+				$flags = RegionFlags::RegionOnline;
+			}
+			if(is_string($x) === true && ctype_digit($x) === true){
+				$x = (integer)$x;
+			}
+			if(is_string($y) === true && ctype_digit($y) === true){
+				$y = (integer)$y;
+			}
+
+			if(is_integer($flags) === false){
+				throw new InvalidArgumentException('RegionFlags argument should be supplied as integer.');
+			}else if($flags < 0){
+				throw new InvalidArgumentException('RegionFlags cannot be less than zero');
+			}else if(RegionFlags::isValid($flags) === false){ // Aurora::Framework::RegionFlags::isValid() does do a check for integerness, but we want to throw a different exception message if it is an integer.
+				throw new InvalidArgumentException('RegionFlags value is invalid, aborting call to API');
+			}else if(is_string($scopeID) === false){
+				throw new InvalidArgumentException('ScopeID must be specified as a string.');
+			}else if(preg_match(self::regex_UUID, $scopeID) != 1){
+				throw new InvalidArgumentException('ScopeID must be a valid UUID.');
+			}
+			if(isset($excludeFlags) === true){
+				if(is_integer($excludeFlags) === false){
+					throw new InvalidArgumentException('RegionFlags exclusion argument should be supplied as integer.');
+				}else if($excludeFlags < 0){
+					throw new InvalidArgumentException('RegionFlags exclusion cannot be less than zero');
+				}else if(RegionFlags::isValid($excludeFlags) === false){ // Aurora::Framework::RegionFlags::isValid() does do a check for integerness, but we want to throw a different exception message if it is an integer.
+					throw new InvalidArgumentException('RegionFlags exclusion value is invalid, aborting call to API');
+				}
+			}
+			
+			$input = array(
+				'X'           => $x,
+				'Y'           => $y,
+				'ScopeID'     => $scopeID,
+				'RegionFlags' => $flags
+			);
+			if(isset($excludeFlags) === true){
+				$input['ExcludeRegionFlags'] = $excludeFlags;
+			}
+			$result = $this->makeCallToAPI('GetRegionsByXY', $input, array(
+				'Regions' => array('array'=>array(static::GridRegionValidator())),
+				'Total'   => array('integer'=>array())
+			));
+			$response = array();
+			foreach($result->Regions as $val){
+				$response[] = WebUI\GridRegion::fromEndPointResult($val);
+			}
+			return WebUI\GetRegions::r($this, null, $flags, 0, $result->Total, null, null, null, $response);
+		}
+
 //!	Get a list of regions in the specified estate that match the specified flags.
 /**
 *	@param object $Estate instance of Aurora::Addon::WebUI::EstateSettings
