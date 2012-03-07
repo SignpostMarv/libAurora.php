@@ -288,7 +288,7 @@ namespace Aurora\Addon\WebUI{
 		}
 	}
 
-//!	Seekable iterator for instances of Aurora\Addon\WebUI GridRegion
+//!	Seekable iterator for instances of Aurora\Addon\WebUI\GridRegion
 	class GetRegions extends WORM implements SeekableIterator{
 
 //!	object instance of Aurora::Addon::WebUI
@@ -503,7 +503,7 @@ namespace Aurora\Addon\WebUI{
 		}
 	}
 
-//!	Seekable iterator for instances of Aurora\Addon\WebUI GridRegion in a specified estate
+//!	Seekable iterator for instances of Aurora\Addon\WebUI\GridRegion in a specified estate
 	class GetRegionsInEstate extends GetRegions{
 
 //!	object instance of Aurora::Addon::WebUI::EstateSettings
@@ -573,8 +573,12 @@ namespace Aurora\Addon\WebUI{
 
 //!	Determines whether we have something in the registry or not.
 /**
-*	@param object $WebUI instance of Aurora::Addon::WebUI
-*	@param integer $flags
+*	@param object $WebUI instance of Aurora::Addon::WebUI. Used to get instances of Aurora::Addon::WebUI::GridRegion that the instance wasn't instantiated with.
+*	@param object $Estate instance of Aurora::Addon::WebUI::EstateSettings
+*	@param integer $flags bitfield of Aurora::Framework::RegionFlags values
+*	@param mixed $sortRegionName NULL or boolean
+*	@param mixed $sortLocX NULL or boolean
+*	@param mixed $sortLocY NULL or boolean
 *	@return boolean TRUE if we have populated the registry array, FALSE otherwise.
 */
 		public static function hasInstance(WebUI $WebUI, EstateSettings $Estate, $flags, $sortRegionName, $sortLocX, $sortLocY){
@@ -592,7 +596,7 @@ namespace Aurora\Addon\WebUI{
 			);
 		}
 
-//!	To avoid slowdowns due to an excessive amount of curl calls, we populate Aurora::Addon::WebUI::GetRegions::$data in batches of 10
+//!	To avoid slowdowns due to an excessive amount of curl calls, we populate Aurora::Addon::WebUI::GetRegionsInEstate::$data in batches of 10
 /**
 *	@return mixed either NULL or an instance of Aurora::Addon::WebUI::GridRegion
 */
@@ -602,6 +606,96 @@ namespace Aurora\Addon\WebUI{
 			}else if(isset($this->data[$this->key()]) === false){
 				$start   = $this->key();
 				$results = $this->WebUI->GetRegionsInEstate($this->Estate, $this->flags, $start, 10, $this->sortRegionName, $this->sortLocX, $this->sortLocY, true);
+				foreach($results as $region){
+					$this->data[$start++] = $region;
+				}
+			}
+			return $this->data[$this->key()];
+		}
+	}
+
+//!	Seekable iterator for instances of Aurora\Addon\WebUI\GridRegion within range of another region
+	class GetRegionNeighbours extends GetRegions{
+
+//!	string region ID
+		private $region;
+
+//!	integer range
+		private $range;
+
+//!	string scope ID
+		private $scopeID;
+
+//!	We're hiding this behind a registry method.
+/**
+*	@param object $WebUI instance of Aurora::Addon::WebUI. Used to get instances of Aurora::Addon::WebUI::GridRegion that the instance wasn't instantiated with.
+*	@param string $region UUID of region
+*	@param string $scopeID Scope ID of region
+*	@param integer $range distance in meters from region center to search
+*	@param integer $start specifies the index that $regions starts at, if specified.
+*	@param integer $total specifies the total number of regions in the grid.
+*	@param mixed $regions Either NULL or an array of Aurora::Addon::WebUI::GridRegion instances.
+*/
+		protected function __construct(WebUI $WebUI, $region, $range=8, $scopeID='00000000-0000-0000-0000-000000000000', $start=0, $total=0, array $regions=null){
+			parent::__construct($WebUI, RegionFlags::RegionOnline, $start, $total, null, null, null, $regions);
+			$this->region  = $region;
+			$this->scopeID = $scopeID;
+			$this->range   = $range;
+		}
+
+//!	registry array.
+		private static $registry = array();
+
+//!	registry method
+		public static function r(WebUI $WebUI, $region, $range=8, $scopeID='00000000-0000-0000-0000-000000000000', $start=0, $total=0, array $regions=null){
+			if(is_string($range) === true && ctype_digit($range) === true){
+				$range = (integer)$range;
+			}
+
+			if(is_string($region) === false){
+				throw new InvalidArgumentException('Region ID must be specified as a string.');
+			}else if(preg_match(\Aurora\Addon\WebUI::regex_UUID, $region) != 1){
+				throw new InvalidArgumentException('Region ID must be a valid UUID.');
+			}else if(is_string($scopeID) === false){
+				throw new InvalidArgumentException('ScopeID must be specified as a string.');
+			}else if(preg_match(\Aurora\Addon\WebUI::regex_UUID, $scopeID) != 1){
+				throw new InvalidArgumentException('ScopeID must be a valid UUID.');
+			}
+			
+			$hash = md5(spl_object_hash($WebUI) . '_' . $region . $scopeID . (string)$range);
+
+			if(isset(static::$registry[$hash]) === false){
+				static::$registry[$hash] = new static($WebUI, $region, $range, $scopeID, $start, $total, $regions);
+			}
+
+			if(is_integer($start) === false){
+				throw new InvalidArgumentException('Start point must be an integer.');
+			}
+			static::$registry[$hash]->seek($start);
+			return static::$registry[$hash];
+		}
+
+//!	Determines whether we have something in the registry or not.
+/**
+*	@param object $WebUI instance of Aurora::Addon::WebUI. Used to get instances of Aurora::Addon::WebUI::GridRegion that the instance wasn't instantiated with.
+*	@param string $region UUID of region
+*	@param string $scopeID Scope ID of region
+*	@param integer $range distance in meters from region center to search
+*/
+		public static function hasInstance(WebUI $WebUI, $region, $range=8, $scopeID='00000000-0000-0000-0000-000000000000'){
+			return isset(static::$registry[md5(spl_object_hash($WebUI) . '_' . $region . $scopeID . $range)]);
+		}
+
+//!	To avoid slowdowns due to an excessive amount of curl calls, we populate Aurora::Addon::WebUI::GetRegionNeighbours::$data in batches of 10
+/**
+*	@return mixed either NULL or an instance of Aurora::Addon::WebUI::GridRegion
+*/
+		public function current(){
+			if($this->valid() === false){
+				return null;
+			}else if(isset($this->data[$this->key()]) === false){
+				$start   = $this->key();
+				$results = $this->WebUI->GetRegionNeighbours($this->region, $this->range, $this->scopeID, true);
 				foreach($results as $region){
 					$this->data[$start++] = $region;
 				}

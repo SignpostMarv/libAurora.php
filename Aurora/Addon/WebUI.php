@@ -1370,6 +1370,51 @@ namespace Aurora\Addon{
 			return $asArray ? $response : WebUI\GetRegionsInEstate::r($this, $Estate, $flags, $start, $has ? null : $result->Total, $sortRegionName, $sortLocX, $sortLocY, $response);
 		}
 
+//!	Get a list of regions within range of the specified region
+/**
+*	@param string $region UUID of region
+*	@param string $scopeID Scope ID of region
+*	@param integer $range distance in meters from region center to search
+*	@return object returns an instance of Aurora::Addon::WebUI::GetRegionNeighbours
+*/
+		public function GetRegionNeighbours($region, $range=128, $scopeID='00000000-0000-0000-0000-000000000000', $start=0, $asArray=false){
+			if(is_string($range) === true && ctype_digit($range) === true){
+				$range = (integer)$range;
+			}
+
+			if(is_string($region) === false){
+				throw new InvalidArgumentException('Region ID must be specified as a string.');
+			}else if(preg_match(self::regex_UUID, $region) != 1){
+				throw new InvalidArgumentException('Region ID must be a valid UUID.');
+			}else if(is_string($scopeID) === false){
+				throw new InvalidArgumentException('ScopeID must be specified as a string.');
+			}else if(preg_match(self::regex_UUID, $scopeID) != 1){
+				throw new InvalidArgumentException('ScopeID must be a valid UUID.');
+			}else if(is_integer($range) === false){
+				throw new InvalidArgumentException('Range must be specified as integer.');
+			}else if($range < 8){
+				throw new InvalidArgumentException('Range must be greater than or equal to 8');
+			}
+
+			$response = array();
+			$has = WebUI\GetRegionNeighbours::hasInstance($this, $region, $range=128, $scopeID='00000000-0000-0000-0000-000000000000');
+			if($asArray === true || $has === false){
+				$result = $this->makeCallToAPI('GetRegionNeighbours', array(
+						'RegionID' => $region,
+						'ScopeID'  => $scopeID,
+						'Range'    => $range
+					), array(
+						'Regions' => array('array'=>array(static::GridRegionValidator())),
+						'Total'   => array('integer'=>array())
+					)
+				);
+				foreach($result->Regions as $val){
+					$response[] = WebUI\GridRegion::fromEndPointResult($val);
+				}
+			}
+			return $asArray ? $response : WebUI\GetRegionNeighbours::r($this, $region, $range=128, $scopeID='00000000-0000-0000-0000-000000000000', $start, $has ? null : $result->Total, $response);
+		}
+
 //!	object an instance of Aurora::Addon::WebUI::GridInfo
 		protected $GridInfo;
 //!	Processes should not be long-lasting, so we only fetch this once.
