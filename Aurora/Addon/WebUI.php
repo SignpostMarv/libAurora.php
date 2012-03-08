@@ -2320,6 +2320,21 @@ namespace Aurora\Addon{
 				$event->maturity
 			);
 		}
+
+//!	Gets the adminmodules settings
+/**
+*	@return object instance of Aurora::Addon::WebUI::BoolWORM
+*/
+		public function adminmodules(){
+			$settings = $this->makeCallToAPI('adminmodules', array(), array(
+				'Settings' => array('object' => array())
+			))->Settings;
+			$resp = array();
+			foreach($settings as $k=>$v){
+				$resp[$k] = $v;
+			}
+			return WebUI\BoolWORM::f($resp);
+		}
 	}
 }
 
@@ -2385,6 +2400,45 @@ namespace Aurora\Addon\WebUI{
 			}
 
 			$this->data[$offset] = $value;
+		}
+	}
+
+//!	WORM array of booleans
+	class BoolWORM extends WORM{
+
+//!	replacing the constructor
+/**
+*	@param array $bools array of booleans
+*/
+		protected function __construct(array $bools){
+			foreach($bools as $k=>$v){
+				if(is_bool($v) === false){
+					throw new InvalidArgumentException('Values must be boolean');
+				}else if(preg_match('/^[A-z][A-z0-9]*$/', $k) != 1){
+					throw new InvalidArgumentException('Key was invalid');
+				}
+			}
+			$this->data = $bools;
+		}
+
+//!	factory method
+/**
+*	@param array $bools array of booleans
+*	@return object instance of Aurora::Addon::BoolWORM
+*/
+		public static function f(array $bools){
+			return new static($bools);
+		}
+
+
+		public function offsetSet($offset, $value){
+			if(is_bool($value) === false){
+				throw new InvalidArgumentException('Values must be boolean');
+			}else if(preg_match('/^[A-z][A-z0-9]*$/', $offset) != 1){
+				throw new InvalidArgumentException('Key was invalid');
+			}else if($this->offsetExists($offset) === true){
+				throw new BadMethodCallException('WORM instance values cannot be overwritten.');
+			}
 		}
 	}
 }
