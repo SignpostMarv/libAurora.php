@@ -2335,6 +2335,26 @@ namespace Aurora\Addon{
 			}
 			return WebUI\BoolWORM::f($resp);
 		}
+
+//!	Gets the admin settings
+/**
+*	@return array
+*/
+		public function adminsetting(){
+			$settings = $this->makeCallToAPI('adminsetting', array(), array(
+				'Settings' => array('object' => array()),
+				'startregion' => array('string' => array())
+			));
+			$resp = array();
+			if(preg_match(static::regex_UUID, $settings->startregion) != 1){
+				throw new UnexpectedValueException('Start region ID was not a valid UUID.');
+			}
+			foreach($settings->Settings as $k=>$v){
+				$resp[$k] = $v;
+			}
+			$resp['startregion'] = $settings->startregion;
+			return $resp;
+		}
 	}
 }
 
