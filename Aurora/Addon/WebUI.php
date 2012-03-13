@@ -2321,38 +2321,36 @@ namespace Aurora\Addon{
 			);
 		}
 
-//!	Gets the adminmodules settings
-/**
-*	@return object instance of Aurora::Addon::WebUI::BoolWORM
-*/
-		public function adminmodules(){
-			$settings = $this->makeCallToAPI('adminmodules', array(), array(
-				'Settings' => array('object' => array())
-			))->Settings;
-			$resp = array();
-			foreach($settings as $k=>$v){
-				$resp[$k] = $v;
-			}
-			return WebUI\BoolWORM::f($resp);
-		}
-
-//!	Gets the admin settings
+//!	Gets the client implementation data
 /**
 *	@return array
 */
-		public function adminsetting(){
-			$settings = $this->makeCallToAPI('adminsetting', array(), array(
-				'Settings' => array('object' => array()),
+		public function WebUIClientImplementationData(){
+			$result = $this->makeCallToAPI('WebUIClientImplementationData', array(), array(
+				'adminmodules' => array('object' => array()),
+				'adminsetting' => array('object' => array()),
 				'startregion' => array('string' => array())
 			));
-			$resp = array();
-			if(preg_match(static::regex_UUID, $settings->startregion) != 1){
+			if(preg_match(static::regex_UUID, $result->startregion) != 1){
 				throw new UnexpectedValueException('Start region ID was not a valid UUID.');
 			}
-			foreach($settings->Settings as $k=>$v){
-				$resp[$k] = $v;
+
+			$resp = array(
+				'adminmodules' => array(),
+				'adminsetting' => array()
+			);
+
+			foreach($result->adminmodules as $k=>$v){
+				$resp['adminmodules'][$k] = $v;
 			}
-			$resp['startregion'] = $settings->startregion;
+
+			foreach($result->adminsetting as $k=>$v){
+				$resp['adminsetting'][$k] = $v;
+			}
+
+			$resp['adminmodules'] = WebUI\BoolWORM::f($resp['adminmodules']);
+			$resp['startregion'] = $result->startregion;
+
 			return $resp;
 		}
 	}
