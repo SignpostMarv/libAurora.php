@@ -188,7 +188,7 @@ namespace Aurora\Addon\WebUI{
 *	@param string $onlineStatus TRUE if the user is currently online, FALSE otherwise.
 *	@param string $email either a valid email address or an empty string.
 */
-		protected function __construct($uuid, $name, $homeUUID, $homeName, $onlineStatus, $email){
+		protected function __construct($uuid, $name, $homeUUID, $homeName, $onlineStatus, $email, $lastLogin=null, $lastLogout=null){
 			if(is_string($homeUUID) === false){
 				throw new InvalidArgumentException('Home region UUID must be a string.');
 			}else if(preg_match(\Aurora\Addon\WebUI::regex_UUID, $homeUUID) !== 1){
@@ -199,11 +199,17 @@ namespace Aurora\Addon\WebUI{
 				throw new InvalidArgumentException('Home region name cannot be an empty string.');
 			}else if(is_bool($onlineStatus) === false){
 				throw new InvalidArgumentException('Online status must be a boolean.');
+			}else if(isset($lastLogin) === true && is_integer($lastLogin) === false){
+				throw new InvalidArgumentException('If the last login time is specified, it must be specified as integer.');
+			}else if(isset($lastLogout) === true && is_integer($lastLogout) === false){
+				throw new InvalidArgumentException('If the last logout time is specified, it must be specified as integer.');
 			}
 
-			$this->HomeUUID = $homeUUID;
-			$this->HomeName = $homeName;
-			$this->Online   = $onlineStatus;
+			$this->HomeUUID   = $homeUUID;
+			$this->HomeName   = $homeName;
+			$this->Online     = $onlineStatus;
+			$this->LastLogin  = $lastLogin;
+			$this->LastLogout = $lastLogout;
 
 			parent::__construct($uuid, $name, $email);
 		}
@@ -218,7 +224,7 @@ namespace Aurora\Addon\WebUI{
 *	@param string $email either a valid email address or an empty string.
 *	@return object instance of Aurora::Addon::WebUI::GridUserInfo
 */
-		public static function r($uuid, $name=null, $homeUUID=null, $homeName=null, $onlineStatus=null, $email=null){
+		public static function r($uuid, $name=null, $homeUUID=null, $homeName=null, $onlineStatus=null, $email=null, $lastLogin=null, $lastLogout=null){
 			if(is_string($uuid) === false){
 				throw new InvalidArgumentException('UUID must be a string.');
 			}else if(preg_match(\Aurora\Addon\WebUI::regex_UUID, $uuid) === false){
@@ -232,17 +238,19 @@ namespace Aurora\Addon\WebUI{
 				if(isset($name, $homeUUID, $homeName, $onlineStatus, $email) === false){
 					throw new InvalidArgumentException('Cannot return grid info for user by UUID, grid info has not been set.');
 				}
-				$registry[$uuid] = new static($uuid, $name, $homeUUID, $homeName, $onlineStatus, $email);
+				$registry[$uuid] = new static($uuid, $name, $homeUUID, $homeName, $onlineStatus, $email, $lastLogin, $lastLogout);
 			}else if(isset($name, $homeUUID, $homeName, $onlineStatus, $email) === true){
 				$info = $registry[$uuid];
 				if(
-					$info->Name()         !== $name         ||
-					$info->HomeUUID()     !== $homeUUID     ||
-					$info->HomeName()     !== $homeName     ||
-					$info->Online() !== $onlineStatus ||
-					$info->Email()        !== $email
+					$info->Name()       !== $name         ||
+					$info->HomeUUID()   !== $homeUUID     ||
+					$info->HomeName()   !== $homeName     ||
+					$info->Online()     !== $onlineStatus ||
+					$info->Email()      !== $email        ||
+					$info->LastLogin()  !== $lastLogin    ||
+					$info->LastLogout() !== $lastLogout
 				){
-					$registry[$uuid] = new static($uuid, $name, $homeUUID, $homeName, $onlineStatus, $email);
+					$registry[$uuid] = new static($uuid, $name, $homeUUID, $homeName, $onlineStatus, $email, $lastLogin, $lastLogout);
 				}
 			}
 			return $registry[$uuid];
@@ -270,6 +278,22 @@ namespace Aurora\Addon\WebUI{
 //!	@see Aurora::Addon::WebUI::GridUserInfo::$Online
 		public function Online(){
 			return $this->Online;
+		}
+
+//! integer Last login time
+//!	@see Aurora::Addon::WebUI::GridUserInfo::LastLogin()
+		protected $LastLogin;
+//!	@see Aurora::Addon::WebUI::GridUserInfo::$LastLogin
+		public function LastLogin(){
+			return $this->LastLogin;
+		}
+
+//! integer Last logout time
+//!	@see Aurora::Addon::WebUI::GridUserInfo::LastLogout()
+		protected $LastLogout;
+//!	@see Aurora::Addon::WebUI::GridUserInfo::$LastLogout
+		public function LastLogout(){
+			return $this->LastLogout;
 		}
 	}
 

@@ -515,10 +515,12 @@ namespace Aurora\Addon{
 				'Email'     => array('string' =>array()),
 				'Name'      => array('string' =>array()),
 				'FirstName' => array('string' =>array()),
-				'LastName'  => array('string' =>array())
+				'LastName'  => array('string' =>array()),
+				'LastLogin' => array('boolean'=>array(false), 'integer'=>array()),
+				'LastLogout' => array('boolean'=>array(false), 'integer'=>array()),
 			));
 			// this is where we get lazy and leave validation up to the GridUserInfo class.
-			return	WebUI\GridUserInfo::r($result->UUID, $result->Name, $result->HomeUUID, $result->HomeName, $result->Online, $result->Email);
+			return	WebUI\GridUserInfo::r($result->UUID, $result->Name, $result->HomeUUID, $result->HomeName, $result->Online, $result->Email, $result->LastLogin === false ? null : $result->LastLogin, $result->LastLogout === false ? null : $result->LastLogout);
 		}
 
 //!	Save email address, set user level to zero.
