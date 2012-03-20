@@ -1415,6 +1415,37 @@ namespace Aurora\Addon{
 			return $asArray ? $response : WebUI\GetRegionNeighbours::r($this, $region, $range=128, $scopeID='00000000-0000-0000-0000-000000000000', $start, $has ? null : $result->Total, $response);
 		}
 
+//!	Get a list of regions in the specified area
+/**
+*	@param integer $startX x-axis start point
+*	@param integer $startY y-axis start point
+*	@param integer $endX x-axis end point
+*	@param integer $endY y-axis end point
+*	@param integer $start specifies the index that $regions starts at, if specified.
+*	@param integer $total specifies the total number of regions in the grid.
+*/
+		public function GetRegionsInArea($startX, $startY, $endX, $endY, $scopeID='00000000-0000-0000-0000-000000000000', $asArray=false){
+			$has      = WebUI\GetRegionsInArea::hasInstance($this, $startX, $startY, $endX, $endY, $scopeID);
+			$response = array();
+			if($asArray === true || $has === false){
+				$result = $this->makeCallToAPI('GetRegionsInArea', array(
+					'StartX'  => $startX,
+					'StartY'  => $startY,
+					'EndX'    => $endX,
+					'EndY'    => $endY,
+					'ScopeID' => $scopeID
+				), array(
+					'Regions' => array('array'=>array(static::GridRegionValidator())),
+					'Total'   => array('integer'=>array())
+				));
+				foreach($result->Regions as $val){
+					$response[] = WebUI\GridRegion::fromEndPointResult($val);
+				}
+			}
+
+			return $asArray ? $response : WebUI\GetRegionsInArea::r($this, $startX, $startY, $endX, $endY, $scopeID, 0, $result->Total, $response);			
+		}
+
 //!	object an instance of Aurora::Addon::WebUI::GridInfo
 		protected $GridInfo;
 //!	Processes should not be long-lasting, so we only fetch this once.
