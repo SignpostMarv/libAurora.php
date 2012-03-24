@@ -523,6 +523,41 @@ namespace Aurora\Addon{
 			return	WebUI\GridUserInfo::r($result->UUID, $result->Name, $result->HomeUUID, $result->HomeName, $result->Online, $result->Email, $result->LastLogin === false ? null : $result->LastLogin, $result->LastLogout === false ? null : $result->LastLogout);
 		}
 
+//!	Set the home location for the specified user.
+/**
+*	@param string $uuid UUID of user
+*	@param mixed $region An instance of Aurora::Services::Interfaces::GridRegion or null, the new home region
+*	@param mixed $position An instance of OpenMetaverse::Vector3 or null, the new home location
+*	@param mixed $lookAt An instance of OpenMetaverse::Vector3 or null, the new focal point for the home location
+*/
+		public function SetHomeLocation($uuid, \Aurora\Services\Interfaces\GridRegion $region=null, \OpenMetaverse\Vector3 $position=null, \OpenMetaverse\Vector3 $lookAt=null){
+			if($uuid instanceof User){
+				$uuid = $uuid->PrincipalID();
+			}
+			if(is_string($uuid) === false){
+				throw new InvalidArgumentException('UUID should be a string.');
+			}else if(preg_match(self::regex_UUID, $uuid) !== 1){
+				throw new InvalidArgumentException('UUID supplied was not a valid UUID.');
+			}
+
+			$input = array(
+				'User' => $uuid
+			);
+			if(isset($region) === true){
+				$input['RegionID'] = $region->RegionID();
+			}
+			if(isset($position) === true){
+				$input['Position'] = (string)$position;
+			}
+			if(isset($lookAt) === true){
+				$input['LookAt'] = (string)$lookAt;
+			}
+			
+			return $this->makeCallToAPI('SetHomeLocation', $input, array(
+				'Success' => array('boolean' => array())
+			))->Success;
+		}
+
 //!	Save email address, set user level to zero.
 /**
 *	@param mixed $uuid either a string UUID or an instance of Aurora::Services::Interfaces::User of the user we wish to save the email address for.
@@ -684,11 +719,12 @@ namespace Aurora\Addon{
 
 			$result = $this->makeCallToAPI('GetProfile', array('Name' => $name, 'UUID' => $uuid), array(
 				'account'=> array('object'=>array(array(
-					'Created' => array('integer'=>array()),
-					'Name' => array('string'=>array()),
-					'PrincipalID' => array('string'=>array()),
-					'Email' => array('string'=>array()),
-					'TimeSinceCreated' => array('string'=>array())
+					'Created'          => array('integer'=>array()),
+					'Name'             => array('string'=>array()),
+					'PrincipalID'      => array('string'=>array()),
+					'Email'            => array('string'=>array()),
+					'TimeSinceCreated' => array('string'=>array()),
+					'UserLevel'        => array('integer'=>array())
 				)))
 			));
 
@@ -699,6 +735,7 @@ namespace Aurora\Addon{
 			$wantToText   = $canDoText      = $languages   = $aboutText = $firstLifeAboutText = $webURL = $displayName = $customType = '';
 			$image        = $firstLifeImage = '00000000-0000-0000-0000-000000000000';
 			$notes        = json_encode('');
+			$userLevel    = $account->UserLevel;
 			if(isset($result->profile) === true){
 				$profile = $result->profile;
 				if(isset(
@@ -751,8 +788,7 @@ namespace Aurora\Addon{
 				$RLCity    = $agent->RLCity;
 				$RLCountry = $agent->RLCountry;
 			}
-
-			return WebUI\UserProfile::r($account->PrincipalID, $account->Name, $account->Email, $account->Created, $allowPublish, $maturePublish, $wantToMask, $wantToText, $canDoMask, $canDoText, $languages, $image, $aboutText, $firstLifeImage, $firstLifeAboutText, $webURL, $displayName, isset($account->PartnerUUID) ? $account->PartnerUUID : '00000000-0000-0000-0000-000000000000', $visible, $customType, $notes, $RLName, $RLAddress, $RLZip, $RLCity, $RLCountry);
+			return WebUI\UserProfile::r($account->PrincipalID, $account->Name, $account->Email, $account->Created, $allowPublish, $maturePublish, $wantToMask, $wantToText, $canDoMask, $canDoText, $languages, $image, $aboutText, $firstLifeImage, $firstLifeAboutText, $webURL, $displayName, isset($account->PartnerUUID) ? $account->PartnerUUID : '00000000-0000-0000-0000-000000000000', $visible, $customType, $notes, $userLevel, $RLName, $RLAddress, $RLZip, $RLCity, $RLCountry);
 		}
 
 //!	Attempt to edit the account name, email address and real-life info.
@@ -764,7 +800,7 @@ namespace Aurora\Addon{
 *	@param mixed either an instance of Aurora::Addon::WebUI::RLInfo or NULL
 *	@return boolean TRUE if successful, FALSE otherwise. Also returns FALSE if the operation was partially successful.
 */
-		public function EditUser($uuid, $name=null, $email='', WebUI\RLInfo $RLInfo=null){
+		public function EditUser($uuid, $name=null, $email='', WebUI\RLInfo $RLInfo=null, $userLevel=null){
 			if($uuid instanceof WebUI\abstractUser){
 				if(is_null($name) === true){
 					$name = $uuid->Name();
@@ -776,6 +812,9 @@ namespace Aurora\Addon{
 			}
 			if(is_string($email)){
 				$email = trim($email);
+			}
+			if(isset($userLevel) === true && is_string($userLevel) === true && ctype_digit($userLevel) === true){
+				$userLevel = (integer)$userLevel;
 			}
 
 			if(is_string($uuid) === false){
@@ -790,6 +829,8 @@ namespace Aurora\Addon{
 				throw new InvalidArgumentException('Email address must be a string.');
 			}else if($email !== '' && is_email($email) === false){
 				throw new InvalidArgumentException('Email address was not valid.');
+			}else if(isset($userLevel) === true && is_integer($userLevel) === false){
+				throw new InvalidArgumentException('User Level must be specified as integer.');
 			}
 
 			$data = array(
@@ -801,6 +842,9 @@ namespace Aurora\Addon{
 				foreach($RLInfo as $k=>$v){
 					$data[$k] = $v;
 				}
+			}
+			if(isset($userLevel) === true){
+				$data['UserLevel'] = $userLevel;
 			}
 
 			$result = $this->makeCallToAPI('EditUser', $data, array(

@@ -323,8 +323,9 @@ namespace Aurora\Addon\WebUI{
 *	@param boolean $visible TRUE if the user's online status is visible to everyone, FALSE otherwise.
 *	@param string $customType custom account type.
 *	@param string $notes Stringified JSON data of account notes.
+*	@param integer $userLevel User Level
 */
-		protected function __construct($uuid, $name='', $email='', $created=0, $allowPublish=false, $maturePublish=false, $wantToMask=0, $wantToText='', $canDoMask=0, $canDoText='', $languages='', $image='00000000-0000-0000-0000-000000000000', $aboutText='', $firstLifeImage='00000000-0000-0000-0000-000000000000', $firstLifeAboutText='', $webURL='', $displayName='', $partnerUUID='00000000-0000-0000-0000-000000000000', $visible=false, $customType='', $notes='', $RLName=null, $RLAddress=null, $RLZip=null, $RLCity=null, $RLCountry=null){
+		protected function __construct($uuid, $name='', $email='', $created=0, $allowPublish=false, $maturePublish=false, $wantToMask=0, $wantToText='', $canDoMask=0, $canDoText='', $languages='', $image='00000000-0000-0000-0000-000000000000', $aboutText='', $firstLifeImage='00000000-0000-0000-0000-000000000000', $firstLifeAboutText='', $webURL='', $displayName='', $partnerUUID='00000000-0000-0000-0000-000000000000', $visible=false, $customType='', $notes='', $userLevel=-1 , $RLName=null, $RLAddress=null, $RLZip=null, $RLCity=null, $RLCountry=null){
 			if(is_string($created) === true && ctype_digit($created) === true){
 				$created = (integer)$created;
 			}
@@ -333,6 +334,9 @@ namespace Aurora\Addon\WebUI{
 			}
 			if(is_string($canDoMask) === true && ctype_digit($canDoMask) === true){
 				$canDoMask = (integer)$canDoMask;
+			}
+			if(is_string($userLevel) === true && ctype_digit($userLevel) === true){
+				$userLevel = (integer)$userLevel;
 			}
 
 			if(is_integer($created) === false){
@@ -381,6 +385,8 @@ namespace Aurora\Addon\WebUI{
 				throw new InvalidArgumentException('notes must be a string.');
 			}else if(json_decode($notes) === false){
 				throw new InvalidArgumentException('notes must be a valid stringified JSON entity.');
+			}else if(is_integer($userLevel) === false){
+				throw new InvalidArgumentException('User Level must be an integer.');
 			}
 			
 			$this->Created            = $created;
@@ -401,6 +407,7 @@ namespace Aurora\Addon\WebUI{
 			$this->Visible            = $visible;
 			$this->CustomType         = trim($customType);
 			$this->Notes              = $notes;
+			$this->UserLevel          = $userLevel;
 
 			if(isset($RLName, $RLAddress, $RLZip, $RLCity, $RLCountry) === true){
 				$this->RLInfo = new RLInfo($RLName, $RLAddress, $RLZip, $RLCity, $RLCountry);
@@ -411,14 +418,14 @@ namespace Aurora\Addon\WebUI{
 			parent::__construct($uuid, $name, $email);
 		}
 
-		public static function r($uuid, $name=null, $email=null, $created=null, $allowPublish=null, $maturePublish=null, $wantToMask=null, $wantToText=null, $canDoMask=null, $canDoText=null, $languages=null, $image=null, $aboutText=null, $firstLifeImage=null, $firstLifeAboutText=null, $webURL=null, $displayName=null, $partnerUUID=null, $visible=null, $customType=null, $notes=null, $RLName=null, $RLAddress=null, $RLZip=null, $RLCity=null, $RLCountry=null){
+		public static function r($uuid, $name=null, $email=null, $created=null, $allowPublish=null, $maturePublish=null, $wantToMask=null, $wantToText=null, $canDoMask=null, $canDoText=null, $languages=null, $image=null, $aboutText=null, $firstLifeImage=null, $firstLifeAboutText=null, $webURL=null, $displayName=null, $partnerUUID=null, $visible=null, $customType=null, $notes=null, $userLevel=null, $RLName=null, $RLAddress=null, $RLZip=null, $RLCity=null, $RLCountry=null){
 			if(is_string($uuid) === false){
 				throw new InvalidArgumentException('UUID must be a string.');
 			}else if(preg_match(\Aurora\Addon\WebUI::regex_UUID, $uuid) === false){
 				throw new InvalidArgumentException('UUID was not a valid UUID.');
 			}else if((
-				(isset($name) || isset($email) || isset($created) || isset($allowPublish) || isset($maturePublish) || isset($wantToMask) || isset($wantToText) || isset($canDoMask) || isset($canDoText) || isset($languages) || isset($image) || isset($aboutText) || isset($firstLifeImage) || isset($firstLifeAboutText) || isset($webURL) || isset($displayName) || isset($partnerUUID) || isset($visible) || isset($customType) || isset($notes)) &&
-				isset($name, $email, $created, $allowPublish, $maturePublish, $wantToMask, $wantToText, $canDoMask, $canDoText, $languages, $image, $aboutText, $firstLifeImage, $firstLifeAboutText, $webURL, $displayName, $partnerUUID, $visible, $customType, $notes) === false) &&
+				(isset($name) || isset($email) || isset($created) || isset($allowPublish) || isset($maturePublish) || isset($wantToMask) || isset($wantToText) || isset($canDoMask) || isset($canDoText) || isset($languages) || isset($image) || isset($aboutText) || isset($firstLifeImage) || isset($firstLifeAboutText) || isset($webURL) || isset($displayName) || isset($partnerUUID) || isset($visible) || isset($customType) || isset($notes) || isset($userLevel)) &&
+				isset($name, $email, $created, $allowPublish, $maturePublish, $wantToMask, $wantToText, $canDoMask, $canDoText, $languages, $image, $aboutText, $firstLifeImage, $firstLifeAboutText, $webURL, $displayName, $partnerUUID, $visible, $customType, $notes, $userLevel) === false) &&
 				((isset($RLName) || isset($RLAddress) || isset($RLZip) || isset($RLCity) || isset($RLCountry)) && 
 				isset($RLName, $RLAddress, $RLZip, $RLCity, $RLCountry) === false)
 			){
@@ -455,7 +462,7 @@ namespace Aurora\Addon\WebUI{
 				if(isset($name, $email, $created, $allowPublish, $maturePublish, $wantToMask, $wantToText, $canDoMask, $canDoText, $languages, $image, $aboutText, $firstLifeImage, $firstLifeAboutText, $webURL, $displayName, $partnerUUID, $visible, $customType, $notes) === false){
 					throw new InvalidArgumentException('Cannot return profile for user by UUID, profile data has not been set.');
 				}
-				$registry[$uuid] = new static($uuid, $name, $email, $created, $allowPublish, $maturePublish, $wantToMask, $wantToText, $canDoMask, $canDoText, $languages, $image, $aboutText, $firstLifeImage, $firstLifeAboutText, $webURL, $displayName, $partnerUUID, $visible, $customType, $notes, $RLName, $RLAddress, $RLZip, $RLCity, $RLCountry);
+				$registry[$uuid] = new static($uuid, $name, $email, $created, $allowPublish, $maturePublish, $wantToMask, $wantToText, $canDoMask, $canDoText, $languages, $image, $aboutText, $firstLifeImage, $firstLifeAboutText, $webURL, $displayName, $partnerUUID, $visible, $customType, $notes, $userLevel, $RLName, $RLAddress, $RLZip, $RLCity, $RLCountry);
 			}else if(isset($uuid, $name, $email, $created, $allowPublish, $maturePublish, $wantToMask, $wantToText, $canDoMask, $canDoText, $languages, $image, $aboutText, $firstLifeImage, $firstLifeAboutText, $webURL, $displayName, $partnerUUID, $visible, $customType, $notes) === true){
 				$info = $registry[$uuid];
 				if(
@@ -479,9 +486,10 @@ namespace Aurora\Addon\WebUI{
 					$info->Visible()            !== $visible            ||
 					$info->CustomType()         !== $customType         ||
 					$info->Notes()              !== $notes              ||
+					$info->UserLevel()          !== $userLevel          ||
 					(string)$info->RLInfo()     !== trim(implode("\n", array($RLName, $RLAddress, $RLZip, $RLCity, $RLCountry)))
 				){
-					$registry[$uuid] = new static($uuid, $name, $email, $created, $allowPublish, $maturePublish, $wantToMask, $wantToText, $canDoMask, $canDoText, $languages, $image, $aboutText, $firstLifeImage, $firstLifeAboutText, $webURL, $displayName, $partnerUUID, $visible, $customType, $notes, $RLName, $RLAddress, $RLZip, $RLCity, $RLCountry);
+					$registry[$uuid] = new static($uuid, $name, $email, $created, $allowPublish, $maturePublish, $wantToMask, $wantToText, $canDoMask, $canDoText, $languages, $image, $aboutText, $firstLifeImage, $firstLifeAboutText, $webURL, $displayName, $partnerUUID, $visible, $customType, $notes, $userLevel, $RLName, $RLAddress, $RLZip, $RLCity, $RLCountry);
 				}
 			}
 			return $registry[$uuid];
@@ -629,6 +637,14 @@ namespace Aurora\Addon\WebUI{
 //!	@see Aurora::Addon::WebUI::UserProfile::$Notes
 		public function Notes(){
 			return $this->Notes;
+		}
+
+//!	integer User Level
+//!	@see Aurora::Addon::WebUI::UserProfile::UserLevel()
+		protected $UserLevel;
+//!	@see Aurora::Addon::WebUI::UserProfile::$UserLevel
+		public function UserLevel(){
+			return $this->UserLevel;
 		}
 
 //!	mixed Either an instance of Aurora::Addon::WebUI::RLInfo or NULL.
