@@ -649,7 +649,11 @@ namespace Aurora\Addon{
 				throw new LengthException('New password cannot be less than 8 characters long.');
 			}
 
-			$result = $this->makeCallToAPI('ChangePassword', array('UUID' => $uuid, 'Password' => $oldPassword, 'NewPassword' => $newPassword), array(
+			$result = $this->makeCallToAPI('ChangePassword', array(
+				'UUID'        => $uuid,
+				'Password'    => '$1$' . (substr($oldPassword, 0, 3) === '$1$' ? substr($oldPassword, 3) : md5($oldPassword)),
+				'NewPassword' => '$1$' . (substr($newPassword, 0, 3) === '$1$' ? substr($newPassword, 3) : md5($newPassword))
+			), array(
 				'Verified' => array('boolean'=>array())
 			));
 
