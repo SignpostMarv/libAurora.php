@@ -859,6 +859,31 @@ namespace Aurora\Addon{
 			return ($result->agent && $result->account);
 		}
 
+//!	Attempt to reset the user's avatar
+/**
+*	@param mixed $uuid either the account ID or an instance of Aurora::Addon::WebUI::abstractUser
+*/
+		public function ResetAvatar($uuid){
+			if($uuid instanceof WebUI\abstractUser){
+				if(is_null($name) === true){
+					$name = $uuid->Name();
+				}
+				$uuid = $uuid->PrincipalID();
+			}
+
+			if(is_string($uuid) === false){
+				throw new InvalidArgumentException('UUID must be a string.');
+			}else if(preg_match(self::regex_UUID, $uuid) === false){
+				throw new InvalidArgumentException('UUID was not a valid UUID.');
+			}
+
+			return $this->makeCallToAPI('ResetAvatar', array(
+				'User' => $uuid
+			), array(
+				'Success' => array('boolean' => array())
+			))->Success;
+		}
+
 //!	Attempt to fetch the public avatar archives.
 /**
 *	@return an instance of Aurora::Addon::WebUI::AvatarArchives corresponding to the result returned by the API end point.
