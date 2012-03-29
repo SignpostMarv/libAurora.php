@@ -15,7 +15,7 @@ namespace Aurora\Addon\WebUI{
 *	@param integer $number looks like the primary key according to IAbuseReports.GetAbuseReport
 *	@param string $details abuse report details
 *	@param string $location abuse report location
-*	@param string $username name of the account being reported
+*	@param string $userName name of the account being reported
 *	@param string $summary summary of abuse report
 *	@param boolean $active whether or not the abuse report is open.
 *	@param string $assignedTo name of admin the abuse report is assigned to.
@@ -36,7 +36,7 @@ namespace Aurora\Addon\WebUI{
 				throw new InvalidArgumentException('AR Details must be a string.');
 			}else if(is_string($location) === false){
 				throw new InvalidArgumentException('AR Location must be a string.');
-			}else if(is_string($username) === false){
+			}else if(is_string($userName) === false){
 				throw new InvalidArgumentException('AR accused name must be a string.');
 			}else if(is_string($summary) === false){
 				throw new InvalidArgumentException('AR summary must be a string.');
@@ -91,7 +91,7 @@ namespace Aurora\Addon\WebUI{
 *	@param integer $number looks like the primary key according to IAbuseReports.GetAbuseReport
 *	@param string $details abuse report details
 *	@param string $location abuse report location
-*	@param string $username name of the account being reported
+*	@param string $userName name of the account being reported
 *	@param string $summary summary of abuse report
 *	@param boolean $active whether or not the abuse report is open.
 *	@param string $assignedTo name of admin the abuse report is assigned to.
@@ -291,7 +291,7 @@ namespace Aurora\Addon\WebUI{
 		public function __construct(array $ARs=null){
 			if(isset($ARs) === true){
 				foreach($ARs as $AR){
-					if(($v instanceof AbuseReport) === false){
+					if(($AR instanceof AbuseReport) === false){
 						throw new InvalidArgumentException('Only instances of Aurora::Addon::WebUI::AbuseReport should be included in the array passed to Aurora::Addon::WebUI::AbuseReports::__construct()');
 					}
 				}

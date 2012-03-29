@@ -1125,15 +1125,31 @@ namespace Aurora\Addon{
 			}
 
 			$result = $this->makeCallToAPI('GetAbuseReports', array('Start' => $start, 'Count' => $count, 'Active' => $active), array(
-				'AbuseReports' => array('array'=>array())
+				'AbuseReports' => array('array'=>array(array(
+					'object' => array(array(
+						'AbuseDetails'   => array('string' =>array()),
+						'AbuseLocation'  => array('string' =>array()),
+						'AbuserName'     => array('string' =>array()),
+						'AbuseSummary'   => array('string' =>array()),
+						'Active'         => array('boolean'=>array()),
+						'AssignedTo'     => array('string' =>array()),
+						'Category'       => array('string' =>array()),
+						'Checked'        => array('boolean'=>array()),
+						'Notes'          => array('string' =>array()),
+						'Number'         => array('integer'=>array()),
+						'ObjectName'     => array('string' =>array()),
+						'ObjectPosition' => array('string' =>array()),
+						'ObjectUUID'     => array('string' =>array()),
+						'RegionName'     => array('string' =>array()),
+						'ReporterName'   => array('string' =>array()),
+						'ScreenshotID'   => array('string' =>array())
+					))
+				)))
 			));
 
 			$results = array();
 			foreach($result->AbuseReports as $AR){
-				if(isset($AR->Number, $AR->Details, $AR->Location, $AR->UserName, $AR->Summary, $AR->Active, $AR->AssignedTo, $AR->Category, $AR->Checked, $AR->Notes, $AR->ObjectName, $AR->ObjectPosition, $AR->ObjectUUID, $AR->RegionName, $AR->ReporterName, $AR->Screenshot) === false){
-					throw new UnexpectedValueException('Call to API was successful, but required response sub-properties were missing.');
-				}
-				$results[] = WebUI\AbuseReport::r($AR->Number, $AR->Details, $AR->Location, $AR->UserName, $AR->Summary, $AR->Active, $AR->AssignedTo, $AR->Category, $AR->Checked, $AR->Notes, $AR->ObjectName, $AR->ObjectPosition, $AR->ObjectUUID, $AR->RegionName, $AR->ReporterName, $AR->Screenshot);
+				$results[] = WebUI\AbuseReport::r($AR->Number, $AR->AbuseDetails, $AR->AbuseLocation, $AR->AbuserName, $AR->AbuseSummary, $AR->Active, $AR->AssignedTo, $AR->Category, $AR->Checked, $AR->Notes, $AR->ObjectName, $AR->ObjectPosition, $AR->ObjectUUID, $AR->RegionName, $AR->ReporterName, $AR->ScreenshotID);
 			}
 
 			return new WebUI\AbuseReports($results);
@@ -1147,6 +1163,8 @@ namespace Aurora\Addon{
 		public function AbuseReportMarkComplete($abuseReport){
 			if($abuseReport instanceof WebUI\AbuseReport){
 				$abuseReport = $abuseReport->Number();
+			}else if(is_string($abuseReport) === true && ctype_digit($abuseReport) === true){
+				$abuseReport = (integer)$abuseReport;
 			}
 
 			if(is_integer($abuseReport) === false){
@@ -1169,6 +1187,8 @@ namespace Aurora\Addon{
 		public function AbuseReportSaveNotes($abuseReport, $notes){
 			if($abuseReport instanceof WebUI\AbuseReport){
 				$abuseReport = $abuseReport->Number();
+			}else if(is_string($abuseReport) === true && ctype_digit($abuseReport) === true){
+				$abuseReport = (integer)$abuseReport;
 			}
 
 			if(is_integer($abuseReport) === false){
