@@ -624,7 +624,7 @@ namespace Aurora\Addon{
 			return $result->Verified;
 		}
 
-//!	Change password. NOTE: currently requires passwords to be sent to WebUI as plaintext.
+//!	Change password.
 /**
 *	@param mixed $uuid either a string UUID or an instance of Aurora::Services::Interfaces::User of the user we wish to change the name for.
 *	@param mixed $oldPassword old password
