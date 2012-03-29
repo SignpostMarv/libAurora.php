@@ -626,7 +626,7 @@ namespace Aurora\Addon{
 
 //!	Change password.
 /**
-*	@param mixed $uuid either a string UUID or an instance of Aurora::Services::Interfaces::User of the user we wish to change the name for.
+*	@param mixed $uuid either a string UUID or an instance of Aurora::Services::Interfaces::User of the user we wish to change the password for.
 *	@param mixed $oldPassword old password
 *	@param mixed $newPassword new password
 */
@@ -649,15 +649,43 @@ namespace Aurora\Addon{
 				throw new LengthException('New password cannot be less than 8 characters long.');
 			}
 
-			$result = $this->makeCallToAPI('ChangePassword', array(
+			return $this->makeCallToAPI('ChangePassword', array(
 				'UUID'        => $uuid,
 				'Password'    => '$1$' . (substr($oldPassword, 0, 3) === '$1$' ? substr($oldPassword, 3) : md5($oldPassword)),
 				'NewPassword' => '$1$' . (substr($newPassword, 0, 3) === '$1$' ? substr($newPassword, 3) : md5($newPassword))
 			), array(
 				'Verified' => array('boolean'=>array())
-			));
+			))->Verified;
+		}
 
-			return $result->Verified;
+//!	Change password without old password
+/**
+*	@param mixed $uuid either a string UUID or an instance of Aurora::Services::Interfaces::User of the user we wish to change the password for.
+*	@param mixed $newPassword new password
+*/
+		public function ForgotPassword($uuid, $newPassword){
+			if($uuid instanceof User){
+				$uuid = $uuid->PrincipalID();
+			}
+
+			if(is_string($uuid) === false){
+				throw new InvalidArgumentException('UUID must be a string.');
+			}else if(preg_match(self::regex_UUID, $uuid) !== 1){
+				throw new InvalidArgumentException('UUID was not a valid UUID.');
+			}else if(is_string($newPassword) === false){
+				throw new InvalidArgumentException('New password must be a string.');
+			}else if(trim($newPassword) === ''){
+				throw new InvalidArgumentException('New password cannot be an empty string.');
+			}else if(strlen($newPassword) < 8){
+				throw new LengthException('New password cannot be less than 8 characters long.');
+			}
+
+			return $this->makeCallToAPI('ForgotPassword', array(
+				'UUID'        => $uuid,
+				'Password' => '$1$' . (substr($newPassword, 0, 3) === '$1$' ? substr($newPassword, 3) : md5($newPassword))
+			), array(
+				'Verified' => array('boolean'=>array())
+			))->Verified;
 		}
 
 //!	Confirm the account name and email address (used by forgotten password activities)
