@@ -493,6 +493,25 @@ namespace Aurora\Addon{
 			return $result->Verified;
 		}
 
+		
+		protected static function GridUserInfoValidator(){
+			static $validator = array(
+				'UUID'              => array('string' =>array()),
+				'HomeUUID'          => array('string' =>array()),
+				'HomeName'          => array('string' =>array()),
+				'CurrentRegionUUID' => array('string' =>array()),
+				'CurrentRegionName' => array('string' =>array()),
+				'Online'            => array('boolean'=>array()),
+				'Email'             => array('string' =>array()),
+				'Name'              => array('string' =>array()),
+				'FirstName'         => array('string' =>array()),
+				'LastName'          => array('string' =>array()),
+				'LastLogin'         => array('boolean'=>array(false), 'integer'=>array()),
+				'LastLogout'        => array('boolean'=>array(false), 'integer'=>array()),
+			);
+			return $validator;
+		}
+
 //!	Get the GetGridUserInfo for the specified user.
 /**
 *	@param mixed $uuid either a string UUID of the user we wish to check, or an instance of Aurora::Services::Interfaces::User
@@ -507,20 +526,7 @@ namespace Aurora\Addon{
 			}else if(preg_match(self::regex_UUID, $uuid) !== 1){
 				throw new InvalidArgumentException('UUID supplied was not a valid UUID.');
 			}
-			$result = $this->makeCallToAPI('GetGridUserInfo', array('UUID'=>$uuid), array(
-				'UUID'              => array('string' =>array()),
-				'HomeUUID'          => array('string' =>array()),
-				'HomeName'          => array('string' =>array()),
-				'CurrentRegionUUID' => array('string' =>array()),
-				'CurrentRegionName' => array('string' =>array()),
-				'Online'            => array('boolean'=>array()),
-				'Email'             => array('string' =>array()),
-				'Name'              => array('string' =>array()),
-				'FirstName'         => array('string' =>array()),
-				'LastName'          => array('string' =>array()),
-				'LastLogin'         => array('boolean'=>array(false), 'integer'=>array()),
-				'LastLogout'        => array('boolean'=>array(false), 'integer'=>array()),
-			));
+			$result = $this->makeCallToAPI('GetGridUserInfo', array('UUID'=>$uuid), static::GridUserInfoValidator());
 			// this is where we get lazy and leave validation up to the GridUserInfo class.
 			return	WebUI\GridUserInfo::r(
 				$result->UUID,
@@ -1120,6 +1126,67 @@ namespace Aurora\Addon{
 			), array(
 				'result' => array('integer'=>array())
 			))->result;
+		}
+
+//!	Attempt to get a list of recently online users
+/**
+*	@param integer $secondsAgo The maximum number of seconds ago that the user would have logged in to include in the query
+*	@param boolean $stillOnline TRUE includes users still online, FALSE otherwise
+*/
+		public function RecentlyOnlineUsers($secondsAgo=0, $stillOnline=false, $start=0, $count=10, $asArray=false){
+			if(is_string($secondsAgo) && ctype_digit($secondsAgo) === true){
+				$secondsAgo = (integer)$secondsAgo;
+			}
+			if(is_string($start) && ctype_digit($start) === true){
+				$start = (integer)$start;
+			}
+			if(is_string($count) && ctype_digit($count) === true){
+				$count = (integer)$count;
+			}
+			
+			
+			if(is_integer($start) === false){
+				throw new InvalidArgumentException('Start point must be an integer.');
+			}else if(is_integer($count) === false){
+				throw new InvalidArgumentException('Maximum batch count must be an integer.');
+			}else if(is_integer($secondsAgo) === false){
+				throw new InvalidArgumentException('secondsAgo must be specified as integer.');
+			}else if($secondsAgo < 0){
+				throw new InvalidArgumentException('secondsAgo must be greater than or equal to zero.');
+			}else if(is_bool($stillOnline) === false){
+				throw new InvalidArgumentException('stillOnline must be specified as a boolean.');
+			}
+			$result = $this->makeCallToAPI('RecentlyOnlineUsers', array(
+				'secondsAgo'  => $secondsAgo,
+				'stillOnline' => $stillOnline ? 1 : 0,
+				'Start'       => $start,
+				'Count'       => $count
+			), array(
+				'Start' => array('integer'=>array()),
+				'Count' => array('integer'=>array()),
+				'Total' => array('integer'=>array()),
+				'Users' => array('array'  =>array(array(
+					'object' => array(static::GridUserInfoValidator())
+				)))
+			));
+			
+			$users = array();
+			foreach($result->Users as $user){
+				$users[] = WebUI\GridUserInfo::r(
+					$user->UUID,
+					$user->Name,
+					$user->HomeUUID,
+					$user->HomeName,
+					$user->CurrentRegionUUID,
+					$user->CurrentRegionName,
+					$user->Online,
+					$user->Email,
+					$user->LastLogin  === false ? null : $user->LastLogin,
+					$user->LastLogout === false ? null : $user->LastLogout
+				);
+			}
+			
+			return $asArray ? $users : WebUI\RecentlyOnlineUsersIterator::f($this, $secondsAgo, $stillOnline, $start, $result->Total, $users);
 		}
 
 //!	Attempt to fetch all Abuse Reports.

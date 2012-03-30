@@ -5,8 +5,11 @@
 
 namespace Aurora\Addon\WebUI{
 
+	use SeekableIterator;
 	use IteratorAggregate;
 
+	use Aurora\Addon\WORM;
+	use Aurora\Addon\WebUI;
 	use Aurora\Services\Interfaces;
 	use Aurora\Addon\abstractIterator;
 
@@ -248,7 +251,18 @@ namespace Aurora\Addon\WebUI{
 				if(isset($name, $homeUUID, $homeName, $onlineStatus, $email) === false){
 					throw new InvalidArgumentException('Cannot return grid info for user by UUID, grid info has not been set.');
 				}
-				$registry[$uuid] = new static($uuid, $name, $homeUUID, $homeName, $onlineStatus, $email, $lastLogin, $lastLogout);
+				$registry[$uuid] = new static(
+					$uuid,
+					$name,
+					$homeUUID,
+					$homeName,
+					$currentRegionUUID,
+					$currentRegionName,
+					$onlineStatus,
+					$email,
+					$lastLogin,
+					$lastLogout
+				);
 			}else if(isset($name, $homeUUID, $homeName, $onlineStatus, $email) === true){
 				$info = $registry[$uuid];
 				if(
@@ -262,7 +276,18 @@ namespace Aurora\Addon\WebUI{
 					$info->LastLogin()         !== $lastLogin         ||
 					$info->LastLogout()        !== $lastLogout
 				){
-					$registry[$uuid] = new static($uuid, $name, $homeUUID, $homeName, $currentRegionUUID, $currentRegionName, $onlineStatus, $email, $lastLogin, $lastLogout);
+					$registry[$uuid] = new static(
+						$uuid,
+						$name,
+						$homeUUID,
+						$homeName,
+						$currentRegionUUID,
+						$currentRegionName,
+						$onlineStatus,
+						$email,
+						$lastLogin,
+						$lastLogout
+					);
 				}
 			}
 			return $registry[$uuid];
@@ -894,6 +919,147 @@ namespace Aurora\Addon\WebUI{
 				reset($users);
 				$this->data = $users;
 			}
+		}
+	}
+
+//!	Recently online users iterator. Returned by Aurora::Addon::WebUI::RecentlyOnlineUsers()
+	class RecentlyOnlineUsersIterator extends WORM implements SeekableIterator{
+
+//!	object instance of Aurora::Addon::WebUI
+		protected $WebUI;
+
+//!	integer Since we're allowing non-contiguous, delayed access to the region list, we need to pre-fetch the total size of the request.
+		private $total;
+
+//!	integer cursor position
+		private $pos = 0;
+
+//!	integer how recently to check
+		private $secondsAgo=0;
+
+//!	boolean whether to check for users that are still online.
+		private $stillOnline=false;
+
+//!	We're hiding this behind factory methods.
+		protected function __construct(WebUI $WebUI, $secondsAgo=0, $stillOnline=false, $start=0, $total=0, array $userInfo=null){
+			if(is_string($secondsAgo) && ctype_digit($secondsAgo) === true){
+				$secondsAgo = (integer)$secondsAgo;
+			}
+			if(is_string($start) && ctype_digit($start) === true){
+				$start = (integer)$start;
+			}
+			if(is_string($total) && ctype_digit($total) === true){
+				$total = (integer)$total;
+			}
+			
+			
+			if(is_integer($start) === false){
+				throw new InvalidArgumentException('Start point must be an integer.');
+			}else if(is_integer($total) === false){
+				throw new InvalidArgumentException('Total must be an integer.');
+			}else if(is_integer($secondsAgo) === false){
+				throw new InvalidArgumentException('secondsAgo must be specified as integer.');
+			}else if($secondsAgo < 0){
+				throw new InvalidArgumentException('secondsAgo must be greater than or equal to zero.');
+			}else if(is_bool($stillOnline) === false){
+				throw new InvalidArgumentException('stillOnline must be specified as a boolean.');
+			}
+
+			if(isset($userInfo) === true){
+				$i = $start;
+				foreach($userInfo as $info){
+					if($info instanceof GridUserInfo){
+						$this->data[$i++] = $info;
+					}else{
+						throw new InvalidArgumentException('Values of instantiated regions array must be instances of Aurora::Addon::WebUI::GridUserInfo');
+					}
+				}
+			}
+
+			$this->WebUI = $WebUI;
+			$this->total = $total;
+			$this->pos   = $start;
+
+			$this->secondsAgo  = $secondsAgo;
+			$this->stillOnline = $stillOnline;
+		}
+
+//!	In a long-running process, the secondsAgo parameter might become "stale", so we don't use a registry.
+		public static function f(WebUI $WebUI, $secondsAgo=0, $stillOnline=false, $start=0, $total=0, array $userInfo=null){
+			return new static($WebUI, $secondsAgo, $stillOnline, $start, $total, $userInfo);
+		}
+
+//!	We're not supporting external manipulation of Aurora::Addon::WebUI::RecentlyOnlineUsersIterator::$data
+		public function offsetSet($offset, $value){
+			throw new BadMethodCallException('Instances of Aurora::Addon::WebUI::RecentlyOnlineUsersIterator cannot be modified from outside of the object scope.');
+		}
+
+//!	Sets the cursor position
+/**
+*	@param integer $to desired cursor position
+*/
+		public function seek($to){
+			if(is_string($to) === true && ctype_digit($to) === true){
+				$to = (integer)$to;
+			}
+			if(is_integer($to) === true && $to < 0){
+				$to = abs($to) % $this->count();
+				$to = $this->count() - $to;
+			}
+
+			if(is_integer($to) === false){
+				throw new InvalidArgumentException('Seek point must be an integer.');
+			}else if($to >= $this->count() && $to !== 0){
+				throw new LengthException('Cannot seek past Aurora::Addon::WebUI::RecentlyOnlineUsersIterator::count()');
+			}
+
+			$this->pos = $to;
+		}
+
+//!	Indicates the total size of the query, not the number of users currently on the iterator
+/**
+*	@return integer
+*/
+		public function count(){
+			return $this->total;
+		}
+
+//!	Gets the cursor position
+/**
+*	@return mixed Integer if the cursor position is valid, NULL otherwise.
+*/
+		public function key(){
+			return ($this->pos < $this->count()) ? $this->pos : null;
+		}
+
+//!	Determines if the current cursor position is valid
+/**
+*	@return boolean TRUE if the cursor position is valid, FALSE otherwise
+*/
+		public function valid(){
+			return ($this->key() !== null);
+		}
+
+//!	advance the cursor
+		public function next(){
+			++$this->pos;
+		}
+
+//!	To avoid slowdowns due to an excessive amount of curl calls, we populate Aurora::Addon::WebUI::RecentlyOnlineUsersIterator::$data in batches of 10
+/**
+*	@return mixed either NULL or an instance of Aurora::Addon::WebUI::GridUserInfo
+*/
+		public function current(){
+			if($this->valid() === false){
+				return null;
+			}else if(isset($this->data[$this->key()]) === false){
+				$start   = $this->key();
+				$results = $this->WebUI->RecentlyOnlineUsers($this->secondsAgo, $this->stillOnline, $start, 10, true);
+				foreach($results as $user){
+					$this->data[$start++] = $user;
+				}
+			}
+			return $this->data[$this->key()];
 		}
 	}
 }
