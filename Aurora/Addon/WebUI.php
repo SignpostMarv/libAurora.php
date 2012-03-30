@@ -1102,7 +1102,7 @@ namespace Aurora\Addon{
 *	@param boolean $stillOnline TRUE includes users still online, FALSE otherwise
 *	@return integer The number of recently online users filtered by the method arguments
 */
-		public function RecentlyOnlineUsers($secondsAgo=0, $stillOnline=false){
+		public function NumberOfRecentlyOnlineUsers($secondsAgo=0, $stillOnline=false){
 			if(is_string($secondsAgo) && ctype_digit($secondsAgo) === true){
 				$secondsAgo = (integer)$secondsAgo;
 			}
@@ -1114,7 +1114,7 @@ namespace Aurora\Addon{
 			}else if(is_bool($stillOnline) === false){
 				throw new InvalidArgumentException('stillOnline must be specified as a boolean.');
 			}
-			return $this->makeCallToAPI('RecentlyOnlineUsers', array(
+			return $this->makeCallToAPI('NumberOfRecentlyOnlineUsers', array(
 				'secondsAgo'  => $secondsAgo,
 				'stillOnline' => $stillOnline ? 1 : 0
 			), array(
