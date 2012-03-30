@@ -345,6 +345,7 @@ namespace Aurora\Addon\WebUI{
 		public function offsetSet($offset, $value){
 			throw new BadMethodCallException('Instances of Aurora::Addon::WebUI::RegionsIterator cannot be modified from outside of the object scope.');
 		}
+
 //!	Sets the cursor position
 /**
 *	@param integer $to desired cursor position
