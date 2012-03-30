@@ -188,7 +188,7 @@ namespace Aurora\Addon\WebUI{
 *	@param string $onlineStatus TRUE if the user is currently online, FALSE otherwise.
 *	@param string $email either a valid email address or an empty string.
 */
-		protected function __construct($uuid, $name, $homeUUID, $homeName, $onlineStatus, $email, $lastLogin=null, $lastLogout=null){
+		protected function __construct($uuid, $name, $homeUUID, $homeName, $currentRegionUUID, $currentRegionName, $onlineStatus, $email, $lastLogin=null, $lastLogout=null){
 			if(is_string($homeUUID) === false){
 				throw new InvalidArgumentException('Home region UUID must be a string.');
 			}else if(preg_match(\Aurora\Addon\WebUI::regex_UUID, $homeUUID) !== 1){
@@ -197,6 +197,14 @@ namespace Aurora\Addon\WebUI{
 				throw new InvalidArgumentException('Home region name must be a string.');
 			}else if($homeUUID !== '00000000-0000-0000-0000-000000000000' && trim($homeName) === ''){
 				throw new InvalidArgumentException('Home region name cannot be an empty string.');
+			}else if(is_string($currentRegionUUID) === false){
+				throw new InvalidArgumentException('Current region UUID must be a string.');
+			}else if(preg_match(\Aurora\Addon\WebUI::regex_UUID, $currentRegionUUID) !== 1){
+				throw new InvalidArgumentException('Current region UUID was not a valid UUID.');
+			}else if(is_string($currentRegionName) === false){
+				throw new InvalidArgumentException('Current region name must be a string.');
+			}else if($currentRegionUUID !== '00000000-0000-0000-0000-000000000000' && trim($currentRegionName) === ''){
+				throw new InvalidArgumentException('Current region name cannot be an empty string.');
 			}else if(is_bool($onlineStatus) === false){
 				throw new InvalidArgumentException('Online status must be a boolean.');
 			}else if(isset($lastLogin) === true && is_integer($lastLogin) === false){
@@ -205,11 +213,13 @@ namespace Aurora\Addon\WebUI{
 				throw new InvalidArgumentException('If the last logout time is specified, it must be specified as integer.');
 			}
 
-			$this->HomeUUID   = $homeUUID;
-			$this->HomeName   = $homeName;
-			$this->Online     = $onlineStatus;
-			$this->LastLogin  = $lastLogin;
-			$this->LastLogout = $lastLogout;
+			$this->HomeUUID          = $homeUUID;
+			$this->HomeName          = trim($homeName);
+			$this->CurrentRegionUUID = $currentRegionUUID;
+			$this->CurrentRegionName = trim($currentRegionName);
+			$this->Online            = $onlineStatus;
+			$this->LastLogin         = $lastLogin;
+			$this->LastLogout        = $lastLogout;
 
 			parent::__construct($uuid, $name, $email);
 		}
@@ -224,12 +234,12 @@ namespace Aurora\Addon\WebUI{
 *	@param string $email either a valid email address or an empty string.
 *	@return object instance of Aurora::Addon::WebUI::GridUserInfo
 */
-		public static function r($uuid, $name=null, $homeUUID=null, $homeName=null, $onlineStatus=null, $email=null, $lastLogin=null, $lastLogout=null){
+		public static function r($uuid, $name=null, $homeUUID=null, $homeName=null, $currentRegionUUID=null, $currentRegionName=null, $onlineStatus=null, $email=null, $lastLogin=null, $lastLogout=null){
 			if(is_string($uuid) === false){
 				throw new InvalidArgumentException('UUID must be a string.');
 			}else if(preg_match(\Aurora\Addon\WebUI::regex_UUID, $uuid) === false){
 				throw new InvalidArgumentException('UUID was not a valid UUID.');
-			}else if((isset($name) || isset($homeUUID) || isset($homeName) || isset($onlineStatus) || isset($email)) && isset($name, $homeUUID, $homeName, $onlineStatus, $email) === false){
+			}else if((isset($name) || isset($homeUUID) || isset($homeName) || isset($onlineStatus) || isset($email)) && isset($name, $homeUUID, $homeName, $currentRegionUUID, $currentRegionName, $onlineStatus, $email) === false){
 				throw new InvalidArgumentException('If the grid info of the user has changed, all info must be specified.');
 			}
 			$uuid = strtolower($uuid);
@@ -242,15 +252,17 @@ namespace Aurora\Addon\WebUI{
 			}else if(isset($name, $homeUUID, $homeName, $onlineStatus, $email) === true){
 				$info = $registry[$uuid];
 				if(
-					$info->Name()       !== $name         ||
-					$info->HomeUUID()   !== $homeUUID     ||
-					$info->HomeName()   !== $homeName     ||
-					$info->Online()     !== $onlineStatus ||
-					$info->Email()      !== $email        ||
-					$info->LastLogin()  !== $lastLogin    ||
-					$info->LastLogout() !== $lastLogout
+					$info->Name()              !== $name              ||
+					$info->HomeUUID()          !== $homeUUID          ||
+					$info->HomeName()          !== $homeName          ||
+					$info->CurrentRegionUUID() !== $currentRegionUUID ||
+					$info->CurrentRegionName() !== $currentRegionName ||
+					$info->Online()            !== $onlineStatus      ||
+					$info->Email()             !== $email             ||
+					$info->LastLogin()         !== $lastLogin         ||
+					$info->LastLogout()        !== $lastLogout
 				){
-					$registry[$uuid] = new static($uuid, $name, $homeUUID, $homeName, $onlineStatus, $email, $lastLogin, $lastLogout);
+					$registry[$uuid] = new static($uuid, $name, $homeUUID, $homeName, $currentRegionUUID, $currentRegionName, $onlineStatus, $email, $lastLogin, $lastLogout);
 				}
 			}
 			return $registry[$uuid];
@@ -270,6 +282,22 @@ namespace Aurora\Addon\WebUI{
 //!	@see Aurora::Addon::WebUI::GridUserInfo::$HomeName
 		public function HomeName(){
 			return $this->HomeName;
+		}
+
+//!	string user current region UUID
+//!	@see Aurora::Addon::WebUI::GridUserInfo::CurrentRegionUUID()
+		protected $CurrentRegionUUID;
+//!	@see Aurora::Addon::WebUI::GridUserInfo::$CurrentRegionUUID
+		public function CurrentRegionUUID(){
+			return $this->CurrentRegionUUID;
+		}
+
+//!	string user current region name
+//!	@see Aurora::Addon::WebUI::GridUserInfo::CurrentRegionName()
+		protected $CurrentRegionName;
+//!	@see Aurora::Addon::WebUI::GridUserInfo::$CurrentRegionName
+		public function CurrentRegionName(){
+			return $this->CurrentRegionName;
 		}
 
 //!	boolean TRUE if Online, FALSE otherwise

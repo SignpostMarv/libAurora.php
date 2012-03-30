@@ -508,19 +508,32 @@ namespace Aurora\Addon{
 				throw new InvalidArgumentException('UUID supplied was not a valid UUID.');
 			}
 			$result = $this->makeCallToAPI('GetGridUserInfo', array('UUID'=>$uuid), array(
-				'UUID'      => array('string' =>array()),
-				'HomeUUID'  => array('string' =>array()),
-				'HomeName'  => array('string' =>array()),
-				'Online'    => array('boolean'=>array()),
-				'Email'     => array('string' =>array()),
-				'Name'      => array('string' =>array()),
-				'FirstName' => array('string' =>array()),
-				'LastName'  => array('string' =>array()),
-				'LastLogin' => array('boolean'=>array(false), 'integer'=>array()),
-				'LastLogout' => array('boolean'=>array(false), 'integer'=>array()),
+				'UUID'              => array('string' =>array()),
+				'HomeUUID'          => array('string' =>array()),
+				'HomeName'          => array('string' =>array()),
+				'CurrentRegionUUID' => array('string' =>array()),
+				'CurrentRegionName' => array('string' =>array()),
+				'Online'            => array('boolean'=>array()),
+				'Email'             => array('string' =>array()),
+				'Name'              => array('string' =>array()),
+				'FirstName'         => array('string' =>array()),
+				'LastName'          => array('string' =>array()),
+				'LastLogin'         => array('boolean'=>array(false), 'integer'=>array()),
+				'LastLogout'        => array('boolean'=>array(false), 'integer'=>array()),
 			));
 			// this is where we get lazy and leave validation up to the GridUserInfo class.
-			return	WebUI\GridUserInfo::r($result->UUID, $result->Name, $result->HomeUUID, $result->HomeName, $result->Online, $result->Email, $result->LastLogin === false ? null : $result->LastLogin, $result->LastLogout === false ? null : $result->LastLogout);
+			return	WebUI\GridUserInfo::r(
+				$result->UUID,
+				$result->Name,
+				$result->HomeUUID,
+				$result->HomeName,
+				$result->CurrentRegionUUID,
+				$result->CurrentRegionName,
+				$result->Online,
+				$result->Email,
+				$result->LastLogin === false ? null : $result->LastLogin,
+				$result->LastLogout === false ? null : $result->LastLogout
+			);
 		}
 
 //!	Set the home location for the specified user.
