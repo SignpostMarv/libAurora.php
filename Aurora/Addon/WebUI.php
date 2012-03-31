@@ -1058,12 +1058,12 @@ namespace Aurora\Addon{
 
 //!	Attempt to search for users
 /**
+*	@param string $query search filter
 *	@param mixed $start either an integer start point for results, or $query when we're being lazy.
 *	@param integer $end end point for results
-*	@param string $query search filter
 *	@return object an instance of Aurora::Addon::WebUI::SearchUserResults
 */
-		public function FindUsers($start=0, $end=25, $query=''){
+		public function FindUsers($query='', $start=0, $count=25, $asArray=false){
 			if(is_string($start) === true){
 				if(ctype_digit($start) === true){
 					$start = (integer)$start;
@@ -1072,8 +1072,8 @@ namespace Aurora\Addon{
 					$start = 0;
 				}
 			}
-			if(is_string($end) === true && ctype_digit($end) === true){
-				$end = (integer)$end;
+			if(is_string($count) === true && ctype_digit($count) === true){
+				$count = (integer)$count;
 			}
 			if(is_string($query) === true){
 				$query = trim($query);
@@ -1081,25 +1081,35 @@ namespace Aurora\Addon{
 
 			if(is_integer($start) === false){
 				throw new InvalidArgumentException('Start point must be an integer.');
-			}else if(is_integer($end) === false){
-				throw new InvalidArgumentException('End point must be an integer.');
+			}else if(is_integer($count) === false){
+				throw new InvalidArgumentException('Count point must be an integer.');
 			}else if(is_string($query) === false){
 				throw new InvalidArgumentException('Query filter must be a string.');
 			}
 
-			$result = $this->makeCallToAPI('FindUsers', array('Start'=>$start, 'End'=>$end, 'Query'=>$query), array(
-				'Users' => array('array'=>array())
-			));
-
+			$has = WebUI\SearchUserResults::hasInstance($this, $query);
 			$results = array();
-			foreach($result->Users as $userdata){
-				if(isset($userdata->PrincipalID, $userdata->UserName, $userdata->Created, $userdata->UserFlags) === false){
-					throw new UnexpectedValueException('Call to API was successful but required response sub-properties were missing.');
+
+			if($asArray == true || $has === false){
+				$result = $this->makeCallToAPI('FindUsers', array(
+					'Start'=>$start,
+					'Count'=>$count,
+					'Query'=>$query
+				), array(
+					'Users' => array('array'=>array()),
+					'Total' => array('integer'=>array())
+				));
+
+				foreach($result->Users as $userdata){
+					if(isset($userdata->PrincipalID, $userdata->UserName, $userdata->Created, $userdata->UserFlags) === false){
+						throw new UnexpectedValueException('Call to API was successful but required response sub-properties were missing.');
+					}
+					$results[] = WebUI\SearchUser::r($userdata->PrincipalID, $userdata->UserName, $userdata->Created, $userdata->UserFlags);
 				}
-				$results[] = WebUI\SearchUser::r($userdata->PrincipalID, $userdata->UserName, $userdata->Created, $userdata->UserFlags);
 			}
 
-			return new WebUI\SearchUserResults($results);
+
+			return $asArray ? $results : WebUI\SearchUserResults::r($this, $query, $start, $has ? null : $result->Total, $results);
 		}
 
 //!	Attempt to get the number of recently online users filtering the query by the method arguments

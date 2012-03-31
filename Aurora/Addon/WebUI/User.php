@@ -67,6 +67,7 @@ namespace Aurora\Addon\WebUI{
 		}
 	}
 
+
 	abstract class abstractUserHasName extends abstractUser{
 		protected function __construct($uuid, $name){
 			$firstName = explode(' ', $name);
@@ -902,14 +903,27 @@ namespace Aurora\Addon\WebUI{
 	}
 
 //!	SearchUserResults iterator. Returned by Aurora::Addon::WebUI::FindUsers
-	class SearchUserResults extends abstractUserIterator{
+	class SearchUserResults extends abstractLazyLoadingSeekableIterator{
 
-//!	public constructor
+//!	string query sent to the API
+		private $query='';
+
+//!	protected constructor
 /**
 *	Since Aurora::Addon::WebUI::SearchUserResults does not implement methods for appending values, calling the constructor with no arguments is a shorthand means of indicating there are no search users available.
 *	@param mixed $archives an array of Aurora::Addon::WebUI::SearchUser instances or NULL
 */
-		public function __construct(array $users=null){
+		protected function __construct(WebUI $WebUI, $query='', $start=0, $total=0, array $users=null){
+			if(is_string($start) && ctype_digit($start) === true){
+				$start = (integer)$start;
+			}
+
+			if(is_integer($start) === false){
+				throw new InvalidArgumentException('Start point must be an integer.');
+			}else if(is_string($query) === false){
+				throw new InvalidArgumentException('Query must be a string.');
+			}
+
 			if(isset($users) === true){
 				foreach($users as $v){
 					if(($v instanceof SearchUser) === false){
@@ -919,20 +933,80 @@ namespace Aurora\Addon\WebUI{
 				reset($users);
 				$this->data = $users;
 			}
+
+			$this->query = $query;
+
+			parent::__construct($WebUI, $start, $total);
+		}
+
+		protected static $registry = array();
+
+		public static function hasInstance(WebUI $WebUI, $query=''){
+			if(is_string($query) === false){
+				throw new InvalidArgumentException('Query must be a string.');
+			}
+			$query = trim($query);
+			$hash = md5(spl_object_hash($WebUI) . ':' . $query);
+			return (isset($registry[$hash]) === true);
+		}
+
+
+		public static function r(WebUI $WebUI, $query='', $start=0, $total=null, array $users=null){
+			if(is_string($start) && ctype_digit($start) === true){
+				$start = (integer)$start;
+			}
+			if(is_string($total) && ctype_digit($total) === true){
+				$total = (integer)$total;
+			}
+
+			if(is_integer($start) === false){
+				throw new InvalidArgumentException('Start point must be an integer.');
+			}else if(isset($total) && is_integer($total) === false){
+				throw new InvalidArgumentException('Total must be an integer.');
+			}else if(is_string($query) === false){
+				throw new InvalidArgumentException('Query must be a string.');
+			}
+
+			$query = trim($query);
+			$hash = md5(spl_object_hash($WebUI) . ':' . $query);
+			$has  = static::hasInstance($WebUI, $query, $total);
+
+			if($has === false && isset($total) === false){
+				throw new InvalidArgumentException('When no instance has been cached the total results must be specified');
+			}
+			$makeNew = !$has || $registry[$hash]->count() !== $total;
+
+			if($makeNew === true && $total > 0 && count($users) === 0){
+				throw new BadMethodCallException('When the total number of users is greater than zero, there should always be a subset of the results to pre-populate an instance with.');
+			}else if($makeNew){
+				$registry[$hash] = new static($WebUI, $query, $start, $total, $users);
+			}
+
+			$registry[$hash]->seek($start);
+
+			return $registry[$hash];
+		}
+
+//!	To avoid slowdowns due to an excessive amount of curl calls, we populate Aurora::Addon::WebUI::SearchUserResults::$data in batches of 10
+/**
+*	@return mixed either NULL or an instance of Aurora::Addon::WebUI::SearchUser
+*/
+		public function current(){
+			if($this->valid() === false){
+				return null;
+			}else if(isset($this->data[$this->key()]) === false){
+				$start   = $this->key();
+				$results = $this->WebUI->FindUsers($this->query, $start, 10, true);
+				foreach($results as $user){
+					$this->data[$start++] = $user;
+				}
+			}
+			return $this->data[$this->key()];
 		}
 	}
 
 //!	Recently online users iterator. Returned by Aurora::Addon::WebUI::RecentlyOnlineUsers()
-	class RecentlyOnlineUsersIterator extends WORM implements SeekableIterator{
-
-//!	object instance of Aurora::Addon::WebUI
-		protected $WebUI;
-
-//!	integer Since we're allowing non-contiguous, delayed access to the region list, we need to pre-fetch the total size of the request.
-		private $total;
-
-//!	integer cursor position
-		private $pos = 0;
+	class RecentlyOnlineUsersIterator extends abstractLazyLoadingSeekableIterator{
 
 //!	integer how recently to check
 		private $secondsAgo=0;
@@ -948,15 +1022,9 @@ namespace Aurora\Addon\WebUI{
 			if(is_string($start) && ctype_digit($start) === true){
 				$start = (integer)$start;
 			}
-			if(is_string($total) && ctype_digit($total) === true){
-				$total = (integer)$total;
-			}
-			
-			
+
 			if(is_integer($start) === false){
 				throw new InvalidArgumentException('Start point must be an integer.');
-			}else if(is_integer($total) === false){
-				throw new InvalidArgumentException('Total must be an integer.');
 			}else if(is_integer($secondsAgo) === false){
 				throw new InvalidArgumentException('secondsAgo must be specified as integer.');
 			}else if($secondsAgo < 0){
@@ -976,73 +1044,15 @@ namespace Aurora\Addon\WebUI{
 				}
 			}
 
-			$this->WebUI = $WebUI;
-			$this->total = $total;
-			$this->pos   = $start;
-
 			$this->secondsAgo  = $secondsAgo;
 			$this->stillOnline = $stillOnline;
+
+			parent::__construct($WebUI, $start, $total);
 		}
 
 //!	In a long-running process, the secondsAgo parameter might become "stale", so we don't use a registry.
 		public static function f(WebUI $WebUI, $secondsAgo=0, $stillOnline=false, $start=0, $total=0, array $userInfo=null){
 			return new static($WebUI, $secondsAgo, $stillOnline, $start, $total, $userInfo);
-		}
-
-//!	We're not supporting external manipulation of Aurora::Addon::WebUI::RecentlyOnlineUsersIterator::$data
-		public function offsetSet($offset, $value){
-			throw new BadMethodCallException('Instances of Aurora::Addon::WebUI::RecentlyOnlineUsersIterator cannot be modified from outside of the object scope.');
-		}
-
-//!	Sets the cursor position
-/**
-*	@param integer $to desired cursor position
-*/
-		public function seek($to){
-			if(is_string($to) === true && ctype_digit($to) === true){
-				$to = (integer)$to;
-			}
-			if(is_integer($to) === true && $to < 0){
-				$to = abs($to) % $this->count();
-				$to = $this->count() - $to;
-			}
-
-			if(is_integer($to) === false){
-				throw new InvalidArgumentException('Seek point must be an integer.');
-			}else if($to >= $this->count() && $to !== 0){
-				throw new LengthException('Cannot seek past Aurora::Addon::WebUI::RecentlyOnlineUsersIterator::count()');
-			}
-
-			$this->pos = $to;
-		}
-
-//!	Indicates the total size of the query, not the number of users currently on the iterator
-/**
-*	@return integer
-*/
-		public function count(){
-			return $this->total;
-		}
-
-//!	Gets the cursor position
-/**
-*	@return mixed Integer if the cursor position is valid, NULL otherwise.
-*/
-		public function key(){
-			return ($this->pos < $this->count()) ? $this->pos : null;
-		}
-
-//!	Determines if the current cursor position is valid
-/**
-*	@return boolean TRUE if the cursor position is valid, FALSE otherwise
-*/
-		public function valid(){
-			return ($this->key() !== null);
-		}
-
-//!	advance the cursor
-		public function next(){
-			++$this->pos;
 		}
 
 //!	To avoid slowdowns due to an excessive amount of curl calls, we populate Aurora::Addon::WebUI::RecentlyOnlineUsersIterator::$data in batches of 10
