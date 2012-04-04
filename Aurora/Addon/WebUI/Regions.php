@@ -289,120 +289,13 @@ namespace Aurora\Addon\WebUI{
 	}
 
 //!	Seekable iterator for instances of Aurora\Addon\WebUI\GridRegion
-	abstract class RegionsIterator extends WORM implements SeekableIterator{
-
-//!	object instance of Aurora::Addon::WebUI
-		protected $WebUI;
-
-//!	integer Since we're allowing non-contiguous, delayed access to the region list, we need to pre-fetch the total size of the regions.
-		private $total;
-
-//!	integer cursor position
-		private $pos = 0;
-
-//!	We're hiding this behind registry methods
-/**
-*	@param object $WebUI instance of Aurora::Addon::WebUI. Used to get instances of Aurora::Addon::WebUI::GridRegion that the instance wasn't instantiated with.
-*	@param integer $start specifies the index that $regions starts at, if specified.
-*	@param integer $total specifies the total number of regions in the grid.
-*	@param mixed $regions Either NULL or an array of Aurora::Addon::WebUI::GridRegion instances.
-**/
-		protected function __construct(WebUI $WebUI, $start=0, $total=0, array $regions=null){
-			if(is_string($start) === true && ctype_digit($start) === true){
-				$start = (integer)$start;
-			}
-			if(is_string($total) === true && ctype_digit($total) === true){
-				$total = (integer)$total;
-			}
-
-			if(is_integer($start) === false){
-				throw new InvalidArgumentException('Start must be an integer.');
-			}else if($start < 0){
-				throw new InvalidArgumentException('Start must be greater than or equal to zero.');
-			}else if(is_integer($total) === false){
-				throw new InvalidArgumentException('Total must be an integer.');
-			}else if($total < 0){
-				throw new InvalidArgumentException('Total must be greater than or equal to zero.');
-			}
-
-			$i = $start;
-			if(isset($regions) === true){
-				foreach($regions as $region){
-					if($region instanceof GridRegion){
-						$this->data[$i++] = $region;
-					}else{
-						throw new InvalidArgumentException('Values of instantiated regions array must be instances of Aurora::Addon::WebUI::GridRegion');
-					}
-				}
-			}
-
-			$this->WebUI = $WebUI;
-			$this->total = $total;
-			$this->pos   = $start;
-		}
-
-//!	We're not supporting external manipulation of Aurora::Addon::WebUI::RegionsIterator::$data
-		public function offsetSet($offset, $value){
-			throw new BadMethodCallException('Instances of Aurora::Addon::WebUI::RegionsIterator cannot be modified from outside of the object scope.');
-		}
-
-//!	Sets the cursor position
-/**
-*	@param integer $to desired cursor position
-*/
-		public function seek($to){
-			if(is_string($to) === true && ctype_digit($to) === true){
-				$to = (integer)$to;
-			}
-			if(is_integer($to) === true && $to < 0){
-				$to = abs($to) % $this->count();
-				$to = $this->count() - $to;
-			}
-
-			if(is_integer($to) === false){
-				throw new InvalidArgumentException('Seek point must be an integer.');
-			}else if($to >= $this->count() && $to !== 0){
-				throw new LengthException('Cannot seek past Aurora::Addon::WebUI::RegionsIterator::count()');
-			}
-
-			$this->pos = $to;
-		}
-
-//!	Indicates the total size of the query, not the number of regions currently on the iterator
-/**
-*	@return integer
-*/
-		public function count(){
-			return $this->total;
-		}
-
-//!	Gets the cursor position
-/**
-*	@return mixed Integer if the cursor position is valid, NULL otherwise.
-*/
-		public function key(){
-			return ($this->pos < $this->count()) ? $this->pos : null;
-		}
-
-//!	Determines if the current cursor position is valid
-/**
-*	@return boolean TRUE if the cursor position is valid, FALSE otherwise
-*/
-		public function valid(){
-			return ($this->key() !== null);
-		}
-
-//!	advance the cursor
-		public function next(){
-			++$this->pos;
-		}
-	}
-
-//!	Seekable iterator for instances of Aurora\Addon\WebUI\GridRegion
 	class GetRegions extends RegionsIterator{
 
 //!	integer Since we're allowing non-contiguous, delayed access to the region list, we need to store the Aurora::Framework::RegionFlags bitfield for future use.
 		protected $flags;
+
+//!	integer as with Aurora::Addon::WebUI::GetRegions::$flags, we need to store the excludeFlags argument
+		protected $excludeFlags;
 
 //!	mixed Since we're allowing non-contiguous, delayed access to the region list, we need to store the sort by region name flag for future use.
 		protected $sortRegionName;
@@ -424,9 +317,12 @@ namespace Aurora\Addon\WebUI{
 *	@param mixed $sortLocY NULL or boolean
 *	@param mixed $regions Either NULL or an array of Aurora::Addon::WebUI::GridRegion instances.
 */
-		protected function __construct(WebUI $WebUI, $flags=null, $start=0, $total=0, $sortRegionName=null, $sortLocX=null, $sortLocY=null, array $regions=null){
+		protected function __construct(WebUI $WebUI, $flags=null, $excludeFlags=0, $start=0, $total=0, $sortRegionName=null, $sortLocX=null, $sortLocY=null, array $regions=null){
 			if(is_string($flags) === true && ctype_digit($flags) === true){
 				$flags = (integer)$flags;
+			}
+			if(is_string($excludeFlags) === true && ctype_digit($excludeFlags) === true){
+				$excludeFlags = (integer)$excludeFlags;
 			}
 
 			if(is_integer($flags) === false){
@@ -441,19 +337,20 @@ namespace Aurora\Addon\WebUI{
 				throw new InvalidArgumentException('If set, the sort by y-axis flag must be a boolean.');
 			}
 
+			parent::__construct($WebUI, $start, $total, $regions);
+
 			$this->flags          = $flags;
+			$this->excludeFlags   = $excludeFlags;
 			$this->sortRegionName = $sortRegionName;
 			$this->sortLocX       = $sortLocX;
 			$this->sortLocY       = $sortLocY;
-
-			parent::__construct($WebUI, $start, $total, $regions);
 		}
 
 //!	registry array.
 		private static $registry = array();
 
 //!	registry method
-		public static function r(WebUI $WebUI, EstateSettings $Estate=null, $flags, $start=0, $total=0, $sortRegionName=null, $sortLocX=null, $sortLocY=null, array $regions=null){
+		public static function r(WebUI $WebUI, $flags, $excludeFlags=0, $start=0, $total=0, $sortRegionName=null, $sortLocX=null, $sortLocY=null, array $regions=null){
 			if(RegionFlags::isValid($flags) === false){
 				throw new InvalidArgumentException('Region Flags bitfield is invalid.');
 			}else if(isset($sortRegionName) === true && is_bool($sortRegionName) === false){
@@ -463,35 +360,23 @@ namespace Aurora\Addon\WebUI{
 			}else if(isset($sortLocY) === true && is_bool($sortLocY) === false){
 				throw new InvalidArgumentException('If set, the sort by y-axis flag must be a boolean.');
 			}
-			$hash = spl_object_hash($WebUI);
-			$srn = isset($sortRegionName) ? ((integer)$sortRegionName) + 1 : 0;
-			$slx = isset($sortLocX) ? ((integer)$sortLocX) + 1 : 0;
-			$sly = isset($sortLocY) ? ((integer)$sortLocY) + 1 : 0;
-			if(isset(static::$registry[$hash]) === false){
-				static::$registry[$hash] = array();
-			}
-			if(isset(static::$registry[$hash][$flags]) === false){
-				static::$registry[$hash][$flags] = array();
-			}
-			if(isset(static::$registry[$hash][$flags][$srn]) === false){
-				static::$registry[$hash][$flags][$srn] = array();
-			}
-			if(isset(static::$registry[$hash][$flags][$srn][$slx]) === false){
-				static::$registry[$hash][$flags][$srn][$slx] = array();
+
+			$has = static::hasInstance($WebUI, $flags, $excludeFlags, $sortRegionName, $sortLocX, $sortLocY);
+			$hash = md5(
+				spl_object_hash($WebUI) . ':' .
+				(isset($sortRegionName) ? ((integer)$sortRegionName) + 1 : 0) . ':' .
+				(isset($sortLocX) ? ((integer)$sortLocX) + 1 : 0) . ':' .
+				(isset($sortLocY) ? ((integer)$sortLocY) + 1 : 0) . ':' .
+				(integer)$flags . ':' .
+				(integer)$excludeFlags
+			);
+
+			if(!$has || static::$registry[$hash]->count() !== $total){
+				static::$registry[$hash] = new static($WebUI, $flags, $excludeFlags, $start, $total, $sortRegionName, $sortLocX, $sortLocY, $regions);
 			}
 
-			if(isset(static::$registry[$hash][$flags][$srn][$slx][$sly]) === false){
-				if(isset($total, $flags) === false){
-					throw new BadMethodCallException('Cannot fetch instance of Aurora::Addon::WebUI::GetRegions from cache as it has not been created yet.');
-				}
-				static::$registry[$hash][$flags][$srn][$slx][$sly] = new static($WebUI, $flags, $start, $total, $sortRegionName, $sortLocX, $sortLocY, $regions);
-			}
-
-			if(is_integer($start) === false){
-				throw new InvalidArgumentException('Start point must be an integer.');
-			}
-			static::$registry[$hash][$flags][$srn][$slx][$sly]->seek($start);
-			return static::$registry[$hash][$flags][$srn][$slx][$sly];
+			static::$registry[$hash]->seek($start);
+			return static::$registry[$hash];
 		}
 
 //!	Determines whether we have something in the registry or not.
@@ -500,19 +385,15 @@ namespace Aurora\Addon\WebUI{
 *	@param integer $flags
 *	@return boolean TRUE if we have populated the registry array, FALSE otherwise.
 */
-		public static function hasInstance(WebUI $WebUI, EstateSettings $Estate=null, $flags, $sortRegionName, $sortLocX, $sortLocY){
+		public static function hasInstance(WebUI $WebUI, $flags, $excludeFlags, $sortRegionName, $sortLocX, $sortLocY){
 			$hash = spl_object_hash($WebUI);
 			$srn = isset($sortRegionName) ? ((integer)$sortRegionName) + 1 : 0;
 			$slx = isset($sortLocX) ? ((integer)$sortLocX) + 1 : 0;
 			$sly = isset($sortLocY) ? ((integer)$sortLocY) + 1 : 0;
 
-			return isset(
-				static::$registry[$hash],
-				static::$registry[$hash][$flags],
-				static::$registry[$hash][$flags][$srn],
-				static::$registry[$hash][$flags][$srn][$slx],
-				static::$registry[$hash][$flags][$srn][$slx][$sly]				
-			);
+			$hash = md5(spl_object_hash($WebUI) . ':' . $srn . ':' . $slx . ':' . $sly . ':' . (integer)$flags . ':' . (integer)$excludeFlags);
+
+			return isset(static::$registry[$hash]);
 		}
 
 //!	To avoid slowdowns due to an excessive amount of curl calls, we populate Aurora::Addon::WebUI::GetRegions::$data in batches of 10
@@ -524,7 +405,7 @@ namespace Aurora\Addon\WebUI{
 				return null;
 			}else if(isset($this->data[$this->key()]) === false){
 				$start   = $this->key();
-				$results = $this->WebUI->GetRegions($this->flags, $start, 10, $this->sortRegionName, $this->sortLocX, $this->sortLocY, true);
+				$results = $this->WebUI->GetRegions($this->flags, $this->excludeFlags, $start, 10, $this->sortRegionName, $this->sortLocX, $this->sortLocY, true);
 				foreach($results as $region){
 					$this->data[$start++] = $region;
 				}
@@ -534,7 +415,22 @@ namespace Aurora\Addon\WebUI{
 	}
 
 //!	Seekable iterator for instances of Aurora\Addon\WebUI\GridRegion in a specified estate
-	class GetRegionsInEstate extends GetRegions{
+	class GetRegionsInEstate extends RegionsIterator{
+
+//!	integer Since we're allowing non-contiguous, delayed access to the region list, we need to store the Aurora::Framework::RegionFlags bitfield for future use.
+		protected $flags;
+
+//!	integer as with Aurora::Addon::WebUI::GetRegions::$flags, we need to store the excludeFlags argument
+		protected $excludeFlags;
+
+//!	mixed Since we're allowing non-contiguous, delayed access to the region list, we need to store the sort by region name flag for future use.
+		protected $sortRegionName;
+
+//!	mixed Since we're allowing non-contiguous, delayed access to the region list, we need to store the sort by region name flag for future use.
+		protected $sortLocX;
+
+//!	mixed Since we're allowing non-contiguous, delayed access to the region list, we need to store the sort by region name flag for future use.
+		protected $sortLocY;
 
 //!	object instance of Aurora::Addon::WebUI::EstateSettings
 		private $Estate;
@@ -551,16 +447,41 @@ namespace Aurora\Addon\WebUI{
 *	@param mixed $sortLocY NULL or boolean
 *	@param mixed $regions Either NULL or an array of Aurora::Addon::WebUI::GridRegion instances.
 */
-		protected function __construct(WebUI $WebUI, EstateSettings $Estate, $flags=null, $start=0, $total=0, $sortRegionName=null, $sortLocX=null, $sortLocY=null, array $regions=null){
-			parent::__construct($WebUI, $flags, $start, $total, $sortRegionName, $sortLocX, $sortLocY, $regions);
-			$this->Estate = $Estate;
+		protected function __construct(WebUI $WebUI, EstateSettings $Estate, $flags=null, $excludeFlags=0, $start=0, $total=0, $sortRegionName=null, $sortLocX=null, $sortLocY=null, array $regions=null){
+			if(is_string($flags) === true && ctype_digit($flags) === true){
+				$flags = (integer)$flags;
+			}
+			if(is_string($excludeFlags) === true && ctype_digit($excludeFlags) === true){
+				$excludeFlags = (integer)$excludeFlags;
+			}
+
+			if(is_integer($flags) === false){
+				throw new InvalidArgumentException('Region Flags must be an integer.');
+			}else if(RegionFlags::isValid($flags) === false){
+				throw new InvalidArgumentException('Region Flags was not a valid bitfield.');
+			}else if(isset($sortRegionName) === true && is_bool($sortRegionName) === false){
+				throw new InvalidArgumentException('If set, the sort by region name flag must be a boolean.');
+			}else if(isset($sortLocX) === true && is_bool($sortLocX) === false){
+				throw new InvalidArgumentException('If set, the sort by x-axis flag must be a boolean.');
+			}else if(isset($sortLocY) === true && is_bool($sortLocY) === false){
+				throw new InvalidArgumentException('If set, the sort by y-axis flag must be a boolean.');
+			}
+
+			parent::__construct($WebUI, $start, $total, $regions);
+
+			$this->flags          = $flags;
+			$this->excludeFlags   = $excludeFlags;
+			$this->sortRegionName = $sortRegionName;
+			$this->sortLocX       = $sortLocX;
+			$this->sortLocY       = $sortLocY;
+			$this->Estate         = $Estate;
 		}
 
 //!	registry array.
 		private static $registry = array();
 
 //!	registry method
-		public static function r(WebUI $WebUI, EstateSettings $Estate, $flags, $start=0, $total=0, $sortRegionName=null, $sortLocX=null, $sortLocY=null, array $regions=null){
+		public static function r(WebUI $WebUI, EstateSettings $Estate, $flags, $excludeFlags=0, $start=0, $total=0, $sortRegionName=null, $sortLocX=null, $sortLocY=null, array $regions=null){
 			if(RegionFlags::isValid($flags) === false){
 				throw new InvalidArgumentException('Region Flags bitfield is invalid.');
 			}else if(isset($sortRegionName) === true && is_bool($sortRegionName) === false){
@@ -570,35 +491,24 @@ namespace Aurora\Addon\WebUI{
 			}else if(isset($sortLocY) === true && is_bool($sortLocY) === false){
 				throw new InvalidArgumentException('If set, the sort by y-axis flag must be a boolean.');
 			}
-			$hash = spl_object_hash($WebUI) . '_' . $Estate->EstateID();
-			$srn = isset($sortRegionName) ? ((integer)$sortRegionName) + 1 : 0;
-			$slx = isset($sortLocX) ? ((integer)$sortLocX) + 1 : 0;
-			$sly = isset($sortLocY) ? ((integer)$sortLocY) + 1 : 0;
-			if(isset(static::$registry[$hash]) === false){
-				static::$registry[$hash] = array();
-			}
-			if(isset(static::$registry[$hash][$flags]) === false){
-				static::$registry[$hash][$flags] = array();
-			}
-			if(isset(static::$registry[$hash][$flags][$srn]) === false){
-				static::$registry[$hash][$flags][$srn] = array();
-			}
-			if(isset(static::$registry[$hash][$flags][$srn][$slx]) === false){
-				static::$registry[$hash][$flags][$srn][$slx] = array();
+
+			$has  = static::hasInstance($WebUI, $Estate, $flags, $excludeFlags, $sortRegionName, $sortLocX, $sortLocY);
+			$hash = md5(
+				spl_object_hash($WebUI) . ':' .
+				$Estate->EstateID() . ':' .
+				(isset($sortRegionName) ? ((integer)$sortRegionName) + 1 : 0) . ':' .
+				(isset($sortLocX) ? ((integer)$sortLocX) + 1 : 0) . ':' .
+				(isset($sortLocY) ? ((integer)$sortLocY) + 1 : 0) . ':' .
+				(integer)$flags . ':' .
+				(integer)$excludeFlags
+			);
+
+			if(!$has || static::$registry[$hash]->count() !== $total){
+				static::$registry[$hash] = new static($WebUI, $Estate, $flags, $excludeFlags, $start, $total, $sortRegionName, $sortLocX, $sortLocY, $regions);
 			}
 
-			if(isset(static::$registry[$hash][$flags][$srn][$slx][$sly]) === false){
-				if(isset($total, $flags) === false){
-					throw new BadMethodCallException('Cannot fetch instance of Aurora::Addon::WebUI::GetRegions from cache as it has not been created yet.');
-				}
-				static::$registry[$hash][$flags][$srn][$slx][$sly] = new static($WebUI, $Estate, $flags, $start, $total, $sortRegionName, $sortLocX, $sortLocY, $regions);
-			}
-
-			if(is_integer($start) === false){
-				throw new InvalidArgumentException('Start point must be an integer.');
-			}
-			static::$registry[$hash][$flags][$srn][$slx][$sly]->seek($start);
-			return static::$registry[$hash][$flags][$srn][$slx][$sly];
+			static::$registry[$hash]->seek($start);
+			return static::$registry[$hash];
 		}
 
 //!	Determines whether we have something in the registry or not.
@@ -611,19 +521,23 @@ namespace Aurora\Addon\WebUI{
 *	@param mixed $sortLocY NULL or boolean
 *	@return boolean TRUE if we have populated the registry array, FALSE otherwise.
 */
-		public static function hasInstance(WebUI $WebUI, EstateSettings $Estate, $flags, $sortRegionName, $sortLocX, $sortLocY){
-			$hash = spl_object_hash($WebUI) . '_' . $Estate->EstateID();
+		public static function hasInstance(WebUI $WebUI, EstateSettings $Estate, $flags, $excludeFlags, $sortRegionName, $sortLocX, $sortLocY){
+			$hash = spl_object_hash($WebUI);
 			$srn = isset($sortRegionName) ? ((integer)$sortRegionName) + 1 : 0;
 			$slx = isset($sortLocX) ? ((integer)$sortLocX) + 1 : 0;
 			$sly = isset($sortLocY) ? ((integer)$sortLocY) + 1 : 0;
 
-			return isset(
-				static::$registry[$hash],
-				static::$registry[$hash][$flags],
-				static::$registry[$hash][$flags][$srn],
-				static::$registry[$hash][$flags][$srn][$slx],
-				static::$registry[$hash][$flags][$srn][$slx][$sly]				
+			$hash = md5(
+				spl_object_hash($WebUI) . ':' .
+				$Estate->EstateID() . ':' .
+				$srn . ':' .
+				$slx . ':' .
+				$sly . ':' .
+				(integer)$flags . ':' .
+				(integer)$excludeFlags
 			);
+
+			return isset(static::$registry[$hash]);
 		}
 
 //!	To avoid slowdowns due to an excessive amount of curl calls, we populate Aurora::Addon::WebUI::GetRegionsInEstate::$data in batches of 10
@@ -635,7 +549,7 @@ namespace Aurora\Addon\WebUI{
 				return null;
 			}else if(isset($this->data[$this->key()]) === false){
 				$start   = $this->key();
-				$results = $this->WebUI->GetRegionsInEstate($this->Estate, $this->flags, $start, 10, $this->sortRegionName, $this->sortLocX, $this->sortLocY, true);
+				$results = $this->WebUI->GetRegionsInEstate($this->Estate, $this->flags, $this->excludeFlags, $start, 10, $this->sortRegionName, $this->sortLocX, $this->sortLocY, true);
 				foreach($results as $region){
 					$this->data[$start++] = $region;
 				}
@@ -645,7 +559,7 @@ namespace Aurora\Addon\WebUI{
 	}
 
 //!	Seekable iterator for instances of Aurora\Addon\WebUI\GridRegion within range of another region
-	class GetRegionNeighbours extends GetRegions{
+	class GetRegionNeighbours extends RegionsIterator{
 
 //!	string region ID
 		private $region;
@@ -667,7 +581,7 @@ namespace Aurora\Addon\WebUI{
 *	@param mixed $regions Either NULL or an array of Aurora::Addon::WebUI::GridRegion instances.
 */
 		protected function __construct(WebUI $WebUI, $region, $range=8, $scopeID='00000000-0000-0000-0000-000000000000', $start=0, $total=0, array $regions=null){
-			parent::__construct($WebUI, RegionFlags::RegionOnline, $start, $total, null, null, null, $regions);
+			parent::__construct($WebUI,  $start, $total, $regions);
 			$this->region  = $region;
 			$this->scopeID = $scopeID;
 			$this->range   = $range;
@@ -692,15 +606,18 @@ namespace Aurora\Addon\WebUI{
 				throw new InvalidArgumentException('ScopeID must be a valid UUID.');
 			}
 			
-			$hash = md5(spl_object_hash($WebUI) . '_' . $region . $scopeID . (string)$range);
+			$has  = static::hasInstance($WebUI, $region, $range, $scopeID);
+			$hash = md5(
+				spl_object_hash($WebUI) . ':' .
+				$region . ':' .
+				$scopeID . ':' .
+				$range
+			);
 
-			if(isset(static::$registry[$hash]) === false){
+			if(!$has || static::$registry[$hash]->count() !== $total){
 				static::$registry[$hash] = new static($WebUI, $region, $range, $scopeID, $start, $total, $regions);
 			}
 
-			if(is_integer($start) === false){
-				throw new InvalidArgumentException('Start point must be an integer.');
-			}
 			static::$registry[$hash]->seek($start);
 			return static::$registry[$hash];
 		}
@@ -713,7 +630,12 @@ namespace Aurora\Addon\WebUI{
 *	@param integer $range distance in meters from region center to search
 */
 		public static function hasInstance(WebUI $WebUI, $region, $range=8, $scopeID='00000000-0000-0000-0000-000000000000'){
-			return isset(static::$registry[md5(spl_object_hash($WebUI) . '_' . $region . $scopeID . $range)]);
+			return isset(static::$registry[md5(
+				spl_object_hash($WebUI) . ':' .
+				$region . ':' .
+				$scopeID . ':' .
+				$range
+			)]);
 		}
 
 //!	To avoid slowdowns due to an excessive amount of curl calls, we populate Aurora::Addon::WebUI::GetRegionNeighbours::$data in batches of 10

@@ -123,5 +123,38 @@ namespace Aurora\Addon\WebUI{
 			++$this->pos;
 		}
 	}
+
+//!	Seekable iterator for instances of Aurora\Addon\WebUI\GridRegion
+	abstract class RegionsIterator extends abstractLazyLoadingSeekableIterator{
+
+//!	We're hiding this behind registry methods
+/**
+*	@param object $WebUI instance of Aurora::Addon::WebUI. Used to get instances of Aurora::Addon::WebUI::GridRegion that the instance wasn't instantiated with.
+*	@param integer $start specifies the index that $regions starts at, if specified.
+*	@param integer $total specifies the total number of regions in the grid.
+*	@param mixed $regions Either NULL or an array of Aurora::Addon::WebUI::GridRegion instances.
+**/
+		protected function __construct(WebUI $WebUI, $start=0, $total=0, array $regions=null){
+			if(is_string($start) === true && ctype_digit($start) === true){
+				$start = (integer)$start;
+			}
+			if(is_string($total) === true && ctype_digit($total) === true){
+				$total = (integer)$total;
+			}
+
+			parent::__construct($WebUI, $start, $total);
+
+			$i = $start;
+			if(isset($regions) === true){
+				foreach($regions as $region){
+					if($region instanceof GridRegion){
+						$this->data[$i++] = $region;
+					}else{
+						throw new InvalidArgumentException('Values of instantiated regions array must be instances of Aurora::Addon::WebUI::GridRegion');
+					}
+				}
+			}
+		}
+	}	
 }
 ?>

@@ -1392,10 +1392,26 @@ namespace Aurora\Addon{
 *	@see Aurora::Addon::WebUI::fromEndPointResult()
 *	@see Aurora::Addon::WebUI::GetRegions::r()
 */
-		public function GetRegions($flags=null, $start=0, $count=null, $sortRegionName=null, $sortLocX=null, $sortLocY=null, $asArray=false){
+		public function GetRegions($flags=null, $excludeFlags=null, $start=0, $count=null, $sortRegionName=null, $sortLocX=null, $sortLocY=null, $asArray=false){
 			if(isset($flags) === false){
 				$flags = RegionFlags::RegionOnline;
 			}
+			if(isset($excludeFlags) === false){
+				$excludeFlags = 0;
+			}
+			if(is_string($flags) === true && ctype_digit($flags) === true){
+				$flags = (integer)$flags;
+			}
+			if(is_string($excludeFlags) === true && ctype_digit($excludeFlags) === true){
+				$excludeFlags = (integer)$excludeFlags;
+			}
+			if(is_string($start) === true && ctype_digit($start) === true){
+				$start = (integer)$start;
+			}
+			if(is_string($count) === true && ctype_digit($count) === true){
+				$count = (integer)$count;
+			}
+
 			if(is_bool($asArray) === false){
 				throw new InvalidArgumentException('asArray flag must be a boolean.');
 			}else if(is_integer($flags) === false){
@@ -1404,6 +1420,10 @@ namespace Aurora\Addon{
 				throw new InvalidArgumentException('RegionFlags cannot be less than zero');
 			}else if(RegionFlags::isValid($flags) === false){ // Aurora::Framework::RegionFlags::isValid() does do a check for integerness, but we want to throw a different exception message if it is an integer.
 				throw new InvalidArgumentException('RegionFlags value is invalid, aborting call to API');
+			}else if($excludeFlags < 0){
+				throw new InvalidArgumentException('Region ExcludeFlags cannot be less than zero');
+			}else if(RegionFlags::isValid($excludeFlags) === false){ // Aurora::Framework::RegionFlags::isValid() does do a check for integerness, but we want to throw a different exception message if it is an integer.
+				throw new InvalidArgumentException('Region ExcludeFlags value is invalid, aborting call to API');
 			}else if(is_integer($start) === false){
 				throw new InvalidArgumentException('Start point must be an integer.');
 			}else if(isset($count) === true){
@@ -1421,9 +1441,10 @@ namespace Aurora\Addon{
 			}
 			$response = array();
 			$input = array(
-				'RegionFlags' => $flags,
-				'Start'       => $start,
-				'Count'       => $count
+				'RegionFlags'        => $flags,
+				'ExcludeRegionFlags' => $excludeFlags,
+				'Start'              => $start,
+				'Count'              => $count
 			);
 			if(isset($sortRegionName) === true){
 				$input['SortRegionName'] = $sortRegionName;
@@ -1434,7 +1455,7 @@ namespace Aurora\Addon{
 			if(isset($sortLocY) === true){
 				$input['SortLocY'] = $sortLocY;
 			}
-			$has = WebUI\GetRegions::hasInstance($this, null, $flags, $sortRegionName, $sortLocX, $sortLocY);
+			$has = WebUI\GetRegions::hasInstance($this, $flags, $excludeFlags, $sortRegionName, $sortLocX, $sortLocY);
 			if($asArray === true || $has === false){
 				$result = $this->makeCallToAPI('GetRegions', $input, array(
 					'Regions' => array('array'=>array(static::GridRegionValidator())),
@@ -1445,7 +1466,7 @@ namespace Aurora\Addon{
 				}
 			}
 
-			return $asArray ? $response : WebUI\GetRegions::r($this, null, $flags, $start, $has ? null : $result->Total, $sortRegionName, $sortLocX, $sortLocY, $response);
+			return $asArray ? $response : WebUI\GetRegions::r($this, $flags, $excludeFlags, $start, $has ? null : $result->Total, $sortRegionName, $sortLocX, $sortLocY, $response);
 		}
 
 //!	Get a list of regions in the AuroraSim install at the specified x/y coordinates that also match the specified flags.
