@@ -1392,7 +1392,7 @@ namespace Aurora\Addon{
 *	@see Aurora::Addon::WebUI::fromEndPointResult()
 *	@see Aurora::Addon::WebUI::GetRegions::r()
 */
-		public function GetRegions($flags=null, $excludeFlags=null, $start=0, $count=null, $sortRegionName=null, $sortLocX=null, $sortLocY=null, $asArray=false){
+		public function GetRegions($flags=null, $excludeFlags=null, $start=0, $count=10, $sortRegionName=null, $sortLocX=null, $sortLocY=null, $asArray=false){
 			if(isset($flags) === false){
 				$flags = RegionFlags::RegionOnline;
 			}
