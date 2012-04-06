@@ -111,6 +111,46 @@ namespace Aurora\Framework{
 			$this->andIsNotNullFilters     = new nullFilter;
 		}
 
+//!	Since PHP doesn't support setters & getters for properties, we need to use the __get() magic method
+		public function __get($name){
+			switch($name){
+				case 'andFilters':
+				case 'orFilters':
+				case 'orMultiFilters':
+
+				case 'andLikeFilters':
+				case 'orLikeFilters':
+				case 'orLikeMultiFilters':
+
+				case 'andBitfieldAndFilters':
+				case 'orBitfieldAndFilters':
+
+				case 'andBitfieldNandFilters':
+
+				case 'andGreaterThanFilters':
+				case 'orGreaterThanFilters':
+
+				case 'andGreaterThanEqFilters':
+				case 'orGreaterThanEqFilters':
+
+				case 'andLessThanFilters':
+				case 'orLessThanFilters':
+
+				case 'andLessThanEqFilters':
+
+				case 'andNotFilters':
+
+				case 'andIsNullFilters':
+				case 'andIsNotNullFilters':
+
+					return $this->$name;
+				break;
+				default:
+					return null;
+				break;
+			}
+		}
+
 //!	Count is mainly used to check if there are any filters being used on the instance, so other code knows whether to act on the instance or not. Possibly just an artefact of sub-filter support.
 		public function count(){
 			return
@@ -200,7 +240,7 @@ namespace Aurora\Framework{
 #region Equality
 			$parts = array();
 			foreach($this->andFilters as $key=>$value){
-				$_key = '?where_AND_' . (string)(++$i) . static::preparedKey($key);
+				$_key = ':where_AND_' . (string)(++$i) . static::preparedKey($key);
 				$ps[$_key] = $value;
 				$parts[] = sprintf('%s = %s', $key, $_key);
 			}
@@ -211,7 +251,7 @@ namespace Aurora\Framework{
 
 			$parts = array();
 			foreach($this->orFilters as $key=>$value){
-				$_key = '?where_OR_' . (string)(++$i) . static::preparedKey($key);
+				$_key = ':where_OR_' . (string)(++$i) . static::preparedKey($key);
 				$ps[$_key] = $value;
 				$parts[] = sprintf('%s = %s', $key, $_key);
 			}
@@ -223,7 +263,7 @@ namespace Aurora\Framework{
 			$parts = array();
 			foreach($this->orMultiFilters as $key=>$args){
 				foreach($args as $value){
-					$_key = '?where_OR_' . (string)(++$i) . static::preparedKey($key);
+					$_key = ':where_OR_' . (string)(++$i) . static::preparedKey($key);
 					$ps[$_key] = $value;
 					$parts[] = sprintf('%s = %s', $key, $_key);
 				}
@@ -235,7 +275,7 @@ namespace Aurora\Framework{
 
 			$parts = array();
 			foreach($this->andNotFilters as $key=>$value){
-				$_key = '?where_AND_NOT_' . (string)(++$i) . static::preparedKey($key);
+				$_key = ':where_AND_NOT_' . (string)(++$i) . static::preparedKey($key);
 				$ps[$_key] = $value;
 				$parts[] = sprintf('%s != %s', $key, $_key);
 			}
@@ -249,7 +289,7 @@ namespace Aurora\Framework{
 #region LIKE
 			$parts = array();
 			foreach($this->andLikeFilters as $key=>$value){
-				$_key = '?where_ANDLIKE_' . (string)(++$i) . static::preparedKey($key);
+				$_key = ':where_ANDLIKE_' . (string)(++$i) . static::preparedKey($key);
 				$ps[$_key] = $value;
 				$parts[] = sprintf('%s LIKE %s', $key, $_key);
 			}
@@ -260,7 +300,7 @@ namespace Aurora\Framework{
 
 			$parts = array();
 			foreach($this->orLikeFilters as $key=>$value){
-				$_key = '?where_ORLIKE_' . (string)(++$i) . static::preparedKey($key);
+				$_key = ':where_ORLIKE_' . (string)(++$i) . static::preparedKey($key);
 				$ps[$_key] = $value;
 				$parts[] = sprintf('%s LIKE %s', $key, $_key);
 			}
@@ -272,7 +312,7 @@ namespace Aurora\Framework{
 			$parts = array();
 			foreach($this->orLikeMultiFilters as $key=>$args){
 				foreach($args as $value){
-					$_key = '?where_ORLIKE_' . (string)(++$i) . static::preparedKey($key);
+					$_key = ':where_ORLIKE_' . (string)(++$i) . static::preparedKey($key);
 					$ps[$_key] = $value;
 					$parts[] = sprintf('%s LIKE %s', $key, $_key);
 				}
@@ -287,7 +327,7 @@ namespace Aurora\Framework{
 #region bitfield &
 			$parts = array();
 			foreach($this->andBitfieldAndFilters as $key=>$value){
-				$_key = '?where_bAND_' . (string)(++$i) . static::preparedKey($key);
+				$_key = ':where_bAND_' . (string)(++$i) . static::preparedKey($key);
 				$ps[$_key] = $value;
 				$parts[] = sprintf('%s & %s', $key, $_key);
 			}
@@ -298,7 +338,7 @@ namespace Aurora\Framework{
 
 			$parts = array();
 			foreach($this->orBitfieldAndFilters as $key=>$value){
-				$_key = '?where_bOR_' . (string)(++$i) . static::preparedKey($key);
+				$_key = ':where_bOR_' . (string)(++$i) . static::preparedKey($key);
 				$ps[$_key] = $value;
 				$parts[] = sprintf('%s & %s', $key, $_key);
 			}
@@ -309,7 +349,7 @@ namespace Aurora\Framework{
 
 			$parts = array();
 			foreach($this->andBitfieldNandFilters as $key=>$value){
-				$_key = '?where_bNAND_' . (string)(++$i) . static::preparedKey($key);
+				$_key = ':where_bNAND_' . (string)(++$i) . static::preparedKey($key);
 				$ps[$_key] = $value;
 				$parts[] = sprintf('%s & %s = 0', $key, $_key);
 			}
@@ -324,7 +364,7 @@ namespace Aurora\Framework{
 
 			$parts = array();
 			foreach($this->andGreaterThanFilters as $key=>$value){
-				$_key = '?where_gtAND_' . (string)(++$i) . static::preparedKey($key);
+				$_key = ':where_gtAND_' . (string)(++$i) . static::preparedKey($key);
 				$ps[$_key] = $value;
 				$parts[] = sprintf('%s > %s', $key, $_key);
 			}
@@ -335,7 +375,7 @@ namespace Aurora\Framework{
 
 			$parts = array();
 			foreach($this->orGreaterThanFilters as $key=>$value){
-				$_key = '?where_gtOR_' . (string)(++$i) . static::preparedKey($key);
+				$_key = ':where_gtOR_' . (string)(++$i) . static::preparedKey($key);
 				$ps[$_key] = $value;
 				$parts[] = sprintf('%s > %s', $key, $_key);
 			}
@@ -346,7 +386,7 @@ namespace Aurora\Framework{
 
 			$parts = array();
 			foreach($this->andGreaterThanEqFilters as $key=>$value){
-				$_key = '?where_gteqAND_' . (string)(++$i) . static::preparedKey($key);
+				$_key = ':where_gteqAND_' . (string)(++$i) . static::preparedKey($key);
 				$ps[$_key] = $value;
 				$parts[] = sprintf('%s >= %s', $key, $_key);
 			}
@@ -357,7 +397,7 @@ namespace Aurora\Framework{
 
 			$parts = array();
 			foreach($this->orGreaterThanEqFilters as $key=>$value){
-				$_key = '?where_gteqOR_' . (string)(++$i) . static::preparedKey($key);
+				$_key = ':where_gteqOR_' . (string)(++$i) . static::preparedKey($key);
 				$ps[$_key] = $value;
 				$parts[] = sprintf('%s >= %s', $key, $_key);
 			}
@@ -372,7 +412,7 @@ namespace Aurora\Framework{
 
 			$parts = array();
 			foreach($this->andLessThanFilters as $key=>$value){
-				$_key = '?where_ltAND_' . (string)(++$i) . static::preparedKey($key);
+				$_key = ':where_ltAND_' . (string)(++$i) . static::preparedKey($key);
 				$ps[$_key] = $value;
 				$parts[] = sprintf('%s < %s', $key, $_key);
 			}
@@ -383,7 +423,7 @@ namespace Aurora\Framework{
 
 			$parts = array();
 			foreach($this->orLessThanFilters as $key=>$value){
-				$_key = '?where_ltOR_' . (string)(++$i) . static::preparedKey($key);
+				$_key = ':where_ltOR_' . (string)(++$i) . static::preparedKey($key);
 				$ps[$_key] = $value;
 				$parts[] = sprintf('%s < %s', $key, $_key);
 			}
@@ -394,7 +434,7 @@ namespace Aurora\Framework{
 
 			$parts = array();
 			foreach($this->andLessThanEqFilters as $key=>$value){
-				$_key = '?where_lteqAND_' . (string)(++$i) . static::preparedKey($key);
+				$_key = ':where_lteqAND_' . (string)(++$i) . static::preparedKey($key);
 				$ps[$_key] = $value;
 				$parts[] = sprintf('%s <= %s', $key, $_key);
 			}
