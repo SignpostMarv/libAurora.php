@@ -5,6 +5,6 @@
 
 namespace{
 	require_once('Aurora/load.php');
-	require_once('libAurora/load.php');
+	require_once('libAurora/DataManager.php');
 }
 ?>
