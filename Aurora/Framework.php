@@ -6,4 +6,5 @@
 	require_once('Framework/EstateSettings.php');
 	require_once('Framework/EventData.php');
 	require_once('Framework/QueryFilter.php');
+	require_once('Framework/IGenericData.php');
 ?>
