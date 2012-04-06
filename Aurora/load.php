@@ -1,5 +1,5 @@
 <?php
-//!	@file libs/Aurora/load.php
+//!	@file Aurora/load.php
 //!	@brief This file loads all the code for the Aurora goodness.
 //!	@author SignpostMarv
 
