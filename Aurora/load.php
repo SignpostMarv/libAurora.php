@@ -3,6 +3,58 @@
 //!	@brief This file loads all the code for the Aurora goodness.
 //!	@author SignpostMarv
 
+namespace libAurora{
+
+	use Iterator;
+	use Countable;
+
+//!	abstract iterator, not for any particular class but we don't want to duplicate code.
+	abstract class abstractIterator implements Iterator, Countable{
+//!	array holds the values of the iterator class
+		protected $data = array();
+
+		public function current(){
+			return current($this->data);
+		}
+
+		public function key(){
+			return key($this->data);
+		}
+
+		public function next(){
+			next($this->data);
+		}
+
+		public function rewind(){
+			reset($this->data);
+		}
+
+		public function valid(){
+			return $this->key() !== null;
+		}
+
+		public function count(){
+			return count($this->data);
+		}
+	}
+
+//!	abstract iterator with ArrayAccess interface
+	abstract class abstractIteratorArrayAccess extends abstractIterator{
+
+		public function offsetExists($offset){
+			return isset($this->data[$offset]);
+		}
+
+		public function offsetGet($offset){
+			return $this->offsetExists($offset) ? $this->data[$offset] : null;
+		}
+
+		public function offsetUnset($offset){
+			unset($this->data[$offset]);
+		}
+	}
+}
+
 //!	Code from libOMV, taken from visible metadata
 namespace OpenMetaverse{
 
@@ -265,31 +317,59 @@ namespace OpenMetaverse{
 	}
 }
 
-namespace Aurora\Addon{
+namespace Aurora{
 
 //!	This interface exists purely to give client code the ability to detect all Addon-specific exception classes in one go.
 //!	The purpose of this behaviour is that instances of Aurora::Addon::Exception will be more or less "safe" for public consumption.
 	interface Exception{
 	}
 
-//!	MapAPI-specific RuntimeException
+//!	Addon-specific RuntimeException
 	class RuntimeException extends \RuntimeException implements Exception{
 	}
 
-//!	MapAPI-specific InvalidArgumentException
+//!	Addon-specific InvalidArgumentException
 	class InvalidArgumentException extends \InvalidArgumentException implements Exception{
 	}
 
-//!	MapAPI-specific UnexpectedValueException
+//!	Addon-specific UnexpectedValueException
 	class UnexpectedValueException extends \UnexpectedValueException implements Exception{
 	}
 
-//!	MapAPI-specific LengthException
+//!	Addon-specific LengthException
 	class LengthException extends \LengthException implements Exception{
 	}
 
-//!	MapAPI-specific BadMethodCallException
+//!	Addon-specific BadMethodCallException
 	class BadMethodCallException extends \BadMethodCallException implements Exception{
+	}
+}
+
+namespace Aurora\Addon{
+
+//!	This interface exists purely to give client code the ability to detect all Addon-specific exception classes in one go.
+//!	The purpose of this behaviour is that instances of Aurora::Addon::Exception will be more or less "safe" for public consumption.
+	interface Exception extends \Aurora\Exception{
+	}
+
+//!	Addon-specific RuntimeException
+	class RuntimeException extends \Aurora\RuntimeException implements Exception{
+	}
+
+//!	Addon-specific InvalidArgumentException
+	class InvalidArgumentException extends \Aurora\InvalidArgumentException implements Exception{
+	}
+
+//!	Addon-specific UnexpectedValueException
+	class UnexpectedValueException extends \Aurora\UnexpectedValueException implements Exception{
+	}
+
+//!	Addon-specific LengthException
+	class LengthException extends \Aurora\LengthException implements Exception{
+	}
+
+//!	Addon-specific BadMethodCallException
+	class BadMethodCallException extends \Aurora\BadMethodCallException implements Exception{
 	}
 
 //!	Determines if a given value is a valid UUID
@@ -299,36 +379,6 @@ namespace Aurora\Addon{
 */
 	function is_uuid($uuid){
 		return is_string($uuid) && (preg_match('/^[a-fA-F0-9]{8}\-[a-fA-F0-9]{4}\-[a-fA-F0-9]{4}\-[a-fA-F0-9]{4}\-[a-fA-F0-9]{12}$/', $uuid) == 1);
-	}
-
-//!	Since webui-gpl now houses code for two API implementations, we're adding a common abstract class
-	abstract class abstractAPI{
-
-//!	makes a call to the API end point running on an instance of Aurora.
-/**
-*	@param string $method
-*	@param array $arguments being lazy and future-proofing API methods that have no arguments.
-*	@return mixed API results should be JSON-encoded, implementations of Aurora::Addon::abstractAPI::makeCallToAPI() should perform json_decode()
-*/
-		abstract protected function makeCallToAPI($method, array $arguments=null, array $expectedResponse);
-
-		protected $attachedAPIs = array();
-
-		public function attachAPI(abstractAPI $API){
-			if(is_a($API, get_class($this)) === true){
-				throw new InvalidArgumentException('Cannot attach an instnace of an API or a child-implementation of an API to itself.');
-			}
-			$pos = strrpos(get_class($API), '\\');
-			$name = substr(get_class($API), $pos !== false ? $pos + 1 : 0);
-			if(isset($this->attachedAPIs[$name]) === true){
-				throw new InvalidArgumentException('An API of that type has already been attached.');
-			}
-			$this->attachedAPIs[$name] = $API;
-		}
-
-		public function getAttachedAPI($className){
-			return isset($this->attachedAPIs[$className]) ? $this->attachedAPIs[$className] : null;
-		}
 	}
 }
 

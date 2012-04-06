@@ -10,33 +10,35 @@ namespace Aurora\Addon{
 	use Countable;
 	use ArrayAccess;
 
-//!	abstract iterator, not for any particular class but we don't want to duplicate code.
-	abstract class abstractIterator implements Iterator, Countable{
-//!	array holds the values of the iterator class
-		protected $data = array();
+	use libAurora\abstractIterator;
 
-		public function current(){
-			return current($this->data);
+//!	Since webui-gpl now houses code for two API implementations, we're adding a common abstract class
+	abstract class abstractAPI{
+
+//!	makes a call to the API end point running on an instance of Aurora.
+/**
+*	@param string $method
+*	@param array $arguments being lazy and future-proofing API methods that have no arguments.
+*	@return mixed API results should be JSON-encoded, implementations of Aurora::Addon::abstractAPI::makeCallToAPI() should perform json_decode()
+*/
+		abstract protected function makeCallToAPI($method, array $arguments=null, array $expectedResponse);
+
+		protected $attachedAPIs = array();
+
+		public function attachAPI(abstractAPI $API){
+			if(is_a($API, get_class($this)) === true){
+				throw new InvalidArgumentException('Cannot attach an instnace of an API or a child-implementation of an API to itself.');
+			}
+			$pos = strrpos(get_class($API), '\\');
+			$name = substr(get_class($API), $pos !== false ? $pos + 1 : 0);
+			if(isset($this->attachedAPIs[$name]) === true){
+				throw new InvalidArgumentException('An API of that type has already been attached.');
+			}
+			$this->attachedAPIs[$name] = $API;
 		}
 
-		public function key(){
-			return key($this->data);
-		}
-
-		public function next(){
-			next($this->data);
-		}
-
-		public function rewind(){
-			reset($this->data);
-		}
-
-		public function valid(){
-			return $this->key() !== null;
-		}
-
-		public function count(){
-			return count($this->data);
+		public function getAttachedAPI($className){
+			return isset($this->attachedAPIs[$className]) ? $this->attachedAPIs[$className] : null;
 		}
 	}
 

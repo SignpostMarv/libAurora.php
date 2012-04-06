@@ -9,7 +9,7 @@ namespace Aurora\Addon\WebUI{
 
 	use Aurora\Addon\WebUI;
 	use Aurora\Addon\WORM;
-	use Aurora\Addon\abstractIterator;
+	use libAurora\abstractIterator;
 
 //!	abstract iterator for instances of Aurora::Addon::WebUI::abstractUser
 	abstract class abstractUserIterator extends abstractIterator{

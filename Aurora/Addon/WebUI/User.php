@@ -11,7 +11,7 @@ namespace Aurora\Addon\WebUI{
 	use Aurora\Addon\WORM;
 	use Aurora\Addon\WebUI;
 	use Aurora\Services\Interfaces;
-	use Aurora\Addon\abstractIterator;
+	use libAurora\abstractIterator;
 
 //!	abstract implementation
 	abstract class abstractUser implements Interfaces\User{

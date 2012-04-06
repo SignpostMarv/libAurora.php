@@ -5,7 +5,7 @@
 
 namespace Aurora\Addon\WebUI{
 
-	use Aurora\Addon\abstractIterator;
+	use libAurora\abstractIterator;
 
 //!	basic stub class for individual avatar archives.
 	class basicAvatarArchive{
