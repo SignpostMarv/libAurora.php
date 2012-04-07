@@ -1064,13 +1064,8 @@ namespace Aurora\Addon{
 *	@return object an instance of Aurora::Addon::WebUI::SearchUserResults
 */
 		public function FindUsers($query='', $start=0, $count=25, $asArray=false){
-			if(is_string($start) === true){
-				if(ctype_digit($start) === true){
-					$start = (integer)$start;
-				}else if($query === ''){
-					$query = $start;
-					$start = 0;
-				}
+			if(is_string($start) === true && ctype_digit($start) === true){
+				$start = (integer)$start;
 			}
 			if(is_string($count) === true && ctype_digit($count) === true){
 				$count = (integer)$count;
