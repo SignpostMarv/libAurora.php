@@ -106,6 +106,66 @@ namespace libAurora\DataManager{
 
 			return $retVal;
 		}
+
+//!	Performs an insert query
+/**
+*	@see Aurora::Framework::IGenericData::Insert()
+*/
+		public function Insert($table, array $values){
+			parent::Insert($table, $values);
+
+			reset($values);
+			$specifyKeys = is_string(key($values));
+			$fields = '';
+			if($specifyKeys === true){
+				$fields   = '(' . implode(', ', array_keys($values)) . ')';
+			}
+
+			$ps = array();
+			foreach($values as $k=>$v){
+				$ps[':' . QueryFilter::preparedKey($k)] = $v;
+			}
+			unset($values);
+
+			$query = sprintf('INSERT INTO %s %s VALUES(%s)', $table, $fields, implode(', ', array_keys($ps)));
+
+			$sth = null;
+			try{
+				$sth = $this->PDO->prepare($query);
+			}catch(PDOException $e){
+				throw new RuntimeException('Exception occurred when preparing query.', $e->getCode());
+			}
+
+			try{
+				foreach($ps as $k=>$v){
+					$type = \PDO::PARAM_STR;
+					switch(gettype($v)){
+						case 'boolean':
+							$type = \PDO::PARAM_BOOL;
+						break;
+						case 'integer':
+							$type = \PDO::PARAM_INT;
+						break;
+						case 'NULL':
+							throw new RuntimeException('NULL is not a supported parameter.');
+						break;
+						default:
+							$v = (string)$v;
+						break;
+					}
+					var_dump($k, $v, $type);
+					$sth->bindValue($k, $v, $type);
+				}
+			}catch(PDOException $e){
+				throw new RuntimeException('Exception occurred when binding values to query.', $e->getCode());
+			}
+
+			try{
+				return $sth->execute();
+			}catch(PDOException $e){
+				throw new RuntimeException('Execution of the query threw an exception.', $e->getCode());
+			}
+		}
 	}
 }
 ?>

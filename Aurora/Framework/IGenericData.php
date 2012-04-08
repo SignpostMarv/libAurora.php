@@ -48,6 +48,14 @@ namespace Aurora\Framework{
 *	@return array A one-dimensional array of all fields in the result rows.
 */
 		public function Query(array $wantedValue, $table, QueryFilter $queryFilter=null, array $sort=null, $start=null, $count=null);
+
+//!	Performs an insert query
+/**
+*	@param string $table the name of the table to perform the query on.
+*	@param array $values if the keys are numeric will INSERT INTO $table VALUES($values), if the keys are strings will INSERT INTO $table (keys($values)) VALUES($values)
+*	@return bool TRUE on success, FALSE otherwise
+*/
+		public function Insert($table, array $values);
 	}
 }
 

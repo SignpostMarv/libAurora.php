@@ -16,6 +16,17 @@ namespace libAurora\DataManager{
 //!	string Regular expression used to validate the $table argument of libAurora::DataManager::DataManagerBase::Query()
 		const regex_Query_arg_table = '/^[A-z0-9_]+$/';
 
+//!	Performs validation on table names
+		protected static function validateArg_table($table){
+			if(is_string($table) === false){
+				throw new InvalidArgumentException('table name must be specified as string.');
+			}else if(ctype_graph($table) === false){
+				throw new InvalidArgumentException('table name must not contain whitespace characters');
+			}else if(preg_match(static::regex_Query_arg_table, $table) != 1){
+				throw new InvalidArgumentException('table name is invalid.');
+			}		
+		}
+
 //!	This method only performs argument validation to save duplication of code.
 		public function Query(array $wantedValue, $table, QueryFilter $queryFilter=null, array $sort=null, $start=null, $count=null){
 			foreach($wantedValue as $value){
@@ -24,13 +35,7 @@ namespace libAurora\DataManager{
 				}
 			}
 
-			if(is_string($table) === false){
-				throw new InvalidArgumentException('table name must be specified as string.');
-			}else if(ctype_graph($table) === false){
-				throw new InvalidArgumentException('table name must not contain whitespace characters');
-			}else if(preg_match(static::regex_Query_arg_table, $table) != 1){
-				throw new InvalidArgumentException('table name is invalid.');
-			}
+			static::validateArg_table($table);
 
 			if(isset($sort) === true){
 				foreach($sort as $k=>$v){
@@ -52,6 +57,25 @@ namespace libAurora\DataManager{
 				throw new InvalidArgumentException('if count is specified, it must be an integer.');
 			}else if(isset($count) === true && is_integer($count) === true && $count < 1){
 				throw new InvalidArgumentException('if count is specified, it must be greater than or equal to one.');
+			}
+		}
+
+//!	This method only performs argument validation to save duplication of code.
+		public function Insert($table, array $values){
+			static::validateArg_table($table);
+			
+			if(count($values) < 1){
+				throw new InvalidArgumentException('Insert query must include at least one value.');
+			}
+			$keys = array_keys($values);
+			$int = is_integer(current($keys));
+			$str = is_string(current($keys));
+			foreach($keys as $k){
+				if(is_integer($k) !== $int || is_string($k) !== $str){
+					throw new InvalidArgumentException('value array keys must be all strings or all integers.');
+				}else if($str === true && preg_match('/^\`?[A-z0-9_]+\`?$/', $k) != 1){
+					throw new InvalidArgumentException('field name was invalid.');
+				}
 			}
 		}
 	}
