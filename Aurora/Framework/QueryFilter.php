@@ -189,7 +189,7 @@ namespace Aurora\Framework{
 *	@param string $key a key intended to used in a prepared SQL statement
 *	@return string $key sans any special characters that would invalidate a prepared statement
 */
-		private static function preparedKey($key){
+		public static function preparedKey($key){
 			if(is_string($key) === false){
 				throw new InvalidArgumentException('key msut be specified as string.');
 			}
