@@ -153,7 +153,6 @@ namespace libAurora\DataManager{
 							$v = (string)$v;
 						break;
 					}
-					var_dump($k, $v, $type);
 					$sth->bindValue($k, $v, $type);
 				}
 			}catch(PDOException $e){
