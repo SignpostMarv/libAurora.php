@@ -6,6 +6,7 @@
 namespace libAurora\DataManager{
 
 	use PDOException;
+	use libAurora\InvalidArgumentException;
 	use libAurora\RuntimeException;
 
 	use PDOStatement;
@@ -92,6 +93,9 @@ namespace libAurora\DataManager{
 			if(isset($sort) === true && count($sort) > 0){
 				$parts = array();
 				foreach($sort as $k=>$v){
+					if(preg_match('/^(\`[A-z0-9_]+\`|[A-z0-9_]+)$/', $k) != 1){
+						throw new InvalidArgumentException('sort key is invalid.');
+					}
 					$parts[] = sprintf('%s %s', $k, $v ? 'ASC' : 'DESC');
 				}
 				$query .= ' ORDER BY ' . implode(', ', $parts);

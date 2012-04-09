@@ -73,7 +73,7 @@ namespace libAurora\DataManager{
 			foreach($keys as $k){
 				if(is_integer($k) !== $int || is_string($k) !== $str){
 					throw new InvalidArgumentException('value array keys must be all strings or all integers.');
-				}else if($str === true && preg_match('/^\`?[A-z0-9_]+\`?$/', $k) != 1){
+				}else if($str === true && preg_match('/^(\`[A-z0-9_]+\`|[A-z0-9_]+)$/', $k) != 1){
 					throw new InvalidArgumentException('field name was invalid.');
 				}
 			}
@@ -88,7 +88,7 @@ namespace libAurora\DataManager{
 			}
 			$keys = array_keys($set);
 			foreach($keys as $k){
-				if(preg_match('/^\`?[A-z0-9_]+\`?$/', $k) != 1){
+				if(preg_match('/^(\`[A-z0-9_]+\`|[A-z0-9_]+)$/', $k) != 1){
 					throw new InvalidArgumentException('field name was invalid.');
 				}
 			}
