@@ -56,6 +56,15 @@ namespace Aurora\Framework{
 *	@return bool TRUE on success, FALSE otherwise
 */
 		public function Insert($table, array $values);
+
+//!	Performs an update query. At the time of writing, the c# IGenericData does not have an Update method.
+/**
+*	@param string $table the name of the table to perform the query on.
+*	@param array $set an array of field names for keys
+*	@param object $queryFilter an instance of Aurora::Framework::QueryFilter
+*	@return bool TRUE on success, FALSE otherwise
+*/
+		public function Update($table, array $set, QueryFilter $queryFilter=null);
 	}
 }
 

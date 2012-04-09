@@ -8,6 +8,8 @@ namespace libAurora\DataManager{
 	use PDOException;
 	use libAurora\RuntimeException;
 
+	use PDOStatement;
+
 	use Aurora\Framework\QueryFilter;
 
 //!	PDO implementation of Aurora::Framework::IGenericData
@@ -24,6 +26,53 @@ namespace libAurora\DataManager{
 			$this->PDO = $PDO;
 		}
 
+//!	Prepares a query
+		private static function prepareSth(\PDO $PDO, PDOStatement & $sth=null, $query){
+			try{
+				$sth = $PDO->prepare($query);
+			}catch(PDOException $e){
+				throw new RuntimeException('Exception occurred when preparing query.', $e->getCode());
+			}		
+		}
+
+//!	Binds values to queries
+		private static function bindValues(PDOStatement $sth, array $ps){
+			try{
+				foreach($ps as $k=>$v){
+					$type = \PDO::PARAM_STR;
+					switch(gettype($v)){
+						case 'boolean':
+							$type = \PDO::PARAM_BOOL;
+						break;
+						case 'integer':
+							$type = \PDO::PARAM_INT;
+						break;
+						case 'NULL':
+							throw new RuntimeException('NULL is not a supported parameter.');
+						break;
+						default:
+							$v = (string)$v;
+						break;
+					}
+					$sth->bindValue($k, $v, $type);
+				}
+			}catch(PDOException $e){
+				throw new RuntimeException('Exception occurred when binding values to query.', $e->getCode());
+			}
+		}
+
+//!	Returns and executes
+		private static function returnExecute(PDOStatement $sth){
+			try{
+				$exec = $sth->execute();
+				if(!$exec){
+					print_r($sth->errorInfo());
+				}
+				return $exec;
+			}catch(PDOException $e){
+				throw new RuntimeException('Execution of the query threw an exception.', $e->getCode());
+			}
+		}
 
 //!	Performs a select query
 /**
@@ -56,34 +105,8 @@ namespace libAurora\DataManager{
 			}
 
 			$sth = null;
-			try{
-				$sth = $this->PDO->prepare($query);
-			}catch(PDOException $e){
-				throw new RuntimeException('Exception occurred when preparing query.', $e->getCode());
-			}
-
-			try{
-				foreach($ps as $k=>$v){
-					$type = \PDO::PARAM_STR;
-					switch(gettype($v)){
-						case 'boolean':
-							$type = \PDO::PARAM_BOOL;
-						break;
-						case 'integer':
-							$type = \PDO::PARAM_INT;
-						break;
-						case 'NULL':
-							throw new RuntimeException('NULL is not a supported parameter.');
-						break;
-						default:
-							$v = (string)$v;
-						break;
-					}
-					$sth->bindValue($k, $v, $type);
-				}
-			}catch(PDOException $e){
-				throw new RuntimeException('Exception occurred when binding values to query.', $e->getCode());
-			}
+			static::prepareSth($this->PDO, $sth, $query);
+			static::bindValues($sth, $ps);
 
 			try{
 				if($sth->execute() === false){
@@ -130,40 +153,38 @@ namespace libAurora\DataManager{
 			$query = sprintf('INSERT INTO %s %s VALUES(%s)', $table, $fields, implode(', ', array_keys($ps)));
 
 			$sth = null;
-			try{
-				$sth = $this->PDO->prepare($query);
-			}catch(PDOException $e){
-				throw new RuntimeException('Exception occurred when preparing query.', $e->getCode());
+			static::prepareSth($this->PDO, $sth, $query);
+			static::bindValues($sth, $ps);
+			return static::returnExecute($sth);
+		}
+
+//!	Performs an update query
+/**
+*	@see Aurora::Framework::IGenericData::Update()
+*/
+		public function Update($table, array $set, QueryFilter $queryFilter=null){
+			parent::Update($table, $set, $queryFilter);
+
+			$parts = array();
+			$ps = array();
+			foreach($set as $k=>$v){
+				$key = ':UPDATE_' . QueryFilter::preparedKey($k);
+				$ps[$key] = $v;
+				$parts[] = sprintf('%s = %s', $k, $key);
+			}
+			$_ps = array();
+
+			$query = sprintf('UPDATE %s SET %s', $table, implode(', ', $parts));
+			if(isset($queryFilter) && $queryFilter->count() > 0){
+				$query .= ' WHERE ' . $queryFilter->toSQL($_ps);
+				$ps = array_merge($ps, $_ps);
+				unset($_ps);
 			}
 
-			try{
-				foreach($ps as $k=>$v){
-					$type = \PDO::PARAM_STR;
-					switch(gettype($v)){
-						case 'boolean':
-							$type = \PDO::PARAM_BOOL;
-						break;
-						case 'integer':
-							$type = \PDO::PARAM_INT;
-						break;
-						case 'NULL':
-							throw new RuntimeException('NULL is not a supported parameter.');
-						break;
-						default:
-							$v = (string)$v;
-						break;
-					}
-					$sth->bindValue($k, $v, $type);
-				}
-			}catch(PDOException $e){
-				throw new RuntimeException('Exception occurred when binding values to query.', $e->getCode());
-			}
-
-			try{
-				return $sth->execute();
-			}catch(PDOException $e){
-				throw new RuntimeException('Execution of the query threw an exception.', $e->getCode());
-			}
+			$sth = null;
+			static::prepareSth($this->PDO, $sth, $query);
+			static::bindValues($sth, $ps);
+			return static::returnExecute($sth);
 		}
 	}
 }

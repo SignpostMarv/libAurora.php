@@ -78,6 +78,21 @@ namespace libAurora\DataManager{
 				}
 			}
 		}
+
+//!	This method only performs argument validation to save duplication of code.
+		public function Update($table, array $set, QueryFilter $queryFilter=null){
+			static::validateArg_table($table);
+
+			if(count($set) < 1){
+				throw new InvalidArgumentException('Insert query must include at least one value.');
+			}
+			$keys = array_keys($set);
+			foreach($keys as $k){
+				if(preg_match('/^\`?[A-z0-9_]+\`?$/', $k) != 1){
+					throw new InvalidArgumentException('field name was invalid.');
+				}
+			}
+		}
 	}
 }
 
