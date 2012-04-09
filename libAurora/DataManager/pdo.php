@@ -190,6 +190,22 @@ namespace libAurora\DataManager{
 			static::bindValues($sth, $ps);
 			return static::returnExecute($sth);
 		}
+
+//!	Performs a delete query
+/**
+*	@see Aurora::Framework::IGenericData::Delete()
+*/
+		public function Delete($table, QueryFilter $queryFilter=null){
+			parent::Delete($table, $queryFilter);
+
+			$ps = array();
+			$query = 'DELETE FROM ' . $table . (($queryFilter !== null && $queryFilter->count() >= 1) ? ' WHERE ' . $queryFilter->ToSQL($ps) : '');
+
+			$sth = null;
+			static::prepareSth($this->PDO, $sth, $query);
+			static::bindValues($sth, $ps);
+			return static::returnExecute($sth);
+		}
 	}
 }
 ?>

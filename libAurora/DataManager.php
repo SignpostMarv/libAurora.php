@@ -93,6 +93,11 @@ namespace libAurora\DataManager{
 				}
 			}
 		}
+
+//!	This method only performs argument validation to save duplication of code.
+		public function Delete($table, QueryFilter $queryFilter=null){
+			static::validateArg_table($table);
+		}
 	}
 }
 

@@ -65,6 +65,14 @@ namespace Aurora\Framework{
 *	@return bool TRUE on success, FALSE otherwise
 */
 		public function Update($table, array $set, QueryFilter $queryFilter=null);
+
+//!	Performs a delete query
+/**
+*	@param string $table the name of the table to perform the query on.
+*	@param object $queryFilter an instance of Aurora::Framework::QueryFilter
+*	@return bool TRUE on success, FALSE otherwise
+*/
+		public function Delete($table, QueryFilter $queryFilter=null);
 	}
 }
 
