@@ -2000,6 +2000,47 @@ namespace Aurora\Addon{
 			);
 		}
 
+//!	Edit a group notice
+/**
+*	@param mixed $groupNotice Either the UUID of a group notice, or an instance of Aurora::Addon::WebUI::GroupNoticeData
+*	@param mixed $subject new subject string or null to indicate no change
+*	@param mixed $message new message string or null to indicate no change
+*/
+		public function EditGroupNotice($notice, $subject=null, $message=null){
+			if(isset($subject) === true && is_string($subject) === false){
+				throw new InvalidArgumentException('If subject is specified, it must be specified as string.');
+			}else if(isset($subject) === true && is_string($subject) === true && trim($subject) === ''){
+				throw new InvalidArgumentException('If subject is specified, it must not be empty.');
+			}else if(isset($message) === true && is_string($message) === false){
+				throw new InvalidArgumentException('If message is specified, it must be specified as string.');				
+			}else if(isset($message) === true && is_string($message) === true && trim($message) === ''){
+				throw new InvalidArgumentException('If message is specified, it must not be empty.');
+			}else if(isset($subject, $message) === false){
+				return true; // if no changes are made, return immediately
+			}
+
+			if($notice instanceof WebUI\GroupNoticeData){
+				$notice = $notice->NoticeID();
+			}
+			if(is_string($notice) === false){
+				throw new InvalidArgumentException('NoticeID must be specified as string.');
+			}else if(preg_match(static::regex_UUID, $notice) != 1){
+				throw new InvalidArgumentException('NoticeID must be a valid UUID.');
+			}
+			
+			$input = array(
+				'NoticeID' => $notice
+			);
+			if(isset($subject) === true){
+				$input['Subject'] = trim($subject);
+			}
+			if(isset($message) === true){
+				$input['Message'] = trim($message);
+			}
+
+			return $this->makeCallToAPI('EditGroupNotice', $input, array('Success' => array('boolean'=>array())))->Success;
+		}
+
 //!	PHP doesn't do const arrays :(
 /**
 *	@return array The validator array to be passed to Aurora::Addon::WebUI::makeCallToAPI() when making parcel-related calls.
