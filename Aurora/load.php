@@ -317,34 +317,6 @@ namespace OpenMetaverse{
 	}
 }
 
-namespace Aurora{
-
-//!	This interface exists purely to give client code the ability to detect all Addon-specific exception classes in one go.
-//!	The purpose of this behaviour is that instances of Aurora::Addon::Exception will be more or less "safe" for public consumption.
-	interface Exception{
-	}
-
-//!	Addon-specific RuntimeException
-	class RuntimeException extends \RuntimeException implements Exception{
-	}
-
-//!	Addon-specific InvalidArgumentException
-	class InvalidArgumentException extends \InvalidArgumentException implements Exception{
-	}
-
-//!	Addon-specific UnexpectedValueException
-	class UnexpectedValueException extends \UnexpectedValueException implements Exception{
-	}
-
-//!	Addon-specific LengthException
-	class LengthException extends \LengthException implements Exception{
-	}
-
-//!	Addon-specific BadMethodCallException
-	class BadMethodCallException extends \BadMethodCallException implements Exception{
-	}
-}
-
 namespace Aurora\Addon{
 
 //!	This interface exists purely to give client code the ability to detect all Addon-specific exception classes in one go.

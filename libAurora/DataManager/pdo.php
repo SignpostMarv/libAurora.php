@@ -92,7 +92,7 @@ namespace libAurora\DataManager{
 			if(isset($sort) === true && count($sort) > 0){
 				$parts = array();
 				foreach($sort as $k=>$v){
-					$parts[] = sprintf('`%s` %s', $k, $v ? 'ASC' : 'DESC');
+					$parts[] = sprintf('%s %s', $k, $v ? 'ASC' : 'DESC');
 				}
 				$query .= ' ORDER BY ' . implode(', ', $parts);
 			}

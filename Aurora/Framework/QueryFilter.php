@@ -39,13 +39,13 @@ namespace Aurora\Framework{
 
 	use Aurora\InvalidArgumentException;
 
-	use QueryFilter\scalarFilter;
-	use QueryFilter\scalarMultiFilter;
-	use QueryFilter\stringFilter;
-	use QueryFilter\stringMultiFilter;
-	use QueryFilter\unsignedIntegerFilter;
-	use QueryFilter\integerFilter;
-	use QueryFilter\nullFilter;
+	use Aurora\Framework\QueryFilter\scalarFilter;
+	use Aurora\Framework\QueryFilter\scalarMultiFilter;
+	use Aurora\Framework\QueryFilter\stringFilter;
+	use Aurora\Framework\QueryFilter\stringMultiFilter;
+	use Aurora\Framework\QueryFilter\unsignedIntegerFilter;
+	use Aurora\Framework\QueryFilter\integerFilter;
+	use Aurora\Framework\QueryFilter\nullFilter;
 
 //! Implementation of QueryFilter class from Aurora-Sim
 	class QueryFilter implements Countable{
@@ -466,6 +466,8 @@ namespace Aurora\Framework{
 			}
 
 #endregion
+
+			return $query;
 		}
 
 	}
