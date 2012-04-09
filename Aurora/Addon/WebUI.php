@@ -493,7 +493,7 @@ namespace Aurora\Addon{
 			return $result->Verified;
 		}
 
-		
+
 		protected static function GridUserInfoValidator(){
 			static $validator = array(
 				'UUID'              => array('string' =>array()),
@@ -571,7 +571,7 @@ namespace Aurora\Addon{
 			if(isset($lookAt) === true){
 				$input['LookAt'] = (string)$lookAt;
 			}
-			
+
 			return $this->makeCallToAPI('SetHomeLocation', $input, array(
 				'Success' => array('boolean' => array())
 			))->Success;
@@ -1117,7 +1117,7 @@ namespace Aurora\Addon{
 			if(is_string($secondsAgo) && ctype_digit($secondsAgo) === true){
 				$secondsAgo = (integer)$secondsAgo;
 			}
-			
+
 			if(is_integer($secondsAgo) === false){
 				throw new InvalidArgumentException('secondsAgo must be specified as integer.');
 			}else if($secondsAgo < 0){
@@ -1148,8 +1148,8 @@ namespace Aurora\Addon{
 			if(is_string($count) && ctype_digit($count) === true){
 				$count = (integer)$count;
 			}
-			
-			
+
+
 			if(is_integer($start) === false){
 				throw new InvalidArgumentException('Start point must be an integer.');
 			}else if(is_integer($count) === false){
@@ -1174,7 +1174,7 @@ namespace Aurora\Addon{
 					'object' => array(static::GridUserInfoValidator())
 				)))
 			));
-			
+
 			$users = array();
 			foreach($result->Users as $user){
 				$users[] = WebUI\GridUserInfo::r(
@@ -1190,7 +1190,7 @@ namespace Aurora\Addon{
 					$user->LastLogout === false ? null : $user->LastLogout
 				);
 			}
-			
+
 			return $asArray ? $users : WebUI\RecentlyOnlineUsersIterator::f($this, $secondsAgo, $stillOnline, $start, $result->Total, $users);
 		}
 
@@ -1504,7 +1504,7 @@ namespace Aurora\Addon{
 					throw new InvalidArgumentException('RegionFlags exclusion value is invalid, aborting call to API');
 				}
 			}
-			
+
 			$input = array(
 				'X'           => $x,
 				'Y'           => $y,
@@ -1514,6 +1514,7 @@ namespace Aurora\Addon{
 			if(isset($excludeFlags) === true){
 				$input['ExcludeRegionFlags'] = $excludeFlags;
 			}
+
 			$result = $this->makeCallToAPI('GetRegionsByXY', $input, array(
 				'Regions' => array('array'=>array(static::GridRegionValidator())),
 				'Total'   => array('integer'=>array())
@@ -1522,7 +1523,8 @@ namespace Aurora\Addon{
 			foreach($result->Regions as $val){
 				$response[] = WebUI\GridRegion::fromEndPointResult($val);
 			}
-			return WebUI\GetRegions::r($this, null, $flags, 0, $result->Total, null, null, null, $response);
+
+			return WebUI\GetRegionsByXY::r($this, $x, $y, $flags, isset($excludeFlags) ? $excludeFlags : 0, $scopeID, $response);
 		}
 
 //!	Get a list of regions in the specified estate that match the specified flags.
@@ -1672,7 +1674,7 @@ namespace Aurora\Addon{
 				}
 			}
 
-			return $asArray ? $response : WebUI\GetRegionsInArea::r($this, $startX, $startY, $endX, $endY, $scopeID, 0, $result->Total, $response);			
+			return $asArray ? $response : WebUI\GetRegionsInArea::r($this, $startX, $startY, $endX, $endY, $scopeID, 0, $result->Total, $response);
 		}
 
 //!	object an instance of Aurora::Addon::WebUI::GridInfo
@@ -1900,7 +1902,7 @@ namespace Aurora\Addon{
 				if($group instanceof WebUI\GroupRecord){
 					$groupIDs[] = $group->GroupID();
 				}else if(is_bool($group) === false){
-					throw new InvalidArgumentException('Groups must be an array of Aurora::Addon::WebUI::GroupRecord instances');				
+					throw new InvalidArgumentException('Groups must be an array of Aurora::Addon::WebUI::GroupRecord instances');
 				}
 			}
 
@@ -1983,7 +1985,7 @@ namespace Aurora\Addon{
 			), array(
 				'GroupNotice' => self::GroupNoticeValidatorArray()
 			))->GroupNotice;
-			
+
 			return WebUI\GroupNoticeData::r(
 				$groupNotice->GroupID,
 				$groupNotice->NoticeID,
@@ -2064,7 +2066,7 @@ namespace Aurora\Addon{
 *	@param object API result
 *	@return object instance of Aurora::Addon::WebUI::LandData
 */
-		private static function ParcelResult2LandData(\stdClass $result){		
+		private static function ParcelResult2LandData(\stdClass $result){
 			$result->UserLookAt   = new Vector3($result->UserLookAt[0]  , $result->UserLookAt[1]  , $result->UserLookAt[2]  );
 			$result->UserLocation = new Vector3($result->UserLocation[0], $result->UserLocation[1], $result->UserLocation[2]);
 			return WebUI\LandData::r(
@@ -2354,7 +2356,7 @@ namespace Aurora\Addon{
 				}
 				$Owner = $this->GetProfile('', $Owner);
 			}
-		
+
 			$input = array(
 				'Owner' => $Owner->PrincipalID()
 			);
@@ -2400,7 +2402,7 @@ namespace Aurora\Addon{
 
 //!	PHP doesn't do const arrays :(
 /**
-*	@return array The validator array to be passed to Aurora::Addon::WebUI::makeCallToAPI() when making event-related calls. 
+*	@return array The validator array to be passed to Aurora::Addon::WebUI::makeCallToAPI() when making event-related calls.
 */
 		private static function EventsResultValidatorArray(){
 			return array('object' => array(array(
@@ -2444,7 +2446,7 @@ namespace Aurora\Addon{
 			}else if($count < 0){
 				throw new InvalidArgumentException('Count must be greater than or equal to zero.');
 			}
-			
+
 			$input = array(
 				'Start' => $start,
 				'Count' => $count
@@ -2455,7 +2457,7 @@ namespace Aurora\Addon{
 			if(isset($sort) === true){
 				$input['Sort'] = $sort;
 			}
-			
+
 			$result = $this->makeCallToAPI('GetEvents', $input, array(
 				'Events' => array('array'=>array( static::EventsResultValidatorArray())),
 				'Total'  => array('integer'=>array())

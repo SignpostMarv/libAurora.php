@@ -91,7 +91,7 @@ namespace Aurora\Addon\WebUI{
 		}
 
 //!	integer
-//!	@see Aurora::Addon::WebUI::GridRegion::EstateID()		
+//!	@see Aurora::Addon::WebUI::GridRegion::EstateID()
 		protected $EstateID;
 //!	@see Aurora::Addon::WebUI::GridRegion::EstateID
 		public function EstateID(){
@@ -179,7 +179,7 @@ namespace Aurora\Addon\WebUI{
 			}else if(is_integer($HttpPort) === false){
 				throw new InvalidArgumentException('HttpPort should be an integer');
 			}else if($HttpPort < 0){
-				throw new InvalidArgumentException('HttpPort should be greater than zero'); 
+				throw new InvalidArgumentException('HttpPort should be greater than zero');
 			}else if(is_string($ServerURI) === false){
 				throw new InvalidArgumentException('ServerURI should be a string');
 			}else if(strpos($ServerURI, 'http://') !== 0 && strpos($ServerURI, 'https://') !== 0){
@@ -310,6 +310,7 @@ namespace Aurora\Addon\WebUI{
 /**
 *	@param object $WebUI instance of Aurora::Addon::WebUI. Used to get instances of Aurora::Addon::WebUI::GridRegion that the instance wasn't instantiated with.
 *	@param integer $flags bitfield of Aurora::Framework::RegionFlags values
+*	@param integer $excludeFlags bitfield of Aurora::Framework::RegionFlags values used to exclude results
 *	@param integer $start specifies the index that $regions starts at, if specified.
 *	@param integer $total specifies the total number of regions in the grid.
 *	@param mixed $sortRegionName NULL or boolean
@@ -605,7 +606,7 @@ namespace Aurora\Addon\WebUI{
 			}else if(preg_match(\Aurora\Addon\WebUI::regex_UUID, $scopeID) != 1){
 				throw new InvalidArgumentException('ScopeID must be a valid UUID.');
 			}
-			
+
 			$has  = static::hasInstance($WebUI, $region, $range, $scopeID);
 			$hash = md5(
 				spl_object_hash($WebUI) . ':' .
@@ -764,7 +765,122 @@ namespace Aurora\Addon\WebUI{
 		}
 	}
 
-//!	Implementation of Aurora::Framework::EstateSettings	
+//!	Seekable iterator for instance of Aurora::Addon::WebUI::GridRegion at specified x/y coordinates, future-proofing the support Aurora has for regions stacked on top of each other.
+	class GetRegionsByXY extends RegionsIterator{
+
+//!	x-axis point
+		protected $x;
+
+//!	y-axis point
+		protected $y;
+
+//!	integer Since we're allowing non-contiguous, delayed access to the region list, we need to store the Aurora::Framework::RegionFlags bitfield for future use.
+		protected $flags;
+
+//!	integer as with Aurora::Addon::WebUI::GetRegionsByXY::$flags, we need to store the excludeFlags argument
+		protected $excludeFlags;
+
+//!	Scope UUID
+		protected $scopeID;
+
+//!	registry array.
+		private static $registry = array();
+
+//!	We're hiding this behind registry methods
+/**
+*	@param object $WebUI instance of Aurora::Addon::WebUI. Used to get instances of Aurora::Addon::WebUI::GridRegion that the instance wasn't instantiated with.
+*	@param integer $x x-axis point
+*	@param integer $y y-axis point
+*	@param integer $flags bitfield of Aurora::Framework::RegionFlags values
+*	@param integer $excludeFlags bitfield of Aurora::Framework::RegionFlags values used to exclude results
+*	@param string $scopeID Scope UUID
+*	@param mixed $regions An array of Aurora::Addon::WebUI::GridRegion instances.
+**/
+		protected function __construct(WebUI $WebUI, $x, $y, $flags, $excludeFlags=0, $scopeID='00000000-0000-0000-0000-000000000000', array $regions){
+			if(is_string($x) === true && ctype_digit($x) === true){
+				$x = (integer)$x;
+			}
+			if(is_string($y) === true && ctype_digit($y) === true){
+				$y = (integer)$y;
+			}
+			if(is_string($flags) === true && ctype_digit($flags) === true){
+				$flags = (integer)$flags;
+			}
+			if(is_string($excludeFlags) === true && ctype_digit($excludeFlags) === true){
+				$excludeFlags = (integer)$excludeFlags;
+			}
+
+			if(is_integer($x) === false){
+				throw new InvalidArgumentException('x-axis point must be specified as integer.');
+			}else if(is_integer($y) === false){
+				throw new InvalidArgumentException('y-axis point must be specified as integer.');
+			}else if(is_integer($flags) === false){
+				throw new InvalidArgumentException('Region flags must be specified as integer.');
+			}else if(is_integer($excludeFlags) === false){
+				throw new InvalidArgumentException('Region exclude flags must be specified as integer.');
+			}else if(is_string($scopeID) === false){
+				throw new InvalidArgumentException('ScopeID must be specified as a string.');
+			}else if(preg_match(\Aurora\Addon\WebUI::regex_UUID, $scopeID) != 1){
+				throw new InvalidArgumentException('ScopeID must be a valid UUID.');
+			}
+
+			$start = 0;
+			$total = count($regions);
+
+			parent::__construct($WebUI, $start, $total, $regions);
+			$this->x            = $x;
+			$this->y            = $y;
+			$this->flags        = $flags;
+			$this->excludeFlags = $excludeFlags;
+			$this->scopeID      = $scopeID;
+		}
+
+//!	Registry method
+/**
+*	@param object $WebUI instance of Aurora::Addon::WebUI. Used to get instances of Aurora::Addon::WebUI::GridRegion that the instance wasn't instantiated with.
+*	@param integer $x x-axis point
+*	@param integer $y y-axis point
+*	@param integer $flags bitfield of Aurora::Framework::RegionFlags values
+*	@param integer $excludeFlags bitfield of Aurora::Framework::RegionFlags values used to exclude results
+*	@param string $scopeID Scope UUID
+*	@param mixed $regions An array of Aurora::Addon::WebUI::GridRegion instances.
+*	@return object instance of Aurora::Addon::WebUI::GetRegionsByXY
+**/
+		public static function r(WebUI $WebUI, $x, $y, $flags, $excludeFlags=0, $scopeID='00000000-0000-0000-0000-000000000000', array $regions){
+			$hash = md5(spl_object_hash($WebUI) . ':' . $x . ':' . $y . ':' . $flags . ':' . $excludeFlags . ':' . $scopeID);
+
+			if(isset(static::$registry[$hash]) === false || static::$registry[$hash]->count() !== count($regions)){
+				static::$registry[$hash] = new static($WebUI, $x, $y, $flags, $excludeFlags, $scopeID, $regions);
+			}
+
+			return static::$registry[$hash];
+		}
+
+//!	Determines if an instance of the class was cached via the registry method
+/**
+*	@param object $WebUI instance of Aurora::Addon::WebUI. Used to get instances of Aurora::Addon::WebUI::GridRegion that the instance wasn't instantiated with.
+*	@param integer $x x-axis point
+*	@param integer $y y-axis point
+*	@param integer $flags bitfield of Aurora::Framework::RegionFlags values
+*	@param integer $excludeFlags bitfield of Aurora::Framework::RegionFlags values used to exclude results
+*	@param string $scopeID Scope UUID
+*	@return bool TRUE if an instance is available, FALSE otherwise
+*/
+		public static function hasInstance(WebUI $WebUI, $x, $y, $flags, $excludeFlags=0, $scopeID='00000000-0000-0000-0000-000000000000'){
+			$hash = md5(spl_object_hash($WebUI) . ':' . $x . ':' . $y . ':' . $flags . ':' . $excludeFlags . ':' . $scopeID);
+			return isset(static::$registry[$hash]);
+		}
+
+//!	The API currently returns *all* regions at the specified x/y coordinates, so unlike other API result iterators, this method does no batch fetching.
+/**
+*	@return mixed either NULL or an instance of Aurora::Addon::WebUI::GridRegion
+*/
+		public function current(){
+			return ($this->valid() === false || isset($this->data[$this->key()]) === false) ? null : $this->data[$this->key()];
+		}
+	}
+
+//!	Implementation of Aurora::Framework::EstateSettings
 	class EstateSettings implements Framework\EstateSettings{
 
 //!	integer EstateID
