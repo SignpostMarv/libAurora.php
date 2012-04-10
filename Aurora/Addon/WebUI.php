@@ -214,6 +214,8 @@ namespace Aurora\Addon{
 			throw new RuntimeException('API call failed to execute.'); // if this starts happening frequently, we'll add in some more debugging code.
 		}
 
+#region textures		
+
 //!	Returns the URI for a grid texture
 /**
 *	@param string $uuid texture UUID
@@ -227,6 +229,16 @@ namespace Aurora\Addon{
 			}
 
 			return $this->get_grid_info('WebUIHandlerTextureServer') . '/index.php?' . http_build_query(array( 'method'=>'GridTexture', 'uuid'=>$uuid));
+		}
+
+//!	Returns the URI for a region texture
+/**
+*	@param object $region instance of Aurora::Addon::WebUI::GridRegion
+*	@param integer $zoomLevel map tile zoom level
+*	@return string full URL to texture
+*/
+		public function MapTexture(WebUI\GridRegion $region){
+			return $region->serverURI() . '/index.php?' . http_build_query(array( 'method'=>'regionImage' . str_replace('-','', $region->RegionID())));
 		}
 
 //!	Returns the size of the specified texture
@@ -249,15 +261,47 @@ namespace Aurora\Addon{
 			))->Size;
 		}
 
-//!	Returns the URI for a region texture
+#endregion
+
+#region Grid
+
+//!	Determines the online status of the grid and whether logins are enabled.
 /**
-*	@param object $region instance of Aurora::Addon::WebUI::GridRegion
-*	@param integer $zoomLevel map tile zoom level
-*	@return string full URL to texture
+*	@return Aurora::Addon::WebUI::OnlineStatus
+*	@see Aurora::Addon::WebUI::makeCallToAPI()
 */
-		public function MapTexture(WebUI\GridRegion $region){
-			return $region->serverURI() . '/index.php?' . http_build_query(array( 'method'=>'regionImage' . str_replace('-','', $region->RegionID())));
+		public function OnlineStatus(){
+			$result = $this->makeCallToAPI('OnlineStatus', null, array(
+				'Online'       => array('boolean'=>array()),
+				'LoginEnabled' => array('boolean'=>array())
+			));
+			return new WebUI\OnlineStatus($result->Online, $result->LoginEnabled);
 		}
+
+//!	object an instance of Aurora::Addon::WebUI::GridInfo
+		protected $GridInfo;
+
+//!	Processes should not be long-lasting, so we only fetch this once.
+		public function get_grid_info($info=null){
+			if(isset($this->GridInfo) === false){
+				$result = $this->makeCallToAPI('get_grid_info', null, array(
+					'GridInfo' => array('object'=>array())
+				));
+
+				$this->GridInfo = WebUI\GridInfo::f();
+				foreach($result->GridInfo as $k=>$v){
+					$this->GridInfo[$k] = $v;
+				}
+			}
+
+			return (isset($info) && is_string($info) && ctype_graph($info)) ? $this->GridInfo[$info] : $this->GridInfo;
+		}
+
+#endregion
+
+#region Account
+
+#region Registration
 
 //!	Determines whether the specified username exists in the AuroraSim database.
 /**
@@ -384,66 +428,26 @@ namespace Aurora\Addon{
 			return array($this->GetGridUserInfo($result->UUID), $ActivationToken);
 		}
 
-//!	Since admin login and normal login have the same response, we're going to use the same code for both here.
+//!	Attempt to fetch the public avatar archives.
 /**
-*	@param string $username
-*	@param string $password
-*	@param boolean $asAdmin TRUE if attempt to login as admin, FALSE otherwise. defaults to FALSE.
-*	@return object instance of Aurora::Addon::WebUI::genUser
+*	@return an instance of Aurora::Addon::WebUI::AvatarArchives corresponding to the result returned by the API end point.
 */
-		private function doLogin($username, $password, $asAdmin=false){
-			if(is_string($username) === false){
-				throw new InvalidArgumentException('Username must be string.');
-			}else if(trim($username) === ''){
-				throw new InvalidArgumentException('Username was an empty string');
-			}else if(is_string($password) === false){
-				throw new InvalidArgumentException('Password must be a string');
-			}else if(trim($password) === ''){
-				throw new InvalidArgumentException('Password was an empty string');
-			}
-			$password = '$1$' . md5($password); // this is required so we don't have to transmit the plaintext password.
-			$result = $this->makeCallToAPI($asAdmin ? 'AdminLogin' : 'Login', array('Name' => $username, 'Password' => $password), array(
-				'Verified'  => array('boolean'=>array())
+		public function GetAvatarArchives(){
+			$result = $this->makeCallToAPI('GetAvatarArchives', null, array(
+				'names'    => array('array'=>array()),
+				'snapshot' => array('array'=>array())
 			));
-			if($result->Verified === false){
-				throw new InvalidArgumentException('Credentials incorrect');
-			}else if(isset($result->UUID, $result->FirstName, $result->LastName) === false){
-				throw new UnexpectedValueException('API call was made, credentials were correct but required response properties were missing');
+
+			if(count($result->names) !== count($result->snapshot)){
+				throw new LengthException('Call to API was successful, but the number of names did not match the number of snapshots');
 			}
-			return WebUI\genUser::r($result->UUID, $result->FirstName, $result->LastName); // we're leaving validation up to the genUser class.
-		}
 
-//!	Attempts a login as a normal user.
-/**
-*	@param string $username
-*	@param string $password
-*	@return object instance of Aurora::Addon::WebUI::genUser
-*/
-		public function Login($username, $password){
-			return $this->doLogin($username, $password);
-		}
+			$archives = array();
+			foreach($result->names as $k=>$v){
+				$archives[] = new WebUI\basicAvatarArchive($v, $result->snapshot[$k]);
+			}
 
-//!	Attempts to login as an admin user.
-/**
-*	@param string $username
-*	@param string $password
-*	@return object instance of Aurora::Addon::WebUI::genUser
-*/
-		public function AdminLogin($username, $password){
-			return $this->doLogin($username, $password, true);
-		}
-
-//!	Determines the online status of the grid and whether logins are enabled.
-/**
-*	@return Aurora::Addon::WebUI::OnlineStatus
-*	@see Aurora::Addon::WebUI::makeCallToAPI()
-*/
-		public function OnlineStatus(){
-			$result = $this->makeCallToAPI('OnlineStatus', null, array(
-				'Online'       => array('boolean'=>array()),
-				'LoginEnabled' => array('boolean'=>array())
-			));
-			return new WebUI\OnlineStatus($result->Online, $result->LoginEnabled);
+			return new WebUI\AvatarArchives($archives);
 		}
 
 //!	Determines whether or not the account has been authenticated/verified.
@@ -493,89 +497,83 @@ namespace Aurora\Addon{
 			return $result->Verified;
 		}
 
+#endregion		
 
-		protected static function GridUserInfoValidator(){
-			static $validator = array(
-				'UUID'              => array('string' =>array()),
-				'HomeUUID'          => array('string' =>array()),
-				'HomeName'          => array('string' =>array()),
-				'CurrentRegionUUID' => array('string' =>array()),
-				'CurrentRegionName' => array('string' =>array()),
-				'Online'            => array('boolean'=>array()),
-				'Email'             => array('string' =>array()),
-				'Name'              => array('string' =>array()),
-				'FirstName'         => array('string' =>array()),
-				'LastName'          => array('string' =>array()),
-				'LastLogin'         => array('boolean'=>array(false), 'integer'=>array()),
-				'LastLogout'        => array('boolean'=>array(false), 'integer'=>array()),
-			);
-			return $validator;
-		}
+#region Login
 
-//!	Get the GetGridUserInfo for the specified user.
+//!	Since admin login and normal login have the same response, we're going to use the same code for both here.
 /**
-*	@param mixed $uuid either a string UUID of the user we wish to check, or an instance of Aurora::Services::Interfaces::User
-*	@return object Aurora::Addon::WebUI::GridUserInfo
+*	@param string $username
+*	@param string $password
+*	@param boolean $asAdmin TRUE if attempt to login as admin, FALSE otherwise. defaults to FALSE.
+*	@return object instance of Aurora::Addon::WebUI::genUser
 */
-		public function GetGridUserInfo($uuid){
-			if($uuid instanceof User){
-				$uuid = $uuid->PrincipalID();
+		private function doLogin($username, $password, $asAdmin=false){
+			if(is_string($username) === false){
+				throw new InvalidArgumentException('Username must be string.');
+			}else if(trim($username) === ''){
+				throw new InvalidArgumentException('Username was an empty string');
+			}else if(is_string($password) === false){
+				throw new InvalidArgumentException('Password must be a string');
+			}else if(trim($password) === ''){
+				throw new InvalidArgumentException('Password was an empty string');
 			}
-			if(is_string($uuid) === false){
-				throw new InvalidArgumentException('UUID should be a string.');
-			}else if(preg_match(self::regex_UUID, $uuid) !== 1){
-				throw new InvalidArgumentException('UUID supplied was not a valid UUID.');
+			$password = '$1$' . md5($password); // this is required so we don't have to transmit the plaintext password.
+			$result = $this->makeCallToAPI($asAdmin ? 'AdminLogin' : 'Login', array('Name' => $username, 'Password' => $password), array(
+				'Verified'  => array('boolean'=>array())
+			));
+			if($result->Verified === false){
+				throw new InvalidArgumentException('Credentials incorrect');
+			}else if(isset($result->UUID, $result->FirstName, $result->LastName) === false){
+				throw new UnexpectedValueException('API call was made, credentials were correct but required response properties were missing');
 			}
-			$result = $this->makeCallToAPI('GetGridUserInfo', array('UUID'=>$uuid), static::GridUserInfoValidator());
-			// this is where we get lazy and leave validation up to the GridUserInfo class.
-			return	WebUI\GridUserInfo::r(
-				$result->UUID,
-				$result->Name,
-				$result->HomeUUID,
-				$result->HomeName,
-				$result->CurrentRegionUUID,
-				$result->CurrentRegionName,
-				$result->Online,
-				$result->Email,
-				$result->LastLogin === false ? null : $result->LastLogin,
-				$result->LastLogout === false ? null : $result->LastLogout
-			);
+			return WebUI\genUser::r($result->UUID, $result->FirstName, $result->LastName); // we're leaving validation up to the genUser class.
 		}
 
-//!	Set the home location for the specified user.
+//!	Attempts a login as a normal user.
 /**
-*	@param string $uuid UUID of user
-*	@param mixed $region An instance of Aurora::Services::Interfaces::GridRegion or null, the new home region
-*	@param mixed $position An instance of OpenMetaverse::Vector3 or null, the new home location
-*	@param mixed $lookAt An instance of OpenMetaverse::Vector3 or null, the new focal point for the home location
+*	@param string $username
+*	@param string $password
+*	@return object instance of Aurora::Addon::WebUI::genUser
 */
-		public function SetHomeLocation($uuid, \Aurora\Services\Interfaces\GridRegion $region=null, \OpenMetaverse\Vector3 $position=null, \OpenMetaverse\Vector3 $lookAt=null){
-			if($uuid instanceof User){
-				$uuid = $uuid->PrincipalID();
-			}
-			if(is_string($uuid) === false){
-				throw new InvalidArgumentException('UUID should be a string.');
-			}else if(preg_match(self::regex_UUID, $uuid) !== 1){
-				throw new InvalidArgumentException('UUID supplied was not a valid UUID.');
-			}
-
-			$input = array(
-				'User' => $uuid
-			);
-			if(isset($region) === true){
-				$input['RegionID'] = $region->RegionID();
-			}
-			if(isset($position) === true){
-				$input['Position'] = (string)$position;
-			}
-			if(isset($lookAt) === true){
-				$input['LookAt'] = (string)$lookAt;
-			}
-
-			return $this->makeCallToAPI('SetHomeLocation', $input, array(
-				'Success' => array('boolean' => array())
-			))->Success;
+		public function Login($username, $password){
+			return $this->doLogin($username, $password);
 		}
+
+//!	Attempts to login as an admin user.
+/**
+*	@param string $username
+*	@param string $password
+*	@return object instance of Aurora::Addon::WebUI::genUser
+*/
+		public function AdminLogin($username, $password){
+			return $this->doLogin($username, $password, true);
+		}
+
+//!	Attempt to set the WebLoginKey for the specified user
+/**
+*	@param string $for UUID of the desired user to specify a WebLoginKey for.
+*	@return string the WebLoginKey generated by the server.
+*	@see Aurora::Addon::WebUI::makeCallToAPI()
+*/
+		public function SetWebLoginKey($for){
+			if(is_string($for) === false){
+				throw new InvalidArgumentException('UUID of user must be specified as a string');
+			}else if(preg_match(self::regex_UUID, $for) !== 1){
+				throw new InvalidArgumentException('Specified string was not a valid UUID');
+			}
+			$result = $this->makeCallToAPI('SetWebLoginKey', array('PrincipalID'=>$for), array(
+				'WebLoginKey' => array('string'=>array())
+			));
+			if(preg_match(self::regex_UUID, $result->WebLoginKey) !== 1){
+				throw new UnexpectedValueException('WebLoginKey value present on API result, but value was not a valid UUID.');
+			}
+			return $result->WebLoginKey;
+		}
+
+#endregion
+
+#region Email
 
 //!	Save email address, set user level to zero.
 /**
@@ -605,43 +603,50 @@ namespace Aurora\Addon{
 			return $result->Verified;
 		}
 
-//!	Change account name.
+//!	Confirm the account name and email address (used by forgotten password activities)
 /**
-*	@param mixed $uuid either a string UUID or an instance of Aurora::Services::Interfaces::User of the user we wish to change the name for.
-*	@param string $name new name
+*	@param string $name Account name
+*	@param string $email Account email address
+*	@return boolean TRUE if successful, FALSE otherwise.
 */
-		public function ChangeName($uuid, $name){
-			if($uuid instanceof User){
-				$uuid = $uuid->PrincipalID();
-			}
+		public function ConfirmUserEmailName($name, $email){
 			if(is_string($name) === true){
 				$name = trim($name);
 			}
 
-			if(is_string($uuid) === false){
-				throw new InvalidArgumentException('UUID must be a string.');
-			}else if(preg_match(self::regex_UUID, $uuid)!== 1){
-				throw new InvalidArgumentException('UUID was not a valid UUID.');
-			}else if(is_string($name) === false){
+			if(is_string($name) === false){
 				throw new InvalidArgumentException('Name must be a string.');
 			}else if($name === ''){
 				throw new InvalidArgumentException('Name cannot be an empty string.');
+			}else if(is_string($email) === false){
+				throw new InvalidArgumentException('Email address must be a string.');
+			}else if(is_email($email) === false){
+				throw new InvalidArgumentException('Email address is invalid.');
 			}
 
-			if($this->GetGridUserInfo($uuid)->Name() === $name){ // if the name is already the same, we're not going to bother making the call.
-				return true;
-			}
-
-			$result = $this->makeCallToAPI('ChangeName', array('UUID' => $uuid, 'Name' => $name), array(
-				'Verified' => array('boolean'=>array()),
-				'Stored'   => array('boolean'=>array())
+			$result = $this->makeCallToAPI('ConfirmUserEmailName', array('Name' => $name, 'Email' => $email), array(
+				'Verified'=>array('boolean'=>array())
 			));
-			if($result->Verified === true && $result->Stored === false){
-				throw new RuntimeException('Call to API was successful, but name change was not stored by the server.');
+			if(isset($result->ErrorCode) === true && is_integer($result->ErrorCode) === false){
+				throw new UnexpectedValueException('Call to API was successful but required response property was of unexpected type.',2);
+			}else if(isset($result->ErrorCode) === true){
+				if($result->ErrorCode === 1){
+					throw new InvalidArgumentException('No account was found with the specified name.');
+				}else if($result->ErrorCode === 2){
+					throw new InvalidArgumentException('The specified account is disabled.');
+				}else if($result->ErrorCode === 3){
+					throw new InvalidArgumentException('The specified email address does not match the email address associated with the specified account.');
+				}else{
+					throw new UnexpectedValueException('Unknown error occurred when checking email address of specified account.');
+				}
 			}
 
 			return $result->Verified;
 		}
+
+#endregion
+
+#region password
 
 //!	Change password.
 /**
@@ -707,45 +712,186 @@ namespace Aurora\Addon{
 			))->Verified;
 		}
 
-//!	Confirm the account name and email address (used by forgotten password activities)
+#endregion		
+
+//!	Change account name.
 /**
-*	@param string $name Account name
-*	@param string $email Account email address
-*	@return boolean TRUE if successful, FALSE otherwise.
+*	@param mixed $uuid either a string UUID or an instance of Aurora::Services::Interfaces::User of the user we wish to change the name for.
+*	@param string $name new name
 */
-		public function ConfirmUserEmailName($name, $email){
+		public function ChangeName($uuid, $name){
+			if($uuid instanceof User){
+				$uuid = $uuid->PrincipalID();
+			}
 			if(is_string($name) === true){
 				$name = trim($name);
 			}
 
-			if(is_string($name) === false){
+			if(is_string($uuid) === false){
+				throw new InvalidArgumentException('UUID must be a string.');
+			}else if(preg_match(self::regex_UUID, $uuid)!== 1){
+				throw new InvalidArgumentException('UUID was not a valid UUID.');
+			}else if(is_string($name) === false){
 				throw new InvalidArgumentException('Name must be a string.');
 			}else if($name === ''){
 				throw new InvalidArgumentException('Name cannot be an empty string.');
-			}else if(is_string($email) === false){
-				throw new InvalidArgumentException('Email address must be a string.');
-			}else if(is_email($email) === false){
-				throw new InvalidArgumentException('Email address is invalid.');
 			}
 
-			$result = $this->makeCallToAPI('ConfirmUserEmailName', array('Name' => $name, 'Email' => $email), array(
-				'Verified'=>array('boolean'=>array())
+			if($this->GetGridUserInfo($uuid)->Name() === $name){ // if the name is already the same, we're not going to bother making the call.
+				return true;
+			}
+
+			$result = $this->makeCallToAPI('ChangeName', array('UUID' => $uuid, 'Name' => $name), array(
+				'Verified' => array('boolean'=>array()),
+				'Stored'   => array('boolean'=>array())
 			));
-			if(isset($result->ErrorCode) === true && is_integer($result->ErrorCode) === false){
-				throw new UnexpectedValueException('Call to API was successful but required response property was of unexpected type.',2);
-			}else if(isset($result->ErrorCode) === true){
-				if($result->ErrorCode === 1){
-					throw new InvalidArgumentException('No account was found with the specified name.');
-				}else if($result->ErrorCode === 2){
-					throw new InvalidArgumentException('The specified account is disabled.');
-				}else if($result->ErrorCode === 3){
-					throw new InvalidArgumentException('The specified email address does not match the email address associated with the specified account.');
-				}else{
-					throw new UnexpectedValueException('Unknown error occurred when checking email address of specified account.');
-				}
+			if($result->Verified === true && $result->Stored === false){
+				throw new RuntimeException('Call to API was successful, but name change was not stored by the server.');
 			}
 
 			return $result->Verified;
+		}
+
+//!	Attempt to edit the account name, email address and real-life info.
+/**
+*	If $uuid is an instance of Aurora::Addon::WebUI::abstractUser, $name is set to Aurora::Addon::WebUI::abstractUser::Name() and $uuid is set to Aurora::Addon::WebUI::abstractUser::PrincipalID()
+*	@param mixed $uuid either the account ID or an instance of Aurora::Addon::WebUI::abstractUser
+*	@param mixed either a string of the account name or NULL when $uuid is an instance of Aurora::Addon::WebUI::abstractUser
+*	@param string $email Email address for the account
+*	@param mixed either an instance of Aurora::Addon::WebUI::RLInfo or NULL
+*	@return boolean TRUE if successful, FALSE otherwise. Also returns FALSE if the operation was partially successful.
+*/
+		public function EditUser($uuid, $name=null, $email='', WebUI\RLInfo $RLInfo=null, $userLevel=null){
+			if($uuid instanceof WebUI\abstractUser){
+				if(is_null($name) === true){
+					$name = $uuid->Name();
+				}
+				$uuid = $uuid->PrincipalID();
+			}
+			if(is_string($name)){
+				$name = trim($name);
+			}
+			if(is_string($email)){
+				$email = trim($email);
+			}
+			if(isset($userLevel) === true && is_string($userLevel) === true && ctype_digit($userLevel) === true){
+				$userLevel = (integer)$userLevel;
+			}
+
+			if(is_string($uuid) === false){
+				throw new InvalidArgumentException('UUID must be a string.');
+			}else if(preg_match(self::regex_UUID, $uuid) === false){
+				throw new InvalidArgumentException('UUID was not a valid UUID.');
+			}else if(is_string($name) === false){
+				throw new InvalidArgumentException('Name must be a string.');
+			}else if($name === ''){
+				throw new InvalidArgumentException('Account name cannot be an empty string.');
+			}else if(is_string($email) === false){
+				throw new InvalidArgumentException('Email address must be a string.');
+			}else if($email !== '' && is_email($email) === false){
+				throw new InvalidArgumentException('Email address was not valid.');
+			}else if(isset($userLevel) === true && is_integer($userLevel) === false){
+				throw new InvalidArgumentException('User Level must be specified as integer.');
+			}
+
+			$data = array(
+				'UserID' => $uuid,
+				'Name'   => $name,
+				'Email'  => $email
+			);
+			if($RLInfo instanceof WebUI\RLInfo){
+				foreach($RLInfo as $k=>$v){
+					$data[$k] = $v;
+				}
+			}
+			if(isset($userLevel) === true){
+				$data['UserLevel'] = $userLevel;
+			}
+
+			$result = $this->makeCallToAPI('EditUser', $data, array(
+				'agent'   => array('boolean'=>array()),
+				'account' => array('boolean'=>array())
+			));
+
+			return ($result->agent && $result->account);
+		}
+
+//!	Attempt to reset the user's avatar
+/**
+*	@param mixed $uuid either the account ID or an instance of Aurora::Addon::WebUI::abstractUser
+*/
+		public function ResetAvatar($uuid){
+			if($uuid instanceof WebUI\abstractUser){
+				if(is_null($name) === true){
+					$name = $uuid->Name();
+				}
+				$uuid = $uuid->PrincipalID();
+			}
+
+			if(is_string($uuid) === false){
+				throw new InvalidArgumentException('UUID must be a string.');
+			}else if(preg_match(self::regex_UUID, $uuid) === false){
+				throw new InvalidArgumentException('UUID was not a valid UUID.');
+			}
+
+			return $this->makeCallToAPI('ResetAvatar', array(
+				'User' => $uuid
+			), array(
+				'Success' => array('boolean' => array())
+			))->Success;
+		}
+
+#endregion
+
+#region Users
+
+
+		protected static function GridUserInfoValidator(){
+			static $validator = array(
+				'UUID'              => array('string' =>array()),
+				'HomeUUID'          => array('string' =>array()),
+				'HomeName'          => array('string' =>array()),
+				'CurrentRegionUUID' => array('string' =>array()),
+				'CurrentRegionName' => array('string' =>array()),
+				'Online'            => array('boolean'=>array()),
+				'Email'             => array('string' =>array()),
+				'Name'              => array('string' =>array()),
+				'FirstName'         => array('string' =>array()),
+				'LastName'          => array('string' =>array()),
+				'LastLogin'         => array('boolean'=>array(false), 'integer'=>array()),
+				'LastLogout'        => array('boolean'=>array(false), 'integer'=>array()),
+			);
+			return $validator;
+		}
+
+//!	Get the GetGridUserInfo for the specified user.
+/**
+*	@param mixed $uuid either a string UUID of the user we wish to check, or an instance of Aurora::Services::Interfaces::User
+*	@return object Aurora::Addon::WebUI::GridUserInfo
+*/
+		public function GetGridUserInfo($uuid){
+			if($uuid instanceof User){
+				$uuid = $uuid->PrincipalID();
+			}
+			if(is_string($uuid) === false){
+				throw new InvalidArgumentException('UUID should be a string.');
+			}else if(preg_match(self::regex_UUID, $uuid) !== 1){
+				throw new InvalidArgumentException('UUID supplied was not a valid UUID.');
+			}
+			$result = $this->makeCallToAPI('GetGridUserInfo', array('UUID'=>$uuid), static::GridUserInfoValidator());
+			// this is where we get lazy and leave validation up to the GridUserInfo class.
+			return	WebUI\GridUserInfo::r(
+				$result->UUID,
+				$result->Name,
+				$result->HomeUUID,
+				$result->HomeName,
+				$result->CurrentRegionUUID,
+				$result->CurrentRegionName,
+				$result->Online,
+				$result->Email,
+				$result->LastLogin === false ? null : $result->LastLogin,
+				$result->LastLogout === false ? null : $result->LastLogout
+			);
 		}
 
 //!	Attempt to get the profile object for the specified user.
@@ -842,117 +988,6 @@ namespace Aurora\Addon{
 			return WebUI\UserProfile::r($account->PrincipalID, $account->Name, $account->Email, $account->Created, $allowPublish, $maturePublish, $wantToMask, $wantToText, $canDoMask, $canDoText, $languages, $image, $aboutText, $firstLifeImage, $firstLifeAboutText, $webURL, $displayName, isset($account->PartnerUUID) ? $account->PartnerUUID : '00000000-0000-0000-0000-000000000000', $visible, $customType, $notes, $userLevel, $RLName, $RLAddress, $RLZip, $RLCity, $RLCountry);
 		}
 
-//!	Attempt to edit the account name, email address and real-life info.
-/**
-*	If $uuid is an instance of Aurora::Addon::WebUI::abstractUser, $name is set to Aurora::Addon::WebUI::abstractUser::Name() and $uuid is set to Aurora::Addon::WebUI::abstractUser::PrincipalID()
-*	@param mixed $uuid either the account ID or an instance of Aurora::Addon::WebUI::abstractUser
-*	@param mixed either a string of the account name or NULL when $uuid is an instance of Aurora::Addon::WebUI::abstractUser
-*	@param string $email Email address for the account
-*	@param mixed either an instance of Aurora::Addon::WebUI::RLInfo or NULL
-*	@return boolean TRUE if successful, FALSE otherwise. Also returns FALSE if the operation was partially successful.
-*/
-		public function EditUser($uuid, $name=null, $email='', WebUI\RLInfo $RLInfo=null, $userLevel=null){
-			if($uuid instanceof WebUI\abstractUser){
-				if(is_null($name) === true){
-					$name = $uuid->Name();
-				}
-				$uuid = $uuid->PrincipalID();
-			}
-			if(is_string($name)){
-				$name = trim($name);
-			}
-			if(is_string($email)){
-				$email = trim($email);
-			}
-			if(isset($userLevel) === true && is_string($userLevel) === true && ctype_digit($userLevel) === true){
-				$userLevel = (integer)$userLevel;
-			}
-
-			if(is_string($uuid) === false){
-				throw new InvalidArgumentException('UUID must be a string.');
-			}else if(preg_match(self::regex_UUID, $uuid) === false){
-				throw new InvalidArgumentException('UUID was not a valid UUID.');
-			}else if(is_string($name) === false){
-				throw new InvalidArgumentException('Name must be a string.');
-			}else if($name === ''){
-				throw new InvalidArgumentException('Account name cannot be an empty string.');
-			}else if(is_string($email) === false){
-				throw new InvalidArgumentException('Email address must be a string.');
-			}else if($email !== '' && is_email($email) === false){
-				throw new InvalidArgumentException('Email address was not valid.');
-			}else if(isset($userLevel) === true && is_integer($userLevel) === false){
-				throw new InvalidArgumentException('User Level must be specified as integer.');
-			}
-
-			$data = array(
-				'UserID' => $uuid,
-				'Name'   => $name,
-				'Email'  => $email
-			);
-			if($RLInfo instanceof WebUI\RLInfo){
-				foreach($RLInfo as $k=>$v){
-					$data[$k] = $v;
-				}
-			}
-			if(isset($userLevel) === true){
-				$data['UserLevel'] = $userLevel;
-			}
-
-			$result = $this->makeCallToAPI('EditUser', $data, array(
-				'agent'   => array('boolean'=>array()),
-				'account' => array('boolean'=>array())
-			));
-
-			return ($result->agent && $result->account);
-		}
-
-//!	Attempt to reset the user's avatar
-/**
-*	@param mixed $uuid either the account ID or an instance of Aurora::Addon::WebUI::abstractUser
-*/
-		public function ResetAvatar($uuid){
-			if($uuid instanceof WebUI\abstractUser){
-				if(is_null($name) === true){
-					$name = $uuid->Name();
-				}
-				$uuid = $uuid->PrincipalID();
-			}
-
-			if(is_string($uuid) === false){
-				throw new InvalidArgumentException('UUID must be a string.');
-			}else if(preg_match(self::regex_UUID, $uuid) === false){
-				throw new InvalidArgumentException('UUID was not a valid UUID.');
-			}
-
-			return $this->makeCallToAPI('ResetAvatar', array(
-				'User' => $uuid
-			), array(
-				'Success' => array('boolean' => array())
-			))->Success;
-		}
-
-//!	Attempt to fetch the public avatar archives.
-/**
-*	@return an instance of Aurora::Addon::WebUI::AvatarArchives corresponding to the result returned by the API end point.
-*/
-		public function GetAvatarArchives(){
-			$result = $this->makeCallToAPI('GetAvatarArchives', null, array(
-				'names'    => array('array'=>array()),
-				'snapshot' => array('array'=>array())
-			));
-
-			if(count($result->names) !== count($result->snapshot)){
-				throw new LengthException('Call to API was successful, but the number of names did not match the number of snapshots');
-			}
-
-			$archives = array();
-			foreach($result->names as $k=>$v){
-				$archives[] = new WebUI\basicAvatarArchive($v, $result->snapshot[$k]);
-			}
-
-			return new WebUI\AvatarArchives($archives);
-		}
-
 //!	Attempt to delete the user
 /**
 *	If $uuid is an instance of Aurora::Addon::WebUI::abstractUser, $uuid is set to Aurora::Addon::WebUI::abstractUser::PrincipalID()
@@ -979,6 +1014,43 @@ namespace Aurora\Addon{
 
 			return $result->Finished;
 		}
+
+//!	Set the home location for the specified user.
+/**
+*	@param string $uuid UUID of user
+*	@param mixed $region An instance of Aurora::Services::Interfaces::GridRegion or null, the new home region
+*	@param mixed $position An instance of OpenMetaverse::Vector3 or null, the new home location
+*	@param mixed $lookAt An instance of OpenMetaverse::Vector3 or null, the new focal point for the home location
+*/
+		public function SetHomeLocation($uuid, \Aurora\Services\Interfaces\GridRegion $region=null, \OpenMetaverse\Vector3 $position=null, \OpenMetaverse\Vector3 $lookAt=null){
+			if($uuid instanceof User){
+				$uuid = $uuid->PrincipalID();
+			}
+			if(is_string($uuid) === false){
+				throw new InvalidArgumentException('UUID should be a string.');
+			}else if(preg_match(self::regex_UUID, $uuid) !== 1){
+				throw new InvalidArgumentException('UUID supplied was not a valid UUID.');
+			}
+
+			$input = array(
+				'User' => $uuid
+			);
+			if(isset($region) === true){
+				$input['RegionID'] = $region->RegionID();
+			}
+			if(isset($position) === true){
+				$input['Position'] = (string)$position;
+			}
+			if(isset($lookAt) === true){
+				$input['LookAt'] = (string)$lookAt;
+			}
+
+			return $this->makeCallToAPI('SetHomeLocation', $input, array(
+				'Success' => array('boolean' => array())
+			))->Success;
+		}
+
+#region banning
 
 //!	Attempts to ban a user permanently or temporarily
 /**
@@ -1056,6 +1128,8 @@ namespace Aurora\Addon{
 			return $result->Finished;
 		}
 
+#endregion
+
 //!	Attempt to search for users
 /**
 *	@param string $query search filter
@@ -1106,6 +1180,37 @@ namespace Aurora\Addon{
 
 			return $asArray ? $results : WebUI\SearchUserResults::r($this, $query, $start, $has ? null : $result->Total, $results);
 		}
+
+//!	returns the friends list for the specified user.
+/**
+*	@param mixed $forUser Either a UUID string or an instance of Aurora::Addon::WebUI::abstractUser
+*	@return object instance of Aurora::Addon::WebUI::FriendsList
+*/
+		public function GetFriends($forUser){
+			if(($forUser instanceof WebUI\abstractUser) === false){
+				if(is_string($forUser) === false){
+					throw new InvalidArgumentException('forUser must be a string.');
+				}else if(preg_match(self::regex_UUID, $forUser) !== 1){
+					throw new InvalidArgumentException('forUser must be a valid UUID.');
+				}
+				$forUser = $this->GetProfile('', $forUser);
+			}
+
+			$result = $this->makeCallToAPI('GetFriends', array('UserID' => $forUser->PrincipalID()), array(
+				'Friends' => array('array'=>array())
+			));
+			$response = array();
+			foreach($result->Friends as $v){
+				if(isset($v->PrincipalID, $v->Name, $v->MyFlags, $v->TheirFlags) === false){
+					throw new UnexpectedValueException('Call to API was successful, but required response sub-properties were missing.');
+				}
+				$response[] = WebUI\FriendInfo::r($forUser, $v->PrincipalID, $v->Name, $v->MyFlags, $v->TheirFlags);
+			}
+
+			return new WebUI\FriendsList($response);
+		}
+
+#region statistics
 
 //!	Attempt to get the number of recently online users filtering the query by the method arguments
 /**
@@ -1193,6 +1298,12 @@ namespace Aurora\Addon{
 
 			return $asArray ? $users : WebUI\RecentlyOnlineUsersIterator::f($this, $secondsAgo, $stillOnline, $start, $result->Total, $users);
 		}
+
+#endregion
+
+#endregion
+
+#region IAbuseReports
 
 //!	Attempt to fetch all Abuse Reports.
 /**
@@ -1289,26 +1400,156 @@ namespace Aurora\Addon{
 			return $result->Finished;
 		}
 
-//!	Attempt to set the WebLoginKey for the specified user
+#endregion
+
+#region Places
+
+#region Estate
+
+//!	Gets the array used as the expected response parameter for Aurora::Addon::WebUI::makeCallToAPI()
 /**
-*	@param string $for UUID of the desired user to specify a WebLoginKey for.
-*	@return string the WebLoginKey generated by the server.
-*	@see Aurora::Addon::WebUI::makeCallToAPI()
+*	@return array
 */
-		public function SetWebLoginKey($for){
-			if(is_string($for) === false){
-				throw new InvalidArgumentException('UUID of user must be specified as a string');
-			}else if(preg_match(self::regex_UUID, $for) !== 1){
-				throw new InvalidArgumentException('Specified string was not a valid UUID');
-			}
-			$result = $this->makeCallToAPI('SetWebLoginKey', array('PrincipalID'=>$for), array(
-				'WebLoginKey' => array('string'=>array())
-			));
-			if(preg_match(self::regex_UUID, $result->WebLoginKey) !== 1){
-				throw new UnexpectedValueException('WebLoginKey value present on API result, but value was not a valid UUID.');
-			}
-			return $result->WebLoginKey;
+		private static function EstateSettingsValidator(){
+			return array(
+				'object' => array(array(
+					'EstateID' => array('integer'=>array()),
+					'EstateName' => array('string'=>array()),
+					'AbuseEmailToEstateOwner' => array('boolean'=>array()),
+					'DenyAnonymous' => array('boolean'=>array()),
+					'ResetHomeOnTeleport' => array('boolean'=>array()),
+					'FixedSun' => array('boolean'=>array()),
+					'DenyTransacted' => array('boolean'=>array()),
+					'BlockDwell' => array('boolean'=>array()),
+					'DenyIdentified' => array('boolean'=>array()),
+					'AllowVoice' => array('boolean'=>array()),
+					'UseGlobalTime' => array('boolean'=>array()),
+					'PricePerMeter' => array('integer'=>array()),
+					'TaxFree' => array('boolean'=>array()),
+					'AllowDirectTeleport' => array('boolean'=>array()),
+					'RedirectGridX' => array('integer'=>array(), 'null'=>array()),
+					'RedirectGridY' => array('integer'=>array(), 'null'=>array()),
+					'ParentEstateID' => array('integer'=>array()),
+					'SunPosition' => array('float'=>array()),
+					'EstateSkipScripts' => array('boolean'=>array()),
+					'BillableFactor' => array('float'=>array()),
+					'PublicAccess' => array('boolean'=>array()),
+					'AbuseEmail' => array('string'=>array()),
+					'EstateOwner' => array('string'=>array()),
+					'DenyMinors' => array('boolean'=>array()),
+					'AllowLandmark' => array('boolean'=>array()),
+					'AllowParcelChanges' => array('boolean'=>array()),
+					'AllowSetHome' => array('boolean'=>array()),
+					'EstateBans' => array('array'=>array(array('string'=>array()))),
+					'EstateManagers' => array('array'=>array(array('string'=>array()))),
+					'EstateGroups' => array('array'=>array(array('string'=>array()))),
+					'EstateAccess' => array('array'=>array(array('string'=>array()))),
+				))
+			);
 		}
+
+//!	Converts an API result into an EstateSettings object
+/**
+*	@return object instance of EstateSettings
+*/
+		private static function EstateSettingsFromResult(\stdClass $Estate){
+			return WebUI\EstateSettings::r(
+				$Estate->EstateID,
+				$Estate->EstateName,
+				$Estate->AbuseEmailToEstateOwner,
+				$Estate->DenyAnonymous,
+				$Estate->ResetHomeOnTeleport,
+				$Estate->FixedSun,
+				$Estate->DenyTransacted,
+				$Estate->BlockDwell,
+				$Estate->DenyIdentified,
+				$Estate->AllowVoice,
+				$Estate->UseGlobalTime,
+				$Estate->PricePerMeter,
+				$Estate->TaxFree,
+				$Estate->AllowDirectTeleport,
+				$Estate->RedirectGridX,
+				$Estate->RedirectGridY,
+				$Estate->ParentEstateID,
+				$Estate->SunPosition,
+				$Estate->EstateSkipScripts,
+				$Estate->BillableFactor,
+				$Estate->PublicAccess,
+				$Estate->AbuseEmail,
+				$Estate->EstateOwner,
+				$Estate->DenyMinors,
+				$Estate->AllowLandmark,
+				$Estate->AllowParcelChanges,
+				$Estate->AllowSetHome,
+				$Estate->EstateBans,
+				$Estate->EstateManagers,
+				$Estate->EstateGroups,
+				$Estate->EstateAccess
+			);
+		}
+
+//!	Gets all estates with the specified owner and optional boolean filters
+/**
+*	@param string $Owner Owner UUID
+*	@param array $boolFields optional array of field names for keys and booleans for values, indicating 1 and 0 for field values.
+*	@return object instance of Aurora::Addon::WebUI::EstateSettingsIterator
+*/
+		public function GetEstates($Owner, array $boolFields=null){
+			if(($Owner instanceof WebUI\abstractUser) === false){
+				if(is_string($Owner) === false){
+					throw new InvalidArgumentException('OwnerID must be a string.');
+				}else if(preg_match(self::regex_UUID, $Owner) !== 1){
+					throw new InvalidArgumentException('OwnerID must be a valid UUID.');
+				}
+				$Owner = $this->GetProfile('', $Owner);
+			}
+
+			$input = array(
+				'Owner' => $Owner->PrincipalID()
+			);
+			if(isset($boolFields) === true){
+				$input['BoolFields'] = $boolFields;
+			}
+
+			$Estates = $this->makeCallToAPI('GetEstates', $input, array(
+				'Estates' => array('array' => array(
+					static::EstateSettingsValidator()
+				))
+			))->Estates;
+			$result = array();
+			foreach($Estates as $Estate){
+				$result[] = static::EstateSettingsFromResult($Estate);
+			}
+
+			return new WebUI\EstateSettingsIterator($result);
+		}
+
+//!	Gets a single estate by estate name
+/**
+*	@param mixed Estate ID or Estate Name
+*	@return object instance of Aurora::Addon::WebUI::EstateSettings
+*/
+		public function GetEstate($Estate){
+			if(is_string($Estate) === true){
+				if(ctype_digit($Estate) === true){
+					$Estate = (integer)$Estate;
+				}else{
+					$Estate = trim($Estate);
+				}
+			}
+
+			if(is_integer($Estate) === false && is_string($Estate) === false){
+				throw new InvalidArgumentException('Estate must be specified as integer or string.');
+			}
+
+			return static::EstateSettingsFromResult($this->makeCallToAPI('GetEstate', array('Estate' => $Estate), array(
+				'Estate' => static::EstateSettingsValidator()
+			))->Estate);
+		}
+
+#endregion
+
+#region Regions
 
 //!	Gets the array used as the expected response parameter for Aurora::Addon::WebUI::makeCallToAPI()
 /**
@@ -1343,37 +1584,6 @@ namespace Aurora\Addon{
 				'remoteEndPointIP'     => array('array'   => array()),
 				'remoteEndPointPort'   => array('integer' => array()),
 			)));
-		}
-
-//!	Get a single region
-/**
-*	@param string $region either a UUID or a region name.
-*	@return object instance of Aurora::Addon::WebUI::GridRegion
-*/
-		public function GetRegion($region, $scopeID='00000000-0000-0000-0000-000000000000'){
-			if(is_string($region) === false){
-				throw new InvalidArgumentException('Region must be specified as a string.');
-			}else if(trim($region) === ''){
-				throw new InvalidArgumentException('Region must not be an empty string.');
-			}else if(is_string($scopeID) === false){
-				throw new InvalidArgumentException('ScopeID must be specified as a string.');
-			}else if(preg_match(self::regex_UUID, $scopeID) != 1){
-				throw new InvalidArgumentException('ScopeID must be a valid UUID.');
-			}
-
-			$input = array(
-				'ScopeID' => $scopeID
-			);
-
-			if(preg_match(self::regex_UUID, $region) != 1){
-				$input['Region'] = trim($region);
-			}else{
-				$input['RegionID'] = $region;
-			}
-
-			return WebUI\GridRegion::fromEndPointResult($this->makeCallToAPI('GetRegion', $input, array(
-				'Region' => static::GridRegionValidator()
-			))->Region);
 		}
 
 //!	Get a list of regions in the AuroraSim install that match the specified flags.
@@ -1527,6 +1737,37 @@ namespace Aurora\Addon{
 			return WebUI\GetRegionsByXY::r($this, $x, $y, $flags, isset($excludeFlags) ? $excludeFlags : 0, $scopeID, $response);
 		}
 
+//!	Get a list of regions in the specified area
+/**
+*	@param integer $startX x-axis start point
+*	@param integer $startY y-axis start point
+*	@param integer $endX x-axis end point
+*	@param integer $endY y-axis end point
+*	@param integer $start specifies the index that $regions starts at, if specified.
+*	@param integer $total specifies the total number of regions in the grid.
+*/
+		public function GetRegionsInArea($startX, $startY, $endX, $endY, $scopeID='00000000-0000-0000-0000-000000000000', $asArray=false){
+			$has      = WebUI\GetRegionsInArea::hasInstance($this, $startX, $startY, $endX, $endY, $scopeID);
+			$response = array();
+			if($asArray === true || $has === false){
+				$result = $this->makeCallToAPI('GetRegionsInArea', array(
+					'StartX'  => $startX,
+					'StartY'  => $startY,
+					'EndX'    => $endX,
+					'EndY'    => $endY,
+					'ScopeID' => $scopeID
+				), array(
+					'Regions' => array('array'=>array(static::GridRegionValidator())),
+					'Total'   => array('integer'=>array())
+				));
+				foreach($result->Regions as $val){
+					$response[] = WebUI\GridRegion::fromEndPointResult($val);
+				}
+			}
+
+			return $asArray ? $response : WebUI\GetRegionsInArea::r($this, $startX, $startY, $endX, $endY, $scopeID, 0, $result->Total, $response);
+		}
+
 //!	Get a list of regions in the specified estate that match the specified flags.
 /**
 *	@param object $Estate instance of Aurora::Addon::WebUI::EstateSettings
@@ -1601,6 +1842,37 @@ namespace Aurora\Addon{
 			return $asArray ? $response : WebUI\GetRegionsInEstate::r($this, $Estate, $flags, $start, $has ? null : $result->Total, $sortRegionName, $sortLocX, $sortLocY, $response);
 		}
 
+//!	Get a single region
+/**
+*	@param string $region either a UUID or a region name.
+*	@return object instance of Aurora::Addon::WebUI::GridRegion
+*/
+		public function GetRegion($region, $scopeID='00000000-0000-0000-0000-000000000000'){
+			if(is_string($region) === false){
+				throw new InvalidArgumentException('Region must be specified as a string.');
+			}else if(trim($region) === ''){
+				throw new InvalidArgumentException('Region must not be an empty string.');
+			}else if(is_string($scopeID) === false){
+				throw new InvalidArgumentException('ScopeID must be specified as a string.');
+			}else if(preg_match(self::regex_UUID, $scopeID) != 1){
+				throw new InvalidArgumentException('ScopeID must be a valid UUID.');
+			}
+
+			$input = array(
+				'ScopeID' => $scopeID
+			);
+
+			if(preg_match(self::regex_UUID, $region) != 1){
+				$input['Region'] = trim($region);
+			}else{
+				$input['RegionID'] = $region;
+			}
+
+			return WebUI\GridRegion::fromEndPointResult($this->makeCallToAPI('GetRegion', $input, array(
+				'Region' => static::GridRegionValidator()
+			))->Region);
+		}
+
 //!	Get a list of regions within range of the specified region
 /**
 *	@param string $region UUID of region
@@ -1646,521 +1918,9 @@ namespace Aurora\Addon{
 			return $asArray ? $response : WebUI\GetRegionNeighbours::r($this, $region, $range=128, $scopeID='00000000-0000-0000-0000-000000000000', $start, $has ? null : $result->Total, $response);
 		}
 
-//!	Get a list of regions in the specified area
-/**
-*	@param integer $startX x-axis start point
-*	@param integer $startY y-axis start point
-*	@param integer $endX x-axis end point
-*	@param integer $endY y-axis end point
-*	@param integer $start specifies the index that $regions starts at, if specified.
-*	@param integer $total specifies the total number of regions in the grid.
-*/
-		public function GetRegionsInArea($startX, $startY, $endX, $endY, $scopeID='00000000-0000-0000-0000-000000000000', $asArray=false){
-			$has      = WebUI\GetRegionsInArea::hasInstance($this, $startX, $startY, $endX, $endY, $scopeID);
-			$response = array();
-			if($asArray === true || $has === false){
-				$result = $this->makeCallToAPI('GetRegionsInArea', array(
-					'StartX'  => $startX,
-					'StartY'  => $startY,
-					'EndX'    => $endX,
-					'EndY'    => $endY,
-					'ScopeID' => $scopeID
-				), array(
-					'Regions' => array('array'=>array(static::GridRegionValidator())),
-					'Total'   => array('integer'=>array())
-				));
-				foreach($result->Regions as $val){
-					$response[] = WebUI\GridRegion::fromEndPointResult($val);
-				}
-			}
+#endregion
 
-			return $asArray ? $response : WebUI\GetRegionsInArea::r($this, $startX, $startY, $endX, $endY, $scopeID, 0, $result->Total, $response);
-		}
-
-//!	object an instance of Aurora::Addon::WebUI::GridInfo
-		protected $GridInfo;
-//!	Processes should not be long-lasting, so we only fetch this once.
-		public function get_grid_info($info=null){
-			if(isset($this->GridInfo) === false){
-				$result = $this->makeCallToAPI('get_grid_info', null, array(
-					'GridInfo' => array('object'=>array())
-				));
-
-				$this->GridInfo = WebUI\GridInfo::f();
-				foreach($result->GridInfo as $k=>$v){
-					$this->GridInfo[$k] = $v;
-				}
-			}
-
-			return (isset($info) && is_string($info) && ctype_graph($info)) ? $this->GridInfo[$info] : $this->GridInfo;
-		}
-
-//!	returns the friends list for the specified user.
-/**
-*	@param mixed $forUser Either a UUID string or an instance of Aurora::Addon::WebUI::abstractUser
-*	@return object instance of Aurora::Addon::WebUI::FriendsList
-*/
-		public function GetFriends($forUser){
-			if(($forUser instanceof WebUI\abstractUser) === false){
-				if(is_string($forUser) === false){
-					throw new InvalidArgumentException('forUser must be a string.');
-				}else if(preg_match(self::regex_UUID, $forUser) !== 1){
-					throw new InvalidArgumentException('forUser must be a valid UUID.');
-				}
-				$forUser = $this->GetProfile('', $forUser);
-			}
-
-			$result = $this->makeCallToAPI('GetFriends', array('UserID' => $forUser->PrincipalID()), array(
-				'Friends' => array('array'=>array())
-			));
-			$response = array();
-			foreach($result->Friends as $v){
-				if(isset($v->PrincipalID, $v->Name, $v->MyFlags, $v->TheirFlags) === false){
-					throw new UnexpectedValueException('Call to API was successful, but required response sub-properties were missing.');
-				}
-				$response[] = WebUI\FriendInfo::r($forUser, $v->PrincipalID, $v->Name, $v->MyFlags, $v->TheirFlags);
-			}
-
-			return new WebUI\FriendsList($response);
-		}
-
-//!	Converts an instances of stdClass from Aurora::Addon::WebUI::GetGroups() and Aurora::Addon::WebUI::GetGroup() results to an instance of Aurora::Addon::WebUI::GroupRecord
-/**
-*	@param object $group instance of stdClass with group properties
-*	@return object corresponding instance of Aurora::Addon::WebUI::GroupRecord
-*/
-		private static function GroupResult2GroupRecord(\stdClass $group){
-			if(isset(
-				$group->GroupID,
-				$group->GroupName,
-				$group->Charter,
-				$group->GroupPicture,
-				$group->FounderID,
-				$group->MembershipFee,
-				$group->OpenEnrollment,
-				$group->ShowInList,
-				$group->AllowPublish,
-				$group->MaturePublish,
-				$group->OwnerRoleID
-			) === false){
-				throw new UnexpectedValueException('Call to API was successful, but required response sub-properties were missing.');
-			}
-			return WebUI\GroupRecord::r(
-				$group->GroupID,
-				$group->GroupName,
-				$group->Charter,
-				$group->GroupPicture,
-				$group->FounderID,
-				$group->MembershipFee,
-				$group->OpenEnrollment,
-				$group->ShowInList,
-				$group->AllowPublish,
-				$group->MaturePublish,
-				$group->OwnerRoleID
-			);
-		}
-
-//!	Gets an iterator for the number of groups specified, with optional filters.
-/**
-*	@param integer $start start point of iterator. negatives are supported (kinda).
-*	@param integer $count Maximum number of groups to fetch from the WebUI API end-point.
-*	@param array $sort optional array of field names for keys and booleans for values, indicating ASC and DESC sort orders for the specified fields.
-*	@param array $boolFields optional array of field names for keys and booleans for values, indicating 1 and 0 for field values.
-*	@return object Aurora::Addon::WebUI::GetGroupRecords
-*	@see Aurora::Addon::WebUI::GetGroupRecords::r()
-*/
-		public function GetGroups($start=0, $count=10, array $sort=null, array $boolFields=null){
-			$input = array(
-				'Start' => $start,
-				'Count' => $count
-			);
-			if(isset($sort) === true){
-				$input['Sort'] = $sort;
-			}
-			if(isset($boolFields) === true){
-				$input['BoolFields'] = $boolFields;
-			}
-
-			$result = $this->makeCallToAPI('GetGroups', $input, array(
-				'Start'  => array('integer'=>array()),
-				'Total'  => array('integer'=>array()),
-				'Groups' => array('array'=>array(array('object'=>array()))),
-			));
-
-			$groups = array();
-			foreach($result->Groups as $group){
-				$groups[] = self::GroupResult2GroupRecord($group);
-			}
-
-			return WebUI\GetGroupRecords::r($this, $result->Start, $result->Total, $sort, $boolFields, $groups);
-		}
-
-//!	Gets an iterator for the groups usable as news sources.
-/**
-*	@param integer $start start point
-*	@param integer $count Maximum number of groups to fetch from the WebUI API end-point
-*	@param boolean $asArray if TRUE will return results as an array, otherwise will return an instance of Aurora::Addon::WebUI::GetNewsSources
-*	@return mixed either an array of Aurora::Addon::WebUI::GroupRecord or an instance of Aurora::Addon::WebUI::GetNewsSources
-*/		
-		public function GetNewsSources($start=0, $count=10, $asArray=false){
-			if(is_string($start) === true && ctype_digit($start) === true){
-				$start = (integer)$start;
-			}
-			if(is_string($count) === true && ctype_digit($count) === true){
-				$count = (integer)$count;
-			}
-
-			if(is_integer($start) === false){
-				throw new InvalidArgumentException('Start point must be specified as integer.');
-			}else if($start < 0){
-				throw new InvalidArgumentException('Start point must be greater than or equal to zero.');
-			}else if(is_integer($count) === false){
-				throw new InvalidArgumentException('Count must be specified as integer.');
-			}else if($count < 1){
-				throw new InvalidArgumentException('Count must be greater than or equal to one.');
-			}else if(is_bool($asArray) === false){
-				throw new InvalidArgumentException('asArray flag must be specified as boolean.');
-			}
-
-			$response = array();
-			if($asArray === true || WebUI\GetNewsSources::hasInstance($this) === false){
-				$result = $this->makeCallToAPI('GetNewsSources', array(
-					'Start' => $start,
-					'Count' => $count
-				), array(
-					'Total' => array('integer'=>array()),
-					'Groups' => array('array'=>array(array('object'=>array())))
-				));
-				foreach($result->Groups as $group){
-					$response[] = self::GroupResult2GroupRecord($group);
-				}
-			}
-
-			return $asArray ? $response : WebUI\GetNewsSources::r($this, $start, $result->Total, $response);
-		}
-
-//!	Gets an iterator for the specified list of GroupIDs
-/**
-*	@param array $GroupIDs list of GroupIDs
-*	@return object Aurora::Addon::WebUI::foreknowledgeGetGroupRecords
-*/
-		public function foreknowledgeGetGroupRecords(array $GroupIDs){
-
-			$result = $this->makeCallToAPI('GetGroups', array(
-				'Groups' => $GroupIDs
-			), array(
-				'Groups' => array('array'=>array(array('object'=>array()))),
-			));
-
-			$groups = array();
-			foreach($result->Groups as $group){
-				$groups[] = self::GroupResult2GroupRecord($group);
-			}
-
-			return WebUI\foreknowledgeGetGroupRecords::r($this, $result->Start, $result->Total, null, null, $groups);
-		}
-
-//!	Fetches the specified group
-/**
-*	@param string $nameOrUUID Either a group UUID, or a group name.
-*	@return mixed either FALSE indicating no group was found, or an instance of Aurora::Addon::WebUI::GroupRecord
-*	@see Aurora::Addon::WebUI::GroupRecord::r()
-*/
-		public function GetGroup($nameOrUUID){
-			if(is_string($nameOrUUID) === true){
-				$nameOrUUID = trim($nameOrUUID);
-			}else if(is_string($nameOrUUID) === false){
-				throw new InvalidArgumentException('Method argument should be a string.');
-			}
-			$name = '';
-			$uuid = '00000000-0000-0000-0000-000000000000';
-			if(preg_match(self::regex_UUID, $nameOrUUID) !== 1){
-				$input = array(
-					'Name' => $nameOrUUID
-				);
-			}else{
-				$input = array(
-					'UUID' => $nameOrUUID
-				);
-			}
-
-			$result = $this->makeCallToAPI('GetGroup', $input, array(
-				'Group' => array(
-					'object'  => array(),
-					'boolean' => array(false)
-				)
-			));
-
-			return $result->Group ? self::GroupResult2GroupRecord($result->Group) : false;
-		}
-
-//!	Enables or disables the specified group as a news source for WebUI
-/**
-*	Throws an exception on failure, for laziness :P
-*	@param object $group instance of Aurora::Addon::WebUI::GroupRecord
-*	@param boolean $useAsNewsSource TRUE to enable, FALSE to disable
-*/
-		public function GroupAsNewsSource(WebUI\GroupRecord $group, $useAsNewsSource=true){
-			if(is_bool($useAsNewsSource) === false){
-				throw new InvalidArgumentException('flag must be a boolean.');
-			}
-
-			$this->makeCallToAPI('GroupAsNewsSource', array(
-				'Group' => $group->GroupID(),
-				'Use'   => $useAsNewsSource
-			), array(
-				'Verified' => array('boolean'=>array(true))
-			));
-		}
-
-//!	PHP doesn't do const arrays :(
-/**
-*	@return array The validator array to be passed to Aurora::Addon::WebUI::makeCallToAPI() when making group notice-related calls.
-*/
-		protected static function GroupNoticeValidatorArray(){
-			static $validator = array('object'=>array(array(
-				'GroupID'       => array('string'=>array()),
-				'NoticeID'      => array('string'=>array()),
-				'Timestamp'     => array('integer'=>array()),
-				'FromName'      => array('string'=>array()),
-				'Subject'       => array('string'=>array()),
-				'Message'       => array('string'=>array()),
-				'HasAttachment' => array('boolean'=>array()),
-				'ItemID'        => array('string'=>array()),
-				'AssetType'     => array('integer'=>array()),
-				'ItemName'      => array('string'=>array())
-			)));
-			return $validator;
-		}
-
-//!	Get group notices for the specified groups
-/**
-*	@param integer $start start point of iterator. negatives are supported (kinda).
-*	@param integer $count Maximum number of group notices to fetch from the WebUI API end-point.
-*	@param array $groups instances of GroupRecord
-*	@return object instance of Aurora::Addon::WebUI::GetGroupNotices
-*/
-		public function GroupNotices($start=0, $count=10, array $groups, $asArray=false){
-			$groupIDs = array();
-			foreach($groups as $group){
-				if($group instanceof WebUI\GroupRecord){
-					$groupIDs[] = $group->GroupID();
-				}else if(is_bool($group) === false){
-					throw new InvalidArgumentException('Groups must be an array of Aurora::Addon::WebUI::GroupRecord instances');
-				}
-			}
-
-			$result = $this->makeCallToAPI('GroupNotices', array(
-				'Start' => $start,
-				'Count' => $count,
-				'Groups' => $groupIDs
-			), array(
-				'Total' => array('integer'=>array()),
-				'GroupNotices' => array('array'=>array(self::GroupNoticeValidatorArray()))
-			));
-
-			$groupNotices = array();
-			foreach($result->GroupNotices as $groupNotice){
-				$groupNotices[] = WebUI\GroupNoticeData::r(
-					$groupNotice->GroupID,
-					$groupNotice->NoticeID,
-					$groupNotice->Timestamp,
-					$groupNotice->FromName,
-					$groupNotice->Subject,
-					$groupNotice->Message,
-					$groupNotice->HasAttachment,
-					$groupNotice->ItemID,
-					$groupNotice->AssetType,
-					$groupNotice->ItemName
-				);
-			}
-
-			return $asArray ? $groupNotices : WebUI\GetGroupNotices::r($this, $start, $result->Total, $groupIDs, $groupNotices);
-		}
-
-//!	Get group notices from groups flagged as being news sources.
-/**
-*	@param integer $start start point of iterator. negatives are supported (kinda).
-*	@param integer $count Maximum number of group notices to fetch from the WebUI API end-point.
-*	@return object instance of Aurora::Addon::WebUI::GetGroupNotices
-*/
-		public function NewsFromGroupNotices($start=0, $count=10, $asArray=false){
-
-			$result = $this->makeCallToAPI('NewsFromGroupNotices', array(
-				'Start' => $start,
-				'Count' => $count
-			), array(
-				'Total' => array('integer'=>array()),
-				'GroupNotices' => array('array'=>array(self::GroupNoticeValidatorArray()))
-			));
-
-			$groupNotices = array();
-			foreach($result->GroupNotices as $groupNotice){
-				$groupNotices[] = WebUI\GroupNoticeData::r(
-					$groupNotice->GroupID,
-					$groupNotice->NoticeID,
-					$groupNotice->Timestamp,
-					$groupNotice->FromName,
-					$groupNotice->Subject,
-					$groupNotice->Message,
-					$groupNotice->HasAttachment,
-					$groupNotice->ItemID,
-					$groupNotice->AssetType,
-					$groupNotice->ItemName
-				);
-			}
-
-			return $asArray ? $groupNotices : WebUI\GetNewsFromGroupNotices::r($this, $start, $result->Total, array(), $groupNotices);
-		}
-
-//!	Get individual group notice
-/**
-*	@param string $uuid UUID of the group notice you wish to fetch
-*	@return object Instance of Aurora\Addon\WebUI\GroupNoticeData
-*/
-		public function GetGroupNotice($uuid){
-			if(is_string($uuid) === false){
-				throw new InvalidArgumentException('Group notice ID should be specified as string.');
-			}else if(preg_match(self::regex_UUID, $uuid) !== 1){
-				throw new InvalidArgumentException('Group notice ID should be a valid UUID');
-			}
-			$groupNotice = $this->makeCallToAPI('GetGroupNotice', array(
-				'NoticeID' => strtolower($uuid)
-			), array(
-				'GroupNotice' => self::GroupNoticeValidatorArray()
-			))->GroupNotice;
-
-			return WebUI\GroupNoticeData::r(
-				$groupNotice->GroupID,
-				$groupNotice->NoticeID,
-				$groupNotice->Timestamp,
-				$groupNotice->FromName,
-				$groupNotice->Subject,
-				$groupNotice->Message,
-				$groupNotice->HasAttachment,
-				$groupNotice->ItemID,
-				$groupNotice->AssetType,
-				$groupNotice->ItemName
-			);
-		}
-
-//!	Edit a group notice
-/**
-*	@param mixed $groupNotice Either the UUID of a group notice, or an instance of Aurora::Addon::WebUI::GroupNoticeData
-*	@param mixed $subject new subject string or null to indicate no change
-*	@param mixed $message new message string or null to indicate no change
-*/
-		public function EditGroupNotice($notice, $subject=null, $message=null){
-			if(isset($subject) === true && is_string($subject) === false){
-				throw new InvalidArgumentException('If subject is specified, it must be specified as string.');
-			}else if(isset($subject) === true && is_string($subject) === true && trim($subject) === ''){
-				throw new InvalidArgumentException('If subject is specified, it must not be empty.');
-			}else if(isset($message) === true && is_string($message) === false){
-				throw new InvalidArgumentException('If message is specified, it must be specified as string.');
-			}else if(isset($message) === true && is_string($message) === true && trim($message) === ''){
-				throw new InvalidArgumentException('If message is specified, it must not be empty.');
-			}else if(isset($subject, $message) === false){
-				return true; // if no changes are made, return immediately
-			}
-
-			if($notice instanceof WebUI\GroupNoticeData){
-				$notice = $notice->NoticeID();
-			}
-			if(is_string($notice) === false){
-				throw new InvalidArgumentException('NoticeID must be specified as string.');
-			}else if(preg_match(static::regex_UUID, $notice) != 1){
-				throw new InvalidArgumentException('NoticeID must be a valid UUID.');
-			}
-
-			$input = array(
-				'NoticeID' => $notice
-			);
-			if(isset($subject) === true){
-				$input['Subject'] = trim($subject);
-			}
-			if(isset($message) === true){
-				$input['Message'] = trim($message);
-			}
-
-			return $this->makeCallToAPI('EditGroupNotice', $input, array('Success' => array('boolean'=>array())))->Success;
-		}
-
-//!	Create a group notice.
-/**
-*	@param mixed $group Either the UUID of a group, or an instance of Aurora::Addon::WebUI::GroupRecord
-*	@param mixed $author Either the UUID of a user, or an instance of Aurora::Services::Interfaces::User
-*	@param string $subject notice subject
-*	@param string $message notice message
-*	@return string new notice ID
-*/
-		public function AddGroupNotice($group, $author, $subject, $message){
-			if($group instanceof WebUI\GroupRecord){
-				$group = $group->GroupID();
-			}
-			if($author instanceof \Aurora\Services\Interfaces\User){
-				$author = $author->PrincipalID();
-			}
-			if(is_string($subject) === true){
-				$subject = trim($subject);
-			}
-			if(is_string($message) === true){
-				$message = trim($message);
-			}
-
-			if(is_string($group) === false){
-				throw new InvalidArgumentException('Group ID must be specified as string.');
-			}else if(preg_match(static::regex_UUID, $group) != 1){
-				throw new InvalidArgumentException('Group ID must be specified as UUID.');
-			}else if(is_string($author) === false){
-				throw new InvalidArgumentException('Author ID must be specified as string.');
-			}else if(preg_match(static::regex_UUID, $author) != 1){
-				throw new InvalidArgumentException('Author ID must be specified as UUID.');
-			}else if(is_string($subject) === false){
-				throw new InvalidArgumentException('Subject must be specified as string.');
-			}else if($subject === ''){
-				throw new InvalidArgumentException('Subject must be specified as non-empty string.');
-			}else if(is_string($message) === false){
-				throw new InvalidArgumentException('Message must be specified as string.');
-			}else if($message === ''){
-				throw new InvalidArgumentException('Message must be specified as non-empty string.');
-			}
-
-			return $this->makeCallToAPI('AddGroupNotice', array(
-				'GroupID'  => $group,
-				'AuthorID' => $author,
-				'Subject'  => $subject,
-				'Message'  => $message
-			), array('NoticeID'=>array('string'=>array())))->NoticeID;
-		}
-
-//!	Remove a group notice
-/**
-*	@param mixed $group Either the UUID of a group, or an instance of Aurora::Addon::WebUI::GroupRecord
-*	@param string $notice The UUID of the group notice
-*	@return bool TRUE if the notice was successfully deleted, FALSE otherwise
-*/
-		public function RemoveGroupNotice($group, $notice){
-			if($group instanceof WebUI\GroupRecord){
-				$group = $group->GroupID();
-			}
-
-			if(is_string($group) === false){
-				throw new InvalidArgumentException('Group ID must be specified as string.');
-			}else if(preg_match(static::regex_UUID, $group) != 1){
-				throw new InvalidArgumentException('Group ID must be specified as UUID.');
-			}else if(is_string($notice) === false){
-				throw new InvalidArgumentException('NoticeID must be specified as string.');
-			}else if(preg_match(static::regex_UUID, $notice) != 1){
-				throw new InvalidArgumentException('NoticeID must be a valid UUID.');
-			}
-
-			return $this->makeCallToAPI('RemoveGroupNotice', array(
-				'GroupID'  => $group,
-				'NoticeID' => $notice
-			), array(
-				'Success' => array('boolean'=>array())
-			))->Success;
-		}
+#region Parcels
 
 //!	PHP doesn't do const arrays :(
 /**
@@ -2421,146 +2181,461 @@ namespace Aurora\Addon{
 			return $asArray ? $result->Parcels : WebUI\GetParcelsWithNameByRegion::r($this, $start, $result->Total, $name, $region, $scopeID, $result->Parcels);
 		}
 
-//!	Gets the array used as the expected response parameter for Aurora::Addon::WebUI::makeCallToAPI()
+#endregion
+
+#endregion
+
+#region Groups
+
+#region GroupRecord
+
+//!	Converts an instances of stdClass from Aurora::Addon::WebUI::GetGroups() and Aurora::Addon::WebUI::GetGroup() results to an instance of Aurora::Addon::WebUI::GroupRecord
 /**
-*	@return array
+*	@param object $group instance of stdClass with group properties
+*	@return object corresponding instance of Aurora::Addon::WebUI::GroupRecord
 */
-		private static function EstateSettingsValidator(){
-			return array(
-				'object' => array(array(
-					'EstateID' => array('integer'=>array()),
-					'EstateName' => array('string'=>array()),
-					'AbuseEmailToEstateOwner' => array('boolean'=>array()),
-					'DenyAnonymous' => array('boolean'=>array()),
-					'ResetHomeOnTeleport' => array('boolean'=>array()),
-					'FixedSun' => array('boolean'=>array()),
-					'DenyTransacted' => array('boolean'=>array()),
-					'BlockDwell' => array('boolean'=>array()),
-					'DenyIdentified' => array('boolean'=>array()),
-					'AllowVoice' => array('boolean'=>array()),
-					'UseGlobalTime' => array('boolean'=>array()),
-					'PricePerMeter' => array('integer'=>array()),
-					'TaxFree' => array('boolean'=>array()),
-					'AllowDirectTeleport' => array('boolean'=>array()),
-					'RedirectGridX' => array('integer'=>array(), 'null'=>array()),
-					'RedirectGridY' => array('integer'=>array(), 'null'=>array()),
-					'ParentEstateID' => array('integer'=>array()),
-					'SunPosition' => array('float'=>array()),
-					'EstateSkipScripts' => array('boolean'=>array()),
-					'BillableFactor' => array('float'=>array()),
-					'PublicAccess' => array('boolean'=>array()),
-					'AbuseEmail' => array('string'=>array()),
-					'EstateOwner' => array('string'=>array()),
-					'DenyMinors' => array('boolean'=>array()),
-					'AllowLandmark' => array('boolean'=>array()),
-					'AllowParcelChanges' => array('boolean'=>array()),
-					'AllowSetHome' => array('boolean'=>array()),
-					'EstateBans' => array('array'=>array(array('string'=>array()))),
-					'EstateManagers' => array('array'=>array(array('string'=>array()))),
-					'EstateGroups' => array('array'=>array(array('string'=>array()))),
-					'EstateAccess' => array('array'=>array(array('string'=>array()))),
-				))
+		private static function GroupResult2GroupRecord(\stdClass $group){
+			if(isset(
+				$group->GroupID,
+				$group->GroupName,
+				$group->Charter,
+				$group->GroupPicture,
+				$group->FounderID,
+				$group->MembershipFee,
+				$group->OpenEnrollment,
+				$group->ShowInList,
+				$group->AllowPublish,
+				$group->MaturePublish,
+				$group->OwnerRoleID
+			) === false){
+				throw new UnexpectedValueException('Call to API was successful, but required response sub-properties were missing.');
+			}
+			return WebUI\GroupRecord::r(
+				$group->GroupID,
+				$group->GroupName,
+				$group->Charter,
+				$group->GroupPicture,
+				$group->FounderID,
+				$group->MembershipFee,
+				$group->OpenEnrollment,
+				$group->ShowInList,
+				$group->AllowPublish,
+				$group->MaturePublish,
+				$group->OwnerRoleID
 			);
 		}
 
-//!	Converts an API result into an EstateSettings object
+//!	Enables or disables the specified group as a news source for WebUI
 /**
-*	@return object instance of EstateSettings
+*	Throws an exception on failure, for laziness :P
+*	@param object $group instance of Aurora::Addon::WebUI::GroupRecord
+*	@param boolean $useAsNewsSource TRUE to enable, FALSE to disable
 */
-		private static function EstateSettingsFromResult(\stdClass $Estate){
-			return WebUI\EstateSettings::r(
-				$Estate->EstateID,
-				$Estate->EstateName,
-				$Estate->AbuseEmailToEstateOwner,
-				$Estate->DenyAnonymous,
-				$Estate->ResetHomeOnTeleport,
-				$Estate->FixedSun,
-				$Estate->DenyTransacted,
-				$Estate->BlockDwell,
-				$Estate->DenyIdentified,
-				$Estate->AllowVoice,
-				$Estate->UseGlobalTime,
-				$Estate->PricePerMeter,
-				$Estate->TaxFree,
-				$Estate->AllowDirectTeleport,
-				$Estate->RedirectGridX,
-				$Estate->RedirectGridY,
-				$Estate->ParentEstateID,
-				$Estate->SunPosition,
-				$Estate->EstateSkipScripts,
-				$Estate->BillableFactor,
-				$Estate->PublicAccess,
-				$Estate->AbuseEmail,
-				$Estate->EstateOwner,
-				$Estate->DenyMinors,
-				$Estate->AllowLandmark,
-				$Estate->AllowParcelChanges,
-				$Estate->AllowSetHome,
-				$Estate->EstateBans,
-				$Estate->EstateManagers,
-				$Estate->EstateGroups,
-				$Estate->EstateAccess
-			);
-		}
-
-//!	Gets all estates with the specified owner and optional boolean filters
-/**
-*	@param string $Owner Owner UUID
-*	@param array $boolFields optional array of field names for keys and booleans for values, indicating 1 and 0 for field values.
-*	@return object instance of Aurora::Addon::WebUI::EstateSettingsIterator
-*/
-		public function GetEstates($Owner, array $boolFields=null){
-			if(($Owner instanceof WebUI\abstractUser) === false){
-				if(is_string($Owner) === false){
-					throw new InvalidArgumentException('OwnerID must be a string.');
-				}else if(preg_match(self::regex_UUID, $Owner) !== 1){
-					throw new InvalidArgumentException('OwnerID must be a valid UUID.');
-				}
-				$Owner = $this->GetProfile('', $Owner);
+		public function GroupAsNewsSource(WebUI\GroupRecord $group, $useAsNewsSource=true){
+			if(is_bool($useAsNewsSource) === false){
+				throw new InvalidArgumentException('flag must be a boolean.');
 			}
 
+			$this->makeCallToAPI('GroupAsNewsSource', array(
+				'Group' => $group->GroupID(),
+				'Use'   => $useAsNewsSource
+			), array(
+				'Verified' => array('boolean'=>array(true))
+			));
+		}
+
+//!	Gets an iterator for the number of groups specified, with optional filters.
+/**
+*	@param integer $start start point of iterator. negatives are supported (kinda).
+*	@param integer $count Maximum number of groups to fetch from the WebUI API end-point.
+*	@param array $sort optional array of field names for keys and booleans for values, indicating ASC and DESC sort orders for the specified fields.
+*	@param array $boolFields optional array of field names for keys and booleans for values, indicating 1 and 0 for field values.
+*	@return object Aurora::Addon::WebUI::GetGroupRecords
+*	@see Aurora::Addon::WebUI::GetGroupRecords::r()
+*/
+		public function GetGroups($start=0, $count=10, array $sort=null, array $boolFields=null){
 			$input = array(
-				'Owner' => $Owner->PrincipalID()
+				'Start' => $start,
+				'Count' => $count
 			);
+			if(isset($sort) === true){
+				$input['Sort'] = $sort;
+			}
 			if(isset($boolFields) === true){
 				$input['BoolFields'] = $boolFields;
 			}
 
-			$Estates = $this->makeCallToAPI('GetEstates', $input, array(
-				'Estates' => array('array' => array(
-					static::EstateSettingsValidator()
-				))
-			))->Estates;
-			$result = array();
-			foreach($Estates as $Estate){
-				$result[] = static::EstateSettingsFromResult($Estate);
+			$result = $this->makeCallToAPI('GetGroups', $input, array(
+				'Start'  => array('integer'=>array()),
+				'Total'  => array('integer'=>array()),
+				'Groups' => array('array'=>array(array('object'=>array()))),
+			));
+
+			$groups = array();
+			foreach($result->Groups as $group){
+				$groups[] = self::GroupResult2GroupRecord($group);
 			}
 
-			return new WebUI\EstateSettingsIterator($result);
+			return WebUI\GetGroupRecords::r($this, $result->Start, $result->Total, $sort, $boolFields, $groups);
 		}
 
-//!	Gets a single estate by estate name
+//!	Gets an iterator for the groups usable as news sources.
 /**
-*	@param mixed Estate ID or Estate Name
-*	@return object instance of Aurora::Addon::WebUI::EstateSettings
-*/
-		public function GetEstate($Estate){
-			if(is_string($Estate) === true){
-				if(ctype_digit($Estate) === true){
-					$Estate = (integer)$Estate;
-				}else{
-					$Estate = trim($Estate);
+*	@param integer $start start point
+*	@param integer $count Maximum number of groups to fetch from the WebUI API end-point
+*	@param boolean $asArray if TRUE will return results as an array, otherwise will return an instance of Aurora::Addon::WebUI::GetNewsSources
+*	@return mixed either an array of Aurora::Addon::WebUI::GroupRecord or an instance of Aurora::Addon::WebUI::GetNewsSources
+*/		
+		public function GetNewsSources($start=0, $count=10, $asArray=false){
+			if(is_string($start) === true && ctype_digit($start) === true){
+				$start = (integer)$start;
+			}
+			if(is_string($count) === true && ctype_digit($count) === true){
+				$count = (integer)$count;
+			}
+
+			if(is_integer($start) === false){
+				throw new InvalidArgumentException('Start point must be specified as integer.');
+			}else if($start < 0){
+				throw new InvalidArgumentException('Start point must be greater than or equal to zero.');
+			}else if(is_integer($count) === false){
+				throw new InvalidArgumentException('Count must be specified as integer.');
+			}else if($count < 1){
+				throw new InvalidArgumentException('Count must be greater than or equal to one.');
+			}else if(is_bool($asArray) === false){
+				throw new InvalidArgumentException('asArray flag must be specified as boolean.');
+			}
+
+			$response = array();
+			if($asArray === true || WebUI\GetNewsSources::hasInstance($this) === false){
+				$result = $this->makeCallToAPI('GetNewsSources', array(
+					'Start' => $start,
+					'Count' => $count
+				), array(
+					'Total' => array('integer'=>array()),
+					'Groups' => array('array'=>array(array('object'=>array())))
+				));
+				foreach($result->Groups as $group){
+					$response[] = self::GroupResult2GroupRecord($group);
 				}
 			}
 
-			if(is_integer($Estate) === false && is_string($Estate) === false){
-				throw new InvalidArgumentException('Estate must be specified as integer or string.');
+			return $asArray ? $response : WebUI\GetNewsSources::r($this, $start, $result->Total, $response);
+		}
+
+//!	Fetches the specified group
+/**
+*	@param string $nameOrUUID Either a group UUID, or a group name.
+*	@return mixed either FALSE indicating no group was found, or an instance of Aurora::Addon::WebUI::GroupRecord
+*	@see Aurora::Addon::WebUI::GroupRecord::r()
+*/
+		public function GetGroup($nameOrUUID){
+			if(is_string($nameOrUUID) === true){
+				$nameOrUUID = trim($nameOrUUID);
+			}else if(is_string($nameOrUUID) === false){
+				throw new InvalidArgumentException('Method argument should be a string.');
+			}
+			$name = '';
+			$uuid = '00000000-0000-0000-0000-000000000000';
+			if(preg_match(self::regex_UUID, $nameOrUUID) !== 1){
+				$input = array(
+					'Name' => $nameOrUUID
+				);
+			}else{
+				$input = array(
+					'UUID' => $nameOrUUID
+				);
 			}
 
-			return static::EstateSettingsFromResult($this->makeCallToAPI('GetEstate', array('Estate' => $Estate), array(
-				'Estate' => static::EstateSettingsValidator()
-			))->Estate);
+			$result = $this->makeCallToAPI('GetGroup', $input, array(
+				'Group' => array(
+					'object'  => array(),
+					'boolean' => array(false)
+				)
+			));
+
+			return $result->Group ? self::GroupResult2GroupRecord($result->Group) : false;
 		}
+
+//!	Gets an iterator for the specified list of GroupIDs
+/**
+*	@param array $GroupIDs list of GroupIDs
+*	@return object Aurora::Addon::WebUI::foreknowledgeGetGroupRecords
+*/
+		public function foreknowledgeGetGroupRecords(array $GroupIDs){
+
+			$result = $this->makeCallToAPI('GetGroups', array(
+				'Groups' => $GroupIDs
+			), array(
+				'Groups' => array('array'=>array(array('object'=>array()))),
+			));
+
+			$groups = array();
+			foreach($result->Groups as $group){
+				$groups[] = self::GroupResult2GroupRecord($group);
+			}
+
+			return WebUI\foreknowledgeGetGroupRecords::r($this, $result->Start, $result->Total, null, null, $groups);
+		}
+
+#endregion
+
+#region GroupNoticeData
+
+//!	PHP doesn't do const arrays :(
+/**
+*	@return array The validator array to be passed to Aurora::Addon::WebUI::makeCallToAPI() when making group notice-related calls.
+*/
+		protected static function GroupNoticeValidatorArray(){
+			static $validator = array('object'=>array(array(
+				'GroupID'       => array('string'=>array()),
+				'NoticeID'      => array('string'=>array()),
+				'Timestamp'     => array('integer'=>array()),
+				'FromName'      => array('string'=>array()),
+				'Subject'       => array('string'=>array()),
+				'Message'       => array('string'=>array()),
+				'HasAttachment' => array('boolean'=>array()),
+				'ItemID'        => array('string'=>array()),
+				'AssetType'     => array('integer'=>array()),
+				'ItemName'      => array('string'=>array())
+			)));
+			return $validator;
+		}
+
+//!	Get group notices for the specified groups
+/**
+*	@param integer $start start point of iterator. negatives are supported (kinda).
+*	@param integer $count Maximum number of group notices to fetch from the WebUI API end-point.
+*	@param array $groups instances of GroupRecord
+*	@return object instance of Aurora::Addon::WebUI::GetGroupNotices
+*/
+		public function GroupNotices($start=0, $count=10, array $groups, $asArray=false){
+			$groupIDs = array();
+			foreach($groups as $group){
+				if($group instanceof WebUI\GroupRecord){
+					$groupIDs[] = $group->GroupID();
+				}else if(is_bool($group) === false){
+					throw new InvalidArgumentException('Groups must be an array of Aurora::Addon::WebUI::GroupRecord instances');
+				}
+			}
+
+			$result = $this->makeCallToAPI('GroupNotices', array(
+				'Start' => $start,
+				'Count' => $count,
+				'Groups' => $groupIDs
+			), array(
+				'Total' => array('integer'=>array()),
+				'GroupNotices' => array('array'=>array(self::GroupNoticeValidatorArray()))
+			));
+
+			$groupNotices = array();
+			foreach($result->GroupNotices as $groupNotice){
+				$groupNotices[] = WebUI\GroupNoticeData::r(
+					$groupNotice->GroupID,
+					$groupNotice->NoticeID,
+					$groupNotice->Timestamp,
+					$groupNotice->FromName,
+					$groupNotice->Subject,
+					$groupNotice->Message,
+					$groupNotice->HasAttachment,
+					$groupNotice->ItemID,
+					$groupNotice->AssetType,
+					$groupNotice->ItemName
+				);
+			}
+
+			return $asArray ? $groupNotices : WebUI\GetGroupNotices::r($this, $start, $result->Total, $groupIDs, $groupNotices);
+		}
+
+//!	Get group notices from groups flagged as being news sources.
+/**
+*	@param integer $start start point of iterator. negatives are supported (kinda).
+*	@param integer $count Maximum number of group notices to fetch from the WebUI API end-point.
+*	@return object instance of Aurora::Addon::WebUI::GetGroupNotices
+*/
+		public function NewsFromGroupNotices($start=0, $count=10, $asArray=false){
+
+			$result = $this->makeCallToAPI('NewsFromGroupNotices', array(
+				'Start' => $start,
+				'Count' => $count
+			), array(
+				'Total' => array('integer'=>array()),
+				'GroupNotices' => array('array'=>array(self::GroupNoticeValidatorArray()))
+			));
+
+			$groupNotices = array();
+			foreach($result->GroupNotices as $groupNotice){
+				$groupNotices[] = WebUI\GroupNoticeData::r(
+					$groupNotice->GroupID,
+					$groupNotice->NoticeID,
+					$groupNotice->Timestamp,
+					$groupNotice->FromName,
+					$groupNotice->Subject,
+					$groupNotice->Message,
+					$groupNotice->HasAttachment,
+					$groupNotice->ItemID,
+					$groupNotice->AssetType,
+					$groupNotice->ItemName
+				);
+			}
+
+			return $asArray ? $groupNotices : WebUI\GetNewsFromGroupNotices::r($this, $start, $result->Total, array(), $groupNotices);
+		}
+
+//!	Get individual group notice
+/**
+*	@param string $uuid UUID of the group notice you wish to fetch
+*	@return object Instance of Aurora\Addon\WebUI\GroupNoticeData
+*/
+		public function GetGroupNotice($uuid){
+			if(is_string($uuid) === false){
+				throw new InvalidArgumentException('Group notice ID should be specified as string.');
+			}else if(preg_match(self::regex_UUID, $uuid) !== 1){
+				throw new InvalidArgumentException('Group notice ID should be a valid UUID');
+			}
+			$groupNotice = $this->makeCallToAPI('GetGroupNotice', array(
+				'NoticeID' => strtolower($uuid)
+			), array(
+				'GroupNotice' => self::GroupNoticeValidatorArray()
+			))->GroupNotice;
+
+			return WebUI\GroupNoticeData::r(
+				$groupNotice->GroupID,
+				$groupNotice->NoticeID,
+				$groupNotice->Timestamp,
+				$groupNotice->FromName,
+				$groupNotice->Subject,
+				$groupNotice->Message,
+				$groupNotice->HasAttachment,
+				$groupNotice->ItemID,
+				$groupNotice->AssetType,
+				$groupNotice->ItemName
+			);
+		}
+
+//!	Edit a group notice
+/**
+*	@param mixed $groupNotice Either the UUID of a group notice, or an instance of Aurora::Addon::WebUI::GroupNoticeData
+*	@param mixed $subject new subject string or null to indicate no change
+*	@param mixed $message new message string or null to indicate no change
+*/
+		public function EditGroupNotice($notice, $subject=null, $message=null){
+			if(isset($subject) === true && is_string($subject) === false){
+				throw new InvalidArgumentException('If subject is specified, it must be specified as string.');
+			}else if(isset($subject) === true && is_string($subject) === true && trim($subject) === ''){
+				throw new InvalidArgumentException('If subject is specified, it must not be empty.');
+			}else if(isset($message) === true && is_string($message) === false){
+				throw new InvalidArgumentException('If message is specified, it must be specified as string.');
+			}else if(isset($message) === true && is_string($message) === true && trim($message) === ''){
+				throw new InvalidArgumentException('If message is specified, it must not be empty.');
+			}else if(isset($subject, $message) === false){
+				return true; // if no changes are made, return immediately
+			}
+
+			if($notice instanceof WebUI\GroupNoticeData){
+				$notice = $notice->NoticeID();
+			}
+			if(is_string($notice) === false){
+				throw new InvalidArgumentException('NoticeID must be specified as string.');
+			}else if(preg_match(static::regex_UUID, $notice) != 1){
+				throw new InvalidArgumentException('NoticeID must be a valid UUID.');
+			}
+
+			$input = array(
+				'NoticeID' => $notice
+			);
+			if(isset($subject) === true){
+				$input['Subject'] = trim($subject);
+			}
+			if(isset($message) === true){
+				$input['Message'] = trim($message);
+			}
+
+			return $this->makeCallToAPI('EditGroupNotice', $input, array('Success' => array('boolean'=>array())))->Success;
+		}
+
+//!	Create a group notice.
+/**
+*	@param mixed $group Either the UUID of a group, or an instance of Aurora::Addon::WebUI::GroupRecord
+*	@param mixed $author Either the UUID of a user, or an instance of Aurora::Services::Interfaces::User
+*	@param string $subject notice subject
+*	@param string $message notice message
+*	@return string new notice ID
+*/
+		public function AddGroupNotice($group, $author, $subject, $message){
+			if($group instanceof WebUI\GroupRecord){
+				$group = $group->GroupID();
+			}
+			if($author instanceof \Aurora\Services\Interfaces\User){
+				$author = $author->PrincipalID();
+			}
+			if(is_string($subject) === true){
+				$subject = trim($subject);
+			}
+			if(is_string($message) === true){
+				$message = trim($message);
+			}
+
+			if(is_string($group) === false){
+				throw new InvalidArgumentException('Group ID must be specified as string.');
+			}else if(preg_match(static::regex_UUID, $group) != 1){
+				throw new InvalidArgumentException('Group ID must be specified as UUID.');
+			}else if(is_string($author) === false){
+				throw new InvalidArgumentException('Author ID must be specified as string.');
+			}else if(preg_match(static::regex_UUID, $author) != 1){
+				throw new InvalidArgumentException('Author ID must be specified as UUID.');
+			}else if(is_string($subject) === false){
+				throw new InvalidArgumentException('Subject must be specified as string.');
+			}else if($subject === ''){
+				throw new InvalidArgumentException('Subject must be specified as non-empty string.');
+			}else if(is_string($message) === false){
+				throw new InvalidArgumentException('Message must be specified as string.');
+			}else if($message === ''){
+				throw new InvalidArgumentException('Message must be specified as non-empty string.');
+			}
+
+			return $this->makeCallToAPI('AddGroupNotice', array(
+				'GroupID'  => $group,
+				'AuthorID' => $author,
+				'Subject'  => $subject,
+				'Message'  => $message
+			), array('NoticeID'=>array('string'=>array())))->NoticeID;
+		}
+
+//!	Remove a group notice
+/**
+*	@param mixed $group Either the UUID of a group, or an instance of Aurora::Addon::WebUI::GroupRecord
+*	@param string $notice The UUID of the group notice
+*	@return bool TRUE if the notice was successfully deleted, FALSE otherwise
+*/
+		public function RemoveGroupNotice($group, $notice){
+			if($group instanceof WebUI\GroupRecord){
+				$group = $group->GroupID();
+			}
+
+			if(is_string($group) === false){
+				throw new InvalidArgumentException('Group ID must be specified as string.');
+			}else if(preg_match(static::regex_UUID, $group) != 1){
+				throw new InvalidArgumentException('Group ID must be specified as UUID.');
+			}else if(is_string($notice) === false){
+				throw new InvalidArgumentException('NoticeID must be specified as string.');
+			}else if(preg_match(static::regex_UUID, $notice) != 1){
+				throw new InvalidArgumentException('NoticeID must be a valid UUID.');
+			}
+
+			return $this->makeCallToAPI('RemoveGroupNotice', array(
+				'GroupID'  => $group,
+				'NoticeID' => $notice
+			), array(
+				'Success' => array('boolean'=>array())
+			))->Success;
+		}
+
+#endregion
+
+#endregion
+
+#region Events
 
 //!	PHP doesn't do const arrays :(
 /**
@@ -2744,6 +2819,8 @@ namespace Aurora\Addon{
 				$event->maturity
 			);
 		}
+
+#endregion
 
 //!	Gets the client implementation data
 /**
