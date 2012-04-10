@@ -266,6 +266,64 @@ namespace Aurora\Addon\WebUI{
 		}
 	}
 
+//!	News sources iterator
+	class GetNewsSources extends abstractLazyLoadingSeekableIterator{
+
+		protected static $registry = array();
+
+//!	We're hiding this behind a registry method.
+		protected function __construct(WebUI $WebUI, $start=0, $total=0, array $groups=null){
+			if(isset($groups) === true){
+				$i = $start;
+				foreach($groups as $group){
+					if($group instanceof GroupRecord){
+						$this->data[$i++] = $group;
+					}else{
+						throw new InvalidArgumentException('Values of instantiated groups array must be instances of Aurora::Addon::WebUI::GroupRecord');
+					}
+				}
+			}
+
+			parent::__construct($WebUI, $start, $total);
+		}
+
+//!	registry method
+		public static function r(WebUI $WebUI, $start=0, $total=null, array $groups=null){
+			$hash = spl_object_hash($WebUI);
+
+			if(isset(static::$registry[$hash]) === false && isset($total) === false){
+				throw new InvalidArgumentException('Total must be specified when no instance has been cached.');
+			}else if(isset(static::$registry[$hash]) === false || static::$registry[$hash]->count() !== $total){
+				static::$registry[$hash] = new static($WebUI, $start, $total, $groups);
+			}
+
+			static::$registry[$hash]->seek($start);
+			return static::$registry[$hash];
+		}
+
+
+		public static function hasInstance(WebUI $WebUI){
+			return isset(static::$registry[spl_object_hash($WebUI)]);
+		}
+
+//!	To avoid slowdowns due to an excessive amount of curl calls, we populate Aurora::Addon::WebUI::GetNewsSources::$data in batches of 10
+/**
+*	@return mixed either NULL or an instance of Aurora::Addon::WebUI::GroupRecord
+*/
+		public function current(){
+			if($this->valid() === false){
+				return null;
+			}else if(isset($this->data[$this->key()]) === false){
+				$start   = $this->key();
+				$results = $this->WebUI->GetNewsSources($start, 10, true);
+				foreach($results as $group){
+					$this->data[$start++] = $group;
+				}
+			}
+			return $this->data[$this->key()];
+		}
+	}
+
 //!	Groups iterator
 	class foreknowledgeGetGroupRecords extends GetGroupRecords{
 
