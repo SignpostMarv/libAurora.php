@@ -2133,6 +2133,35 @@ namespace Aurora\Addon{
 			), array('NoticeID'=>array('string'=>array())))->NoticeID;
 		}
 
+//!	Remove a group notice
+/**
+*	@param mixed $group Either the UUID of a group, or an instance of Aurora::Addon::WebUI::GroupRecord
+*	@param string $notice The UUID of the group notice
+*	@return bool TRUE if the notice was successfully deleted, FALSE otherwise
+*/
+		public function RemoveGroupNotice($group, $notice){
+			if($group instanceof WebUI\GroupRecord){
+				$group = $group->GroupID();
+			}
+
+			if(is_string($group) === false){
+				throw new InvalidArgumentException('Group ID must be specified as string.');
+			}else if(preg_match(static::regex_UUID, $group) != 1){
+				throw new InvalidArgumentException('Group ID must be specified as UUID.');
+			}else if(is_string($notice) === false){
+				throw new InvalidArgumentException('NoticeID must be specified as string.');
+			}else if(preg_match(static::regex_UUID, $notice) != 1){
+				throw new InvalidArgumentException('NoticeID must be a valid UUID.');
+			}
+
+			return $this->makeCallToAPI('RemoveGroupNotice', array(
+				'GroupID'  => $group,
+				'NoticeID' => $notice
+			), array(
+				'Success' => array('boolean'=>array())
+			))->Success;
+		}
+
 //!	PHP doesn't do const arrays :(
 /**
 *	@return array The validator array to be passed to Aurora::Addon::WebUI::makeCallToAPI() when making parcel-related calls.
