@@ -214,7 +214,7 @@ namespace Aurora\Addon{
 			throw new RuntimeException('API call failed to execute.'); // if this starts happening frequently, we'll add in some more debugging code.
 		}
 
-#region textures		
+#region textures
 
 //!	Returns the URI for a grid texture
 /**
@@ -497,7 +497,7 @@ namespace Aurora\Addon{
 			return $result->Verified;
 		}
 
-#endregion		
+#endregion
 
 #region Login
 
@@ -712,7 +712,7 @@ namespace Aurora\Addon{
 			))->Verified;
 		}
 
-#endregion		
+#endregion
 
 //!	Change account name.
 /**
@@ -2285,7 +2285,7 @@ namespace Aurora\Addon{
 *	@param integer $count Maximum number of groups to fetch from the WebUI API end-point
 *	@param boolean $asArray if TRUE will return results as an array, otherwise will return an instance of Aurora::Addon::WebUI::GetNewsSources
 *	@return mixed either an array of Aurora::Addon::WebUI::GroupRecord or an instance of Aurora::Addon::WebUI::GetNewsSources
-*/		
+*/
 		public function GetNewsSources($start=0, $count=10, $asArray=false){
 			if(is_string($start) === true && ctype_digit($start) === true){
 				$start = (integer)$start;
