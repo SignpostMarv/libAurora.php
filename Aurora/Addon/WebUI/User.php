@@ -1039,7 +1039,7 @@ namespace Aurora\Addon\WebUI{
 					if($info instanceof GridUserInfo){
 						$this->data[$i++] = $info;
 					}else{
-						throw new InvalidArgumentException('Values of instantiated regions array must be instances of Aurora::Addon::WebUI::GridUserInfo');
+						throw new InvalidArgumentException('Values of instantiated users array must be instances of Aurora::Addon::WebUI::GridUserInfo');
 					}
 				}
 			}
