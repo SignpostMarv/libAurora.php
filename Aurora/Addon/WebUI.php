@@ -1795,6 +1795,50 @@ namespace Aurora\Addon{
 			return WebUI\GetGroupRecords::r($this, $result->Start, $result->Total, $sort, $boolFields, $groups);
 		}
 
+//!	Gets an iterator for the groups usable as news sources.
+/**
+*	@param integer $start start point
+*	@param integer $count Maximum number of groups to fetch from the WebUI API end-point
+*	@param boolean $asArray if TRUE will return results as an array, otherwise will return an instance of Aurora::Addon::WebUI::GetNewsSources
+*	@return mixed either an array of Aurora::Addon::WebUI::GroupRecord or an instance of Aurora::Addon::WebUI::GetNewsSources
+*/		
+		public function GetNewsSources($start=0, $count=10, $asArray=false){
+			if(is_string($start) === true && ctype_digit($start) === true){
+				$start = (integer)$start;
+			}
+			if(is_string($count) === true && ctype_digit($count) === true){
+				$count = (integer)$count;
+			}
+
+			if(is_integer($start) === false){
+				throw new InvalidArgumentException('Start point must be specified as integer.');
+			}else if($start < 0){
+				throw new InvalidArgumentException('Start point must be greater than or equal to zero.');
+			}else if(is_integer($count) === false){
+				throw new InvalidArgumentException('Count must be specified as integer.');
+			}else if($count < 1){
+				throw new InvalidArgumentException('Count must be greater than or equal to one.');
+			}else if(is_bool($asArray) === false){
+				throw new InvalidArgumentException('asArray flag must be specified as boolean.');
+			}
+
+			$response = array();
+			if($asArray === true || WebUI\GetNewsSources::hasInstance($this) === false){
+				$result = $this->makeCallToAPI('GetNewsSources', array(
+					'Start' => $start,
+					'Count' => $count
+				), array(
+					'Total' => array('integer'=>array()),
+					'Groups' => array('array'=>array(array('object'=>array())))
+				));
+				foreach($result->Groups as $group){
+					$response[] = self::GroupResult2GroupRecord($group);
+				}
+			}
+
+			return $asArray ? $response : WebUI\GetNewsSources::r($this, $start, $result->Total, $response);
+		}
+
 //!	Gets an iterator for the specified list of GroupIDs
 /**
 *	@param array $GroupIDs list of GroupIDs
@@ -2012,7 +2056,7 @@ namespace Aurora\Addon{
 			}else if(isset($subject) === true && is_string($subject) === true && trim($subject) === ''){
 				throw new InvalidArgumentException('If subject is specified, it must not be empty.');
 			}else if(isset($message) === true && is_string($message) === false){
-				throw new InvalidArgumentException('If message is specified, it must be specified as string.');				
+				throw new InvalidArgumentException('If message is specified, it must be specified as string.');
 			}else if(isset($message) === true && is_string($message) === true && trim($message) === ''){
 				throw new InvalidArgumentException('If message is specified, it must not be empty.');
 			}else if(isset($subject, $message) === false){
@@ -2027,7 +2071,7 @@ namespace Aurora\Addon{
 			}else if(preg_match(static::regex_UUID, $notice) != 1){
 				throw new InvalidArgumentException('NoticeID must be a valid UUID.');
 			}
-			
+
 			$input = array(
 				'NoticeID' => $notice
 			);
@@ -2039,6 +2083,54 @@ namespace Aurora\Addon{
 			}
 
 			return $this->makeCallToAPI('EditGroupNotice', $input, array('Success' => array('boolean'=>array())))->Success;
+		}
+
+//!	Create a group notice.
+/**
+*	@param mixed $group Either the UUID of a group, or an instance of Aurora::Addon::WebUI::GroupRecord
+*	@param mixed $author Either the UUID of a user, or an instance of Aurora::Services::Interfaces::User
+*	@param string $subject notice subject
+*	@param string $message notice message
+*	@return string new notice ID
+*/
+		public function AddGroupNotice($group, $author, $subject, $message){
+			if($group instanceof WebUI\GroupRecord){
+				$group = $group->GroupID();
+			}
+			if($author instanceof \Aurora\Services\Interfaces\User){
+				$author = $author->PrincipalID();
+			}
+			if(is_string($subject) === true){
+				$subject = trim($subject);
+			}
+			if(is_string($message) === true){
+				$message = trim($message);
+			}
+
+			if(is_string($group) === false){
+				throw new InvalidArgumentException('Group ID must be specified as string.');
+			}else if(preg_match(static::regex_UUID, $group) != 1){
+				throw new InvalidArgumentException('Group ID must be specified as UUID.');
+			}else if(is_string($author) === false){
+				throw new InvalidArgumentException('Author ID must be specified as string.');
+			}else if(preg_match(static::regex_UUID, $author) != 1){
+				throw new InvalidArgumentException('Author ID must be specified as UUID.');
+			}else if(is_string($subject) === false){
+				throw new InvalidArgumentException('Subject must be specified as string.');
+			}else if($subject === ''){
+				throw new InvalidArgumentException('Subject must be specified as non-empty string.');
+			}else if(is_string($message) === false){
+				throw new InvalidArgumentException('Message must be specified as string.');
+			}else if($message === ''){
+				throw new InvalidArgumentException('Message must be specified as non-empty string.');
+			}
+
+			return $this->makeCallToAPI('AddGroupNotice', array(
+				'GroupID'  => $group,
+				'AuthorID' => $author,
+				'Subject'  => $subject,
+				'Message'  => $message
+			), array('NoticeID'=>array('string'=>array())))->NoticeID;
 		}
 
 //!	PHP doesn't do const arrays :(
