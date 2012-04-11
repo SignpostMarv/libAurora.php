@@ -1,5 +1,5 @@
 <?php
-//!	@file libs/Aurora/Addon/WebUI/abstracts.php
+//!	@file Aurora/Addon/WebUI/abstracts.php
 //!	@brief abstract WebUI classes
 //!	@author SignpostMarv
 
@@ -32,7 +32,7 @@ namespace Aurora\Addon\WebUI{
 		}
 	}
 
-
+//!	Implements the bare-minimum common code for API result iterators that do not load the entire set of results for paginated views.
 	abstract class abstractLazyLoadingSeekableIterator extends WORM implements SeekableIterator{
 
 //!	object instance of Aurora::Addon::WebUI
@@ -124,7 +124,7 @@ namespace Aurora\Addon\WebUI{
 		}
 	}
 
-//!	Seekable iterator for instances of Aurora\Addon\WebUI\GridRegion
+//!	Seekable iterator for instances of Aurora::Addon::WebUI::GridRegion
 	abstract class RegionsIterator extends abstractLazyLoadingSeekableIterator{
 
 //!	We're hiding this behind registry methods

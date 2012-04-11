@@ -1,5 +1,5 @@
 <?php
-//!	@file libs/Aurora/Addon/WebUI.php
+//!	@file Aurora/Addon/WebUI.php
 //!	@brief WebUI code
 //!	@author SignpostMarv
 
@@ -98,6 +98,7 @@ namespace Aurora\Addon{
 /**
 *	@param string $method
 *	@param array $arguments being lazy and future-proofing API methods that have no arguments.
+*	@param array $expectedResponse a specially-constructed array indicating the expected response format of the API call
 *	@return mixed All instances of do_post_request() in Aurora-WebUI that act upon the result call json_decode() on the $result prior to acting on it, so we save ourselves some time and execute json_decode() here.
 */
 		protected function makeCallToAPI($method, array $arguments=null, array $expectedResponse){
@@ -234,7 +235,6 @@ namespace Aurora\Addon{
 //!	Returns the URI for a region texture
 /**
 *	@param object $region instance of Aurora::Addon::WebUI::GridRegion
-*	@param integer $zoomLevel map tile zoom level
 *	@return string full URL to texture
 */
 		public function MapTexture(WebUI\GridRegion $region){
@@ -453,7 +453,7 @@ namespace Aurora\Addon{
 //!	Determines whether or not the account has been authenticated/verified.
 /**
 *	@param mixed $uuid either a string UUID of the user we wish to check, or an instance of Aurora::Services::Interfaces::User
-*	@param boolean TRUE if the account has been authenticated/verified, FALSE otherwise.
+*	@return boolean TRUE if the account has been authenticated/verified, FALSE otherwise.
 */
 		public function Authenticated($uuid){
 			if($uuid instanceof User){
@@ -756,9 +756,10 @@ namespace Aurora\Addon{
 /**
 *	If $uuid is an instance of Aurora::Addon::WebUI::abstractUser, $name is set to Aurora::Addon::WebUI::abstractUser::Name() and $uuid is set to Aurora::Addon::WebUI::abstractUser::PrincipalID()
 *	@param mixed $uuid either the account ID or an instance of Aurora::Addon::WebUI::abstractUser
-*	@param mixed either a string of the account name or NULL when $uuid is an instance of Aurora::Addon::WebUI::abstractUser
+*	@param mixed $name either a string of the account name or NULL when $uuid is an instance of Aurora::Addon::WebUI::abstractUser
 *	@param string $email Email address for the account
-*	@param mixed either an instance of Aurora::Addon::WebUI::RLInfo or NULL
+*	@param mixed $RLInfo either an instance of Aurora::Addon::WebUI::RLInfo or NULL
+*	@param mixed $userLevel NULL or integer user level
 *	@return boolean TRUE if successful, FALSE otherwise. Also returns FALSE if the operation was partially successful.
 */
 		public function EditUser($uuid, $name=null, $email='', WebUI\RLInfo $RLInfo=null, $userLevel=null){
@@ -845,7 +846,13 @@ namespace Aurora\Addon{
 
 #region Users
 
-
+//!	Validator array to be used with Aurora::Addon::WebUI::makeCallToAPI()
+/**
+*	Since we get serialized GridUserInfo objects in both single-result API calls and iterator result calls, we avoid duplication of the validator array by moving it into a static method.
+*	@return array Validator array to be used with Aurora::Addon::WebUI::makeCallToAPI()
+*	@see Aurora::Addon::WebUI::GetGridUserInfo()
+*	@see Aurora::Addon::WebUI::RecentlyOnlineUsers()
+*/
 		protected static function GridUserInfoValidator(){
 			static $validator = array(
 				'UUID'              => array('string' =>array()),
@@ -1133,8 +1140,9 @@ namespace Aurora\Addon{
 //!	Attempt to search for users
 /**
 *	@param string $query search filter
-*	@param mixed $start either an integer start point for results, or $query when we're being lazy.
-*	@param integer $end end point for results
+*	@param integer $start an integer start point for results
+*	@param integer $count maximum number of results to fetch in a single batch
+*	@param boolean $asArray controls whether to return an iterator object or a raw result array.
 *	@return object an instance of Aurora::Addon::WebUI::SearchUserResults
 */
 		public function FindUsers($query='', $start=0, $count=25, $asArray=false){
@@ -1242,6 +1250,9 @@ namespace Aurora\Addon{
 /**
 *	@param integer $secondsAgo The maximum number of seconds ago that the user would have logged in to include in the query
 *	@param boolean $stillOnline TRUE includes users still online, FALSE otherwise
+*	@param integer $start an integer start point for results
+*	@param integer $count maximum number of results to fetch in a single batch
+*	@param boolean $asArray controls whether to return an iterator object or a raw result array.
 */
 		public function RecentlyOnlineUsers($secondsAgo=0, $stillOnline=false, $start=0, $count=10, $asArray=false){
 			if(is_string($secondsAgo) && ctype_digit($secondsAgo) === true){
@@ -1526,7 +1537,7 @@ namespace Aurora\Addon{
 
 //!	Gets a single estate by estate name
 /**
-*	@param mixed Estate ID or Estate Name
+*	@param mixed $Estate Estate ID or Estate Name
 *	@return object instance of Aurora::Addon::WebUI::EstateSettings
 */
 		public function GetEstate($Estate){
@@ -1589,9 +1600,13 @@ namespace Aurora\Addon{
 //!	Get a list of regions in the AuroraSim install that match the specified flags.
 /**
 *	@param integer $flags A bitfield corresponding to constants in Aurora::Framework::RegionFlags
+*	@param integer $excludeFlags exclusive region flags
 *	@param integer $start start point. If Aurora::Addon::WebUI::GetRegions is primed, then Aurora::Addon::WebUI::GetRegions::r() will auto-seek to start.
 *	@param mixed $count Either an integer for the maximum number of regions to fetch from the API end point in a single batch, or NULL to use the end point's default value.
-*	@param boolean $asArray
+*	@param mixed $sortRegionName flag for sorting by region name. NULL or boolean where TRUE indicates ascending sort and FALSE indicates descending sort.
+*	@param mixed $sortLocX flag for sorting by x-axis coordinates NULL or boolean where TRUE indicates ascending sort and FALSE indicates descending sort.
+*	@param mixed $sortLocY flag for sorting by y-axis coordinates NULL or boolean where TRUE indicates ascending sort and FALSE indicates descending sort.
+*	@param boolean $asArray controls whether to return an iterator object or a raw result array.
 *	@return mixed If $asArray is TRUE returns an array, otherwise returns an instance of Aurora::Addon::WebUI::GetRegions
 *	@see Aurora::Addon::WebUI::makeCallToAPI()
 *	@see Aurora::Addon::WebUI::fromEndPointResult()
@@ -1743,8 +1758,8 @@ namespace Aurora\Addon{
 *	@param integer $startY y-axis start point
 *	@param integer $endX x-axis end point
 *	@param integer $endY y-axis end point
-*	@param integer $start specifies the index that $regions starts at, if specified.
-*	@param integer $total specifies the total number of regions in the grid.
+*	@param string $scopeID The scope ID for regions to fetch
+*	@param boolean $asArray controls whether to return an iterator object or a raw result array.
 */
 		public function GetRegionsInArea($startX, $startY, $endX, $endY, $scopeID='00000000-0000-0000-0000-000000000000', $asArray=false){
 			$has      = WebUI\GetRegionsInArea::hasInstance($this, $startX, $startY, $endX, $endY, $scopeID);
@@ -1774,7 +1789,10 @@ namespace Aurora\Addon{
 *	@param integer $flags A bitfield corresponding to constants in Aurora::Framework::RegionFlags
 *	@param integer $start start point. If Aurora::Addon::WebUI::GetRegions is primed, then Aurora::Addon::WebUI::GetRegions::r() will auto-seek to start.
 *	@param mixed $count Either an integer for the maximum number of regions to fetch from the API end point in a single batch, or NULL to use the end point's default value.
-*	@param boolean $asArray
+*	@param mixed $sortRegionName flag for sorting by region name. NULL or boolean where TRUE indicates ascending sort and FALSE indicates descending sort.
+*	@param mixed $sortLocX flag for sorting by x-axis coordinates NULL or boolean where TRUE indicates ascending sort and FALSE indicates descending sort.
+*	@param mixed $sortLocY flag for sorting by y-axis coordinates NULL or boolean where TRUE indicates ascending sort and FALSE indicates descending sort.
+*	@param boolean $asArray controls whether to return an iterator object or a raw result array.
 *	@return mixed If $asArray is TRUE returns an array, otherwise returns an instance of Aurora::Addon::WebUI::GetRegionsInEstate
 *	@see Aurora::Addon::WebUI::makeCallToAPI()
 *	@see Aurora::Addon::WebUI::fromEndPointResult()
@@ -1845,6 +1863,7 @@ namespace Aurora\Addon{
 //!	Get a single region
 /**
 *	@param string $region either a UUID or a region name.
+*	@param string $scopeID region scope ID
 *	@return object instance of Aurora::Addon::WebUI::GridRegion
 */
 		public function GetRegion($region, $scopeID='00000000-0000-0000-0000-000000000000'){
@@ -1876,8 +1895,10 @@ namespace Aurora\Addon{
 //!	Get a list of regions within range of the specified region
 /**
 *	@param string $region UUID of region
-*	@param string $scopeID Scope ID of region
 *	@param integer $range distance in meters from region center to search
+*	@param string $scopeID Scope ID of region
+*	@param integer $start start point for results
+*	@param boolean $asArray controls whether to return an iterator object or a raw result array.
 *	@return object returns an instance of Aurora::Addon::WebUI::GetRegionNeighbours
 */
 		public function GetRegionNeighbours($region, $range=128, $scopeID='00000000-0000-0000-0000-000000000000', $start=0, $asArray=false){
@@ -1985,7 +2006,7 @@ namespace Aurora\Addon{
 
 //!	Converts an API result for parcels to an instance of Aurora::Addon::WebUI::LandData
 /**
-*	@param object API result
+*	@param object $result API result
 *	@return object instance of Aurora::Addon::WebUI::LandData
 */
 		private static function ParcelResult2LandData(\stdClass $result){
@@ -2128,7 +2149,7 @@ namespace Aurora\Addon{
 /**
 *	@param integer $start start point for results (useful for paginated output)
 *	@param integer $count maximum number of results to return in initial call.
-*	@param string Parcel name
+*	@param string $name Parcel name
 *	@param object $region instance of Aurora::Addon::WebUI::GridRegion
 *	@param string $scopeID Region scope ID
 *	@param boolean $asArray if TRUE return array of parcels, if FALSE return Iterator object
@@ -2407,6 +2428,7 @@ namespace Aurora\Addon{
 *	@param integer $start start point of iterator. negatives are supported (kinda).
 *	@param integer $count Maximum number of group notices to fetch from the WebUI API end-point.
 *	@param array $groups instances of GroupRecord
+*	@param boolean $asArray controls whether to return an iterator object or a raw result array.
 *	@return object instance of Aurora::Addon::WebUI::GetGroupNotices
 */
 		public function GroupNotices($start=0, $count=10, array $groups, $asArray=false){
@@ -2451,7 +2473,8 @@ namespace Aurora\Addon{
 /**
 *	@param integer $start start point of iterator. negatives are supported (kinda).
 *	@param integer $count Maximum number of group notices to fetch from the WebUI API end-point.
-*	@return object instance of Aurora::Addon::WebUI::GetGroupNotices
+*	@param boolean $asArray controls whether to return an iterator object or a raw result array.
+*	@return mixed if $asArray is FALSE instance of Aurora::Addon::WebUI::GetGroupNotices, otherwise returns the raw result array
 */
 		public function NewsFromGroupNotices($start=0, $count=10, $asArray=false){
 
@@ -2485,7 +2508,7 @@ namespace Aurora\Addon{
 //!	Get individual group notice
 /**
 *	@param string $uuid UUID of the group notice you wish to fetch
-*	@return object Instance of Aurora\Addon\WebUI\GroupNoticeData
+*	@return object Instance of Aurora::Addon::WebUI::GroupNoticeData
 */
 		public function GetGroupNotice($uuid){
 			if(is_string($uuid) === false){
@@ -2515,7 +2538,7 @@ namespace Aurora\Addon{
 
 //!	Edit a group notice
 /**
-*	@param mixed $groupNotice Either the UUID of a group notice, or an instance of Aurora::Addon::WebUI::GroupNoticeData
+*	@param mixed $notice Either the UUID of a group notice, or an instance of Aurora::Addon::WebUI::GroupNoticeData
 *	@param mixed $subject new subject string or null to indicate no change
 *	@param mixed $message new message string or null to indicate no change
 */
@@ -2666,6 +2689,7 @@ namespace Aurora\Addon{
 *	@param integer $count Maximum number of results to fetch in initial call
 *	@param array $filter columns to filter by
 *	@param array $sort fields to sort by
+*	@param boolean $asArray controls whether to return an iterator object or a raw result array.
 *	@return object instance of Aurora::Addon::WebUI::GetEvents
 */
 		public function GetEvents($start=0, $count=10, array $filter=null, array $sort=null, $asArray=false){
@@ -2878,7 +2902,7 @@ namespace Aurora\Addon\WebUI{
 
 	use Aurora\Addon\WORM;
 
-//!	Long-term goal of Aurora-WebUI-GPL is to support multiple grids on a single website, so we need an iterator to hold all the configs.
+//!	Long-term goal of libAurora.php is to support multiple grids on a single website, so we need an iterator to hold all the configs.
 	class Configs extends WORM{
 
 //!	singleton method.
@@ -2904,7 +2928,7 @@ namespace Aurora\Addon\WebUI{
 			return static::i()->offsetGet(0);
 		}
 
-
+//!	Restricts offsets to integers and values to instances of Aurora::Addon::WebUI
 		public function offsetSet($offset, $value){
 			if(($value instanceof \Aurora\Addon\WebUI) === false){
 				throw new InvalidArgumentException('Only instances of Aurora::Addon::WebUI can be added to instances of Aurora::Addon::WebUI::Configs');
@@ -2949,7 +2973,7 @@ namespace Aurora\Addon\WebUI{
 			return new static($bools);
 		}
 
-
+//!	Restricts values to booleans
 		public function offsetSet($offset, $value){
 			if(is_bool($value) === false){
 				throw new InvalidArgumentException('Values must be boolean');

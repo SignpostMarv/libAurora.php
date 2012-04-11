@@ -1,7 +1,10 @@
 <?php
+//!	@file Aurora/Addon/WebUI/Template.php
+//!	@author SignpostMarv
+//!	@brief Template helpers.
+//!	@todo Should probably be moved to anoter namespace at somepoint.
 
-
-
+//!	Template-related methods
 namespace Aurora\Addon\WebUI\Template{
 
 	use Globals;
@@ -11,7 +14,11 @@ namespace Aurora\Addon\WebUI\Template{
 	use Aurora\Addon\WebUI;
 	use Aurora\Addon\WebUI\InvalidArgumentException;
 
-
+//!	Generates specific links for various entities as well as altering all results to work with mod_rewrite enabled or disabled.
+/**
+*	@param mixed $url either a string url in mod_rewrite-esque form, or an instance of Aurora::Addon::WebUI::abstractUser, Aurora::Addon::WebUI::EstateSettings, Aurora::Addon::WebUI::GridRegion, Aurora::Addon::WebUI::GroupRecord, Aurora::Addon::WebUI::LandData
+*	@return string an URL reformated to work depending on whether the site is configured for mod_rewrite or not.
+*/
 	function link($url){
 		if(is_object($url) === true){
 			$args = func_get_args();
@@ -89,6 +96,11 @@ namespace Aurora\Addon\WebUI\Template{
 		return $output;
 	}
 
+//!	Converts a UUID to a base-36 string
+/**
+*	@param string $uuid the UUID to squish
+*	@return string the UUID stripped of hyphens then converted to a base-36 string.
+*/
 	function squishUUID($uuid){
 		if(Addon\is_uuid($uuid) === false){
 			throw new InvalidArgumentException('Input value must be a valid UUID');
@@ -96,6 +108,12 @@ namespace Aurora\Addon\WebUI\Template{
 		return base_convert(str_replace('-', '', $uuid), 16, 36);
 	}
 
+//!	Converts a squished UUID to a valid UUID string.
+/**
+*	The base-16 converted string needs to be padded left with zeroes so it can be easily reformated to represent a UUID string.
+*	@param string $string the squished UUID string.
+*	@return a valid UUID
+*/
 	function unsquishUUID($string){
 		$string = str_split(str_pad(base_convert($string, 36, 16), 32, '0', STR_PAD_LEFT), 4);
 		$uuid   =
@@ -111,9 +129,14 @@ namespace Aurora\Addon\WebUI\Template{
 		return $uuid;
 	}
 
+//!	Used to store user-correctable problems with forms
 	class FormProblem extends WORM{
 
-
+//!	Sets the problem for a given form section
+/**
+*	@param string $offset string indicating the form section
+*	@param string $value the problem
+*/
 		public function offsetSet($offset, $value){
 			if(is_string($value) === true){
 				$value = trim($value);
@@ -132,7 +155,7 @@ namespace Aurora\Addon\WebUI\Template{
 			$this->data[$offset] = $value;
 		}
 
-
+//!	Since only one form can be submitted at a time, we use a singleton pattern
 		public static function i(){
 			static $instance;
 			if(isset($instance) === false){

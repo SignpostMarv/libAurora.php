@@ -1,5 +1,5 @@
 <?php
-//!	@file libs/Aurora/Addon/WebUI/AbuseReports.php
+//!	@file Aurora/Addon/WebUI/AbuseReports.php
 //!	@brief Abuse Report-related WebUI code
 //!	@author SignpostMarv
 
@@ -27,7 +27,7 @@ namespace Aurora\Addon\WebUI{
 *	@param string $objectUUID UUID of object being reported (if applicable)
 *	@param string $regionName region the report originated from
 *	@param string $reporterName account name of the user who filed the abuse report
-*	@parama string $screenshot asset UUID of screenshot attached to the abuse report
+*	@param string $screenshot asset UUID of screenshot attached to the abuse report
 */
 		protected function __construct($number, $details, $location, $userName, $summary, $active, $assignedTo, $category, $checked, $notes, $objectName, $objectPosition, $objectUUID, $regionName, $reporterName, $screenshot){
 			if(is_integer($number) === false){
@@ -103,7 +103,8 @@ namespace Aurora\Addon\WebUI{
 *	@param string $objectUUID UUID of object being reported (if applicable)
 *	@param string $regionName region the report originated from
 *	@param string $reporterName account name of the user who filed the abuse report
-*	@parama string $screenshot asset UUID of screenshot attached to the abuse report
+*	@param string $screenshot asset UUID of screenshot attached to the abuse report
+*	@return object an instance of Aurora::Addon::WebUI::AbuseReport
 */
 		public static function r($number, $details=null, $location=null, $userName=null, $summary=null, $active=null, $assignedTo=null, $category=null, $checked=null, $notes=null, $objectName=null, $objectPosition=null, $objectUUID=null, $regionName=null, $reporterName=null, $screenshot=null){
 			if(is_integer($number) === false){

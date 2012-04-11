@@ -1,5 +1,5 @@
 <?php
-//!	@file libs/Aurora/Addon/WebUI/User.php
+//!	@file Aurora/Addon/WebUI/User.php
 //!	@brief User-related WebUI code
 //!	@author SignpostMarv
 
@@ -67,8 +67,14 @@ namespace Aurora\Addon\WebUI{
 		}
 	}
 
-
+//!	implements common code relating converting names from a single string into the legacy first and last components.
 	abstract class abstractUserHasName extends abstractUser{
+
+//!	Wraps to Aurora::Addon::WebUI::abstractUser::__construct() after converting names from a single string into the legacy first and last components.
+/**
+*	@param string $uuid UUID for this user.
+*	@param string $name single string for the username.
+*/
 		protected function __construct($uuid, $name){
 			$firstName = explode(' ', $name);
 			$lastName = array_pop($firstName);
@@ -129,6 +135,7 @@ namespace Aurora\Addon\WebUI{
 		}
 	}
 
+//!	implements some methods & input validation that child classes will have in common to avoid code duplication.
 	abstract class commonUser extends genUser{
 
 //!	We need to add in some more properties and validation since we're extending another class.
@@ -189,8 +196,12 @@ namespace Aurora\Addon\WebUI{
 *	@param string $name the user's name.
 *	@param string $homeUUID the UUID of the user's home region.
 *	@param string $homeName the name of the user's home region.
+*	@param string $currentRegionUUID region UUID of current location
+*	@param string $currentRegionName region name of current location
 *	@param string $onlineStatus TRUE if the user is currently online, FALSE otherwise.
 *	@param string $email either a valid email address or an empty string.
+*	@param mixed $lastLogin NULL or integer last login timestamp
+*	@param mixed $lastLogout NULL or integer last logout timestamp
 */
 		protected function __construct($uuid, $name, $homeUUID, $homeName, $currentRegionUUID, $currentRegionName, $onlineStatus, $email, $lastLogin=null, $lastLogout=null){
 			if(is_string($homeUUID) === false){
@@ -231,11 +242,15 @@ namespace Aurora\Addon\WebUI{
 //!	Since this is a generated class for non-unique entities, we're going to use a registry method.
 /**
 *	@param string $uuid UUID for the user
-*	@param string $name the user's name.
-*	@param string $homeUUID the UUID of the user's home region.
-*	@param string $homeName the name of the user's home region.
-*	@param string $onlineStatus TRUE if the user is currently online, FALSE otherwise.
-*	@param string $email either a valid email address or an empty string.
+*	@param mixed $name NULL or string the user's name.
+*	@param mixed $homeUUID NULL or string the UUID of the user's home region.
+*	@param mixed $homeName NULL or string the name of the user's home region.
+*	@param mixed $currentRegionUUID NULL or string region UUID of current location
+*	@param mixed $currentRegionName NULL or string region name of current location
+*	@param mixed $onlineStatus NULL or boolean TRUE if the user is currently online, FALSE otherwise.
+*	@param mixed $email NULL or string either a valid email address or an empty string.
+*	@param mixed $lastLogin NULL or integer last login timestamp
+*	@param mixed $lastLogout NULL or integer last logout timestamp
 *	@return object instance of Aurora::Addon::WebUI::GridUserInfo
 */
 		public static function r($uuid, $name=null, $homeUUID=null, $homeName=null, $currentRegionUUID=null, $currentRegionName=null, $onlineStatus=null, $email=null, $lastLogin=null, $lastLogout=null){
@@ -378,6 +393,11 @@ namespace Aurora\Addon\WebUI{
 *	@param string $customType custom account type.
 *	@param string $notes Stringified JSON data of account notes.
 *	@param integer $userLevel User Level
+*	@param mixed $RLName NULL or string first-life name
+*	@param mixed $RLAddress NULL or string postal address
+*	@param mixed $RLZip NULL or string postal/zip code
+*	@param mixed $RLCity NULL or string postal city
+*	@param mixed $RLCountry NULL or string postal country
 */
 		protected function __construct($uuid, $name='', $email='', $created=0, $allowPublish=false, $maturePublish=false, $wantToMask=0, $wantToText='', $canDoMask=0, $canDoText='', $languages='', $image='00000000-0000-0000-0000-000000000000', $aboutText='', $firstLifeImage='00000000-0000-0000-0000-000000000000', $firstLifeAboutText='', $webURL='', $displayName='', $partnerUUID='00000000-0000-0000-0000-000000000000', $visible=false, $customType='', $notes='', $userLevel=-1 , $RLName=null, $RLAddress=null, $RLZip=null, $RLCity=null, $RLCountry=null){
 			if(is_string($created) === true && ctype_digit($created) === true){
@@ -472,6 +492,37 @@ namespace Aurora\Addon\WebUI{
 			parent::__construct($uuid, $name, $email);
 		}
 
+//!	registry method
+/**
+*	@param string $uuid user UUID
+*	@param mixed $name NULL or string username
+*	@param mixed $email NULL or string email address
+*	@param mixed $created NULL or integer rezday timestamp
+*	@param mixed $allowPublish NULL or boolean publishing flag
+*	@param mixed $maturePublish NULL or boolean mature content flag
+*	@param mixed $wantToMask NULL or integer bitfield of interests
+*	@param mixed $wantToText NULL or string interests
+*	@param mixed $canDoMask NULL or integer bitfield of abilities
+*	@param mixed $canDoText NULL or string abilities
+*	@param mixed $languages NULL or string languages comprehended
+*	@param mixed $image NULL or string asset UUID for profile image
+*	@param mixed $aboutText NULL or string profile text
+*	@param mixed $firstLifeImage NULL or string asset UUID for first-life profile
+*	@param mixed $firstLifeAboutText NULL or string first-life profile text
+*	@param mixed $webURL NULL or string, empty or URL to web page
+*	@param mixed $displayName NULL or string display name
+*	@param mixed $partnerUUID NULL or string partner user UUID
+*	@param mixed $visible NULL or boolean flag controling whether the user's online status is visible to everyone by default
+*	@param mixed $customType NULL or string custom account type
+*	@param mixed $notes NULL or string JSON data of account notes.
+*	@param mixed $userLevel NULL or integer account level
+*	@param mixed $RLName NULL or string first-life name
+*	@param mixed $RLAddress NULL or string postal address
+*	@param mixed $RLZip NULL or string postal/zip code
+*	@param mixed $RLCity NULL or string postal city
+*	@param mixed $RLCountry NULL or string postal country
+*	@return object instance of UserProfile
+*/
 		public static function r($uuid, $name=null, $email=null, $created=null, $allowPublish=null, $maturePublish=null, $wantToMask=null, $wantToText=null, $canDoMask=null, $canDoText=null, $languages=null, $image=null, $aboutText=null, $firstLifeImage=null, $firstLifeAboutText=null, $webURL=null, $displayName=null, $partnerUUID=null, $visible=null, $customType=null, $notes=null, $userLevel=null, $RLName=null, $RLAddress=null, $RLZip=null, $RLCity=null, $RLCountry=null){
 			if(is_string($uuid) === false){
 				throw new InvalidArgumentException('UUID must be a string.');
@@ -859,6 +910,7 @@ namespace Aurora\Addon\WebUI{
 *	@param string $name Account name
 *	@param integer $created unix timestamp of when the account was created
 *	@param integer $userFlags bitfield of user flags
+*	@return object an instance of Aurora::Addon::WebUI::SearchUser
 */
 		public static function r($uuid, $name=null, $created=null, $userFlags=null){
 			if(is_string($uuid) === false){
@@ -911,7 +963,11 @@ namespace Aurora\Addon\WebUI{
 //!	protected constructor
 /**
 *	Since Aurora::Addon::WebUI::SearchUserResults does not implement methods for appending values, calling the constructor with no arguments is a shorthand means of indicating there are no search users available.
-*	@param mixed $archives an array of Aurora::Addon::WebUI::SearchUser instances or NULL
+*	@param object $WebUI instance of Aurora::Addon::WebUI
+*	@param string $query search query
+*	@param integer $start start point
+*	@param mixed $total NULL or total number of results
+*	@param mixed $users NULL or an array of Aurora::Addon::WebUI::SearchUser instances
 */
 		protected function __construct(WebUI $WebUI, $query='', $start=0, $total=0, array $users=null){
 			if(is_string($start) && ctype_digit($start) === true){
@@ -939,8 +995,15 @@ namespace Aurora\Addon\WebUI{
 			parent::__construct($WebUI, $start, $total);
 		}
 
+//!	registry array.
 		protected static $registry = array();
 
+//!	Determines whether we have something in the registry or not.
+/**
+*	@param object $WebUI instance of Aurora::Addon::WebUI
+*	@param string $query search query
+*	@return boolean TRUE if we have populated the registry array, FALSE otherwise.
+*/
 		public static function hasInstance(WebUI $WebUI, $query=''){
 			if(is_string($query) === false){
 				throw new InvalidArgumentException('Query must be a string.');
@@ -950,7 +1013,14 @@ namespace Aurora\Addon\WebUI{
 			return (isset($registry[$hash]) === true);
 		}
 
-
+/**
+*	@param object $WebUI instance of Aurora::Addon::WebUI
+*	@param string $query search query
+*	@param integer $start start point
+*	@param mixed $total NULL or total number of results
+*	@param mixed $users NULL or an array of Aurora::Addon::WebUI::SearchUser instances
+*	@return object an instance of SearchUserResults
+*/
 		public static function r(WebUI $WebUI, $query='', $start=0, $total=null, array $users=null){
 			if(is_string($start) && ctype_digit($start) === true){
 				$start = (integer)$start;

@@ -1,5 +1,5 @@
 <?php
-//!	@file libs/Aurora/Addon/WebUI/GridInfo.php
+//!	@file Aurora/Addon/WebUI/GridInfo.php
 //!	@brief GridInfo-related WebUI code
 //!	@author SignpostMarv
 
@@ -56,6 +56,7 @@ namespace Aurora\Addon\WebUI{
 
 //!	deduplication of code to convert arguments to Aurora::Addon::WebUI::OnlineStatus::__construct() to boolean.
 //!	@param mixed $val passed by reference
+//!	@return void
 		final protected static function maybe2bool(& $val){
 			if(is_integer($val) === true){
 				$val = ($val !== 0);
@@ -71,7 +72,7 @@ namespace Aurora\Addon\WebUI{
 			return new static();
 		}
 
-
+//!	restricts keys to whitespace-free strings and values to scalar types
 		public function offsetSet($offset, $value){
 			if(is_string($offset) === false){
 				throw new InvalidArgumentException('Offsets must be strings.');

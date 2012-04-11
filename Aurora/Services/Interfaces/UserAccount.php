@@ -44,7 +44,7 @@ namespace Aurora\Services\Interfaces{
 //!	@return string First Name
 		public function FirstName();
 
-//!	@retain string Last Name
+//!	@return string Last Name
 		public function LastName();
 	}
 }

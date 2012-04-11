@@ -224,7 +224,7 @@ namespace Aurora\Framework{
 /**
 *	The original c# supports a prefix character argument that is unneccessary in PHP
 *	@param array $ps array of prepared statement keys and values
-*	@param string SQL query
+*	@return string SQL query
 */
 		public function ToSQL(array & $ps){
 			$ps = array();

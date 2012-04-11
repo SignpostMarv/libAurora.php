@@ -1,5 +1,5 @@
 <?php
-//!	@file libs/Aurora/Addon/MapAPI.php
+//!	@file Aurora/Addon/MapAPI.php
 //!	@brief MapAPI code
 //!	@author SignpostMarv
 
@@ -68,8 +68,9 @@ namespace Aurora\Addon{
 //!	makes a call to the MapAPI API end point running on an instance of Aurora.
 /**
 *	Unlike the WebUI API, the Map API will not return a map of keys & values, it may only return values.
-*	@param string $method
-*	@param array $arguments being lazy and future-proofing API methods that have no arguments.
+*	@param string $method the API method to call
+*	@param mixed $arguments NULL if a method is being called with no arguments or an array of named arguments
+*	@param array $expectedResponse a specially-constructed array indicating the expected response format of the API call
 *	@return mixed
 */
 		protected function makeCallToAPI($method, array $arguments=null, array $expectedResponse){
@@ -91,12 +92,18 @@ namespace Aurora\Addon{
 			throw new RuntimeException('API call failed to execute.'); // if this starts happening frequently, we'll add in some more debugging code.
 		}
 
-
+//!	Gets the monolithic lookup list for regions in the grid
+/**
+*	@return array all regions in the grid
+*/
 		public function MonolithicRegionLookup(){
 			return $this->makeCallToAPI(__FUNCTION__, array(), array());
 		}
 
-
+//!	Gets the formatting string for mapapi.js to generate tile urls.
+/**
+*	@return string the url with replacable segments for tile urls
+*/
 		public function mapTextureURL(){
 			return $this->makeCallToAPI(__FUNCTION__, array(), array());
 		}

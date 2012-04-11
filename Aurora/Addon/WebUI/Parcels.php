@@ -1,5 +1,5 @@
 <?php
-//!	@file libs/Aurora/Addon/WebUI/Parcels.php
+//!	@file Aurora/Addon/WebUI/Parcels.php
 //!	@brief Parcel-related WebUI code
 //!	@author SignpostMarv
 
@@ -639,6 +639,52 @@ namespace Aurora\Addon\WebUI{
 			$this->GenericData          = $GenericData;
 		}
 
+//!	registry method
+/**
+*	@param string $InfoUUID Info UUID
+*	@param mixed $RegionID NULL or string Region UUID.
+*	@param mixed $GlobalID NULL or string Global UUID
+*	@param mixed $LocalID NULL or integer Local ID
+*	@param mixed $SalePrice NULL or integer Sale price
+*	@param mixed $UserLocation NULL or object instance of OpenMetaverse::Vector3 User teleport location
+*	@param mixed $UserLookAt NULL or object instance of OpenMetaverse::Vector3 indicating where the user should look at on arrival.
+*	@param mixed $Name NULL or string Parcel name
+*	@param mixed $Description NULL or string Parcel description
+*	@param mixed $Flags NULL or integer Parcel Flags bitfield
+*	@param mixed $Dwell NULL or integer Parcel Dwell
+*	@param mixed $AuctionID NULL or integer Auction ID
+*	@param mixed $Area NULL or integer Area of parcel in square meters
+*	@param mixed $Maturity NULL or integer Maturity
+*	@param mixed $OwnerID NULL or string Owner UUID
+*	@param mixed $GroupID NULL or string Group UUID
+*	@param mixed $IsGroupOwned NULL or boolean TRUE if Aurora::Framework::GroupID() is not 00000000-0000-0000-0000-000000000000, FALSE otherwise
+*	@param mixed $SnapshotID NULL or string Snapshot asset texture UUID
+*	@param mixed $MediaDescription NULL or string Media Description
+*	@param mixed $MediaWidth NULL or integer Media Width
+*	@param mixed $MediaHeight NULL or integer Media Height
+*	@param mixed $MediaLoop NULL or boolean Media Loop flag
+*	@param mixed $MediaType NULL or string Media type
+*	@param mixed $ObscureMedia NULL or boolean flag to obscure media url
+*	@param mixed $ObscureMusic NULL or boolean flag to obscure music url
+*	@param mixed $MediaLoopSet NULL or float Media Loop time
+*	@param mixed $MediaAutoScale NULL or integer Media auto-sclae flag (why is this not a boolean ?)
+*	@param mixed $MediaURL NULL or string Media URL
+*	@param mixed $MusicURL NULL or string Music URL
+*	@param mixed $Bitmap NULL or string Bitmap WebUI will get this as a space-separated list of hexadecimal digits, rather than the raw bitmap
+*	@param mixed $Category NULL or integer Parcel Category
+*	@param mixed $FirstParty NULL or boolean TRUE if parcel is ran by grid operator, FALSE otherwise
+*	@param mixed $ClaimDate NULL or integer Unix timestamp indicating when parcel was claimed
+*	@param mixed $ClaimPrice NULL or integer Claim price
+*	@param mixed $LandingType NULL or integer Landing Type
+*	@param mixed $PassHours NULL or float How long an access pass lasts for in hours
+*	@param mixed $PassPrice NULL or integer How much the access pass costs
+*	@param mixed $AuthBuyerID NULL or string user UUID of authorised buyer.
+*	@param mixed $OtherCleanTime NULL or integer Other Clean Time
+*	@param mixed $RegionHandle NULL or string Region Handle - in the c#, this is a 64bit unsigned integer. since we can't guarantee availability of 64bit integers (never mined the lack of unsigned integers in PHP), WebUI will get this as a string.
+*	@param mixed $isPrivate NULL or boolean TRUE if parcel is Private, FALSE otherwise. we name the method isPrivate() instead of Private() because Private is a reserved word.
+*	@param mixed $GenericData NULL or array Generic Data
+*	@return object instance of Aurora::Addon::WebUI::LandData
+*/
 		public static function r(
 			$InfoUUID,
 			$RegionID=null,
@@ -863,6 +909,7 @@ namespace Aurora\Addon\WebUI{
 		}
 	}
 
+//!	implements common code and input validation for iterators dealing with parcels that are within a specific region.
 	abstract class abstractSeekableLandDataIteratorByRegion extends abstractSeekableLandDataIterator{
 
 //!	object instance of Aurora::Addon::WebUI::GridRegion
@@ -1002,8 +1049,8 @@ namespace Aurora\Addon\WebUI{
 *	@param object $WebUI instanceof Aurora::Addon::WebUI
 *	@param integer $start start point
 *	@param integer $total total number of LandData results according to child-class filters
+*	@param string $name Parcel name
 *	@param object $region instance of Aurora::Addon::WebUI::GridRegion
-*	@param string $owner Parcel Owner UUID
 *	@param string $scopeID Region ScopeID
 *	@param array $parcels array of Aurora::Addon::WebUI::LandData objects
 */

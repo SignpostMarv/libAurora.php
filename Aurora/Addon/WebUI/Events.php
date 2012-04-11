@@ -1,5 +1,5 @@
 <?php
-//!	@file libs/Aurora/Addon/WebUI/Events.php
+//!	@file Aurora/Addon/WebUI/Events.php
 //!	@brief Event-related WebUI code
 //!	@author SignpostMarv
 
@@ -291,9 +291,9 @@ namespace Aurora\Addon\WebUI{
 *	@param object $WebUI instanceof Aurora::Addon::WebUI
 *	@param integer $start start point
 *	@param integer $total total number of EventData results according to child-class filters
-*	@param array $filter filter argument used with the API
-*	@param array $sort sort argument used with the API
-*	@param array $parcels array of Aurora::Addon::WebUI::EventData objects
+*	@param mixed $filter NULL or array filter argument used with the API
+*	@param mixed $sort NULL or array sort argument used with the API
+*	@param mixed $parcels NULL or array array of Aurora::Addon::WebUI::EventData objects
 */
 		protected function __construct(WebUI $WebUI, $start=0, $total=0, array $filter=null, array $sort=null, array $parcels=null){
 			$this->filter = $filter;
@@ -301,7 +301,16 @@ namespace Aurora\Addon\WebUI{
 			parent::__construct($WebUI, $start, $total, $parcels);
 		}
 
-
+//!	Registry method
+/**
+*	@param object $WebUI instanceof Aurora::Addon::WebUI
+*	@param integer $start start point
+*	@param integer $total total number of EventData results according to child-class filters
+*	@param mixed $filter NULL or array filter argument used with the API
+*	@param mixed $sort NULL or array sort argument used with the API
+*	@param mixed $parcels NULL or array array of Aurora::Addon::WebUI::EventData objects
+*	@return object instance of Aurora::Addon::WebUI::GetEvents
+*/
 		public static function r(WebUI $WebUI, $start=0, $total=0, array $filter=null, array $sort=null, array $parcels=null){
 		
 			static $registry = array();

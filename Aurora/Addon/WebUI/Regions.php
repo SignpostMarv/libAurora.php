@@ -1,5 +1,5 @@
 <?php
-//!	@file libs/Aurora/Addon/WebUI/Regions.php
+//!	@file Aurora/Addon/WebUI/Regions.php
 //!	@brief Region-related WebUI code
 //!	@author SignpostMarv
 
@@ -147,18 +147,20 @@ namespace Aurora\Addon\WebUI{
 
 //!	We're making this a protected method because we're going to be using at least one public static method to deserialise some data for this class.
 /**
-*	@param integer $HttpPort
-*	@param string $ServerURI
-*	@param string $RegionName
+*	@param string $RegionID UUID for region
+*	@param integer $HttpPort TCP port used for http comms
+*	@param string $ServerURI URL to communicate with the server over HTTP
+*	@param string $RegionName region name
 *	@param string $RegionType
-*	@param integer $RegionLocX
-*	@param integer $RegionLocY
-*	@param integer $RegionLocZ
-*	@param string $EstateOwner
-*	@param integer $RegionSizeX
-*	@param integer $RegionSizeY
-*	@param integer $RegionSizeZ
-*	@param integer $Flags
+*	@param integer $RegionLocX x-axis location
+*	@param integer $RegionLocY y-axis location
+*	@param integer $RegionLocZ z-axis location
+*	@param string $EstateOwner UUID for region/estate owner
+*	@param integer $EstateID estate ID
+*	@param integer $RegionSizeX region width
+*	@param integer $RegionSizeY region breadth
+*	@param integer $RegionSizeZ region height
+*	@param integer $Flags bitfield corresponding to Aurora::Framework::RegionFlags
 *	@param string $SessionID
 */
 		protected function __construct($RegionID, $HttpPort, $ServerURI, $RegionName, $RegionType, $RegionLocX, $RegionLocY, $RegionLocZ=0, $EstateOwner='00000000-0000-0000-0000-000000000000', $EstateID=0, $RegionSizeX=256, $RegionSizeY=256, $RegionSizeZ=256, $Flags=0, $SessionID='00000000-0000-0000-0000-000000000000'){
@@ -288,7 +290,7 @@ namespace Aurora\Addon\WebUI{
 		}
 	}
 
-//!	Seekable iterator for instances of Aurora\Addon\WebUI\GridRegion
+//!	Seekable iterator for instances of Aurora::Addon::WebUI::GridRegion
 	class GetRegions extends RegionsIterator{
 
 //!	integer Since we're allowing non-contiguous, delayed access to the region list, we need to store the Aurora::Framework::RegionFlags bitfield for future use.
@@ -351,6 +353,18 @@ namespace Aurora\Addon\WebUI{
 		private static $registry = array();
 
 //!	registry method
+/**
+*	@param object $WebUI instance of Aurora::Addon::WebUI
+*	@param integer $flags bitfield of Aurora::Framework::RegionFlags values
+*	@param integer $excludeFlags bitfield of Aurora::Framework::RegionFlags values
+*	@param integer $start iterator start point
+*	@param integer $total total number of results
+*	@param mixed $sortRegionName NULL or boolean
+*	@param mixed $sortLocX NULL or boolean
+*	@param mixed $sortLocY NULL or boolean
+*	@param mixed $regions Either NULL or an array of Aurora::Addon::WebUI::GridRegion instances.
+*	@return object instance of GetRegions
+*/
 		public static function r(WebUI $WebUI, $flags, $excludeFlags=0, $start=0, $total=0, $sortRegionName=null, $sortLocX=null, $sortLocY=null, array $regions=null){
 			if(RegionFlags::isValid($flags) === false){
 				throw new InvalidArgumentException('Region Flags bitfield is invalid.');
@@ -383,7 +397,11 @@ namespace Aurora\Addon\WebUI{
 //!	Determines whether we have something in the registry or not.
 /**
 *	@param object $WebUI instance of Aurora::Addon::WebUI
-*	@param integer $flags
+*	@param integer $flags bitfield of Aurora::Framework::RegionFlags values
+*	@param integer $excludeFlags bitfield of Aurora::Framework::RegionFlags values
+*	@param mixed $sortRegionName NULL or boolean
+*	@param mixed $sortLocX NULL or boolean
+*	@param mixed $sortLocY NULL or boolean
 *	@return boolean TRUE if we have populated the registry array, FALSE otherwise.
 */
 		public static function hasInstance(WebUI $WebUI, $flags, $excludeFlags, $sortRegionName, $sortLocX, $sortLocY){
@@ -415,7 +433,7 @@ namespace Aurora\Addon\WebUI{
 		}
 	}
 
-//!	Seekable iterator for instances of Aurora\Addon\WebUI\GridRegion in a specified estate
+//!	Seekable iterator for instances of Aurora::Addon::WebUI::GridRegion in a specified estate
 	class GetRegionsInEstate extends RegionsIterator{
 
 //!	integer Since we're allowing non-contiguous, delayed access to the region list, we need to store the Aurora::Framework::RegionFlags bitfield for future use.
@@ -441,6 +459,7 @@ namespace Aurora\Addon\WebUI{
 *	@param object $WebUI instance of Aurora::Addon::WebUI. Used to get instances of Aurora::Addon::WebUI::GridRegion that the instance wasn't instantiated with.
 *	@param object $Estate instance of Aurora::Addon::WebUI::EstateSettings
 *	@param integer $flags bitfield of Aurora::Framework::RegionFlags values
+*	@param integer $excludeFlags bitfield of Aurora::Framework::RegionFlags values
 *	@param integer $start specifies the index that $regions starts at, if specified.
 *	@param integer $total specifies the total number of regions in the grid.
 *	@param mixed $sortRegionName NULL or boolean
@@ -517,6 +536,7 @@ namespace Aurora\Addon\WebUI{
 *	@param object $WebUI instance of Aurora::Addon::WebUI. Used to get instances of Aurora::Addon::WebUI::GridRegion that the instance wasn't instantiated with.
 *	@param object $Estate instance of Aurora::Addon::WebUI::EstateSettings
 *	@param integer $flags bitfield of Aurora::Framework::RegionFlags values
+*	@param integer $excludeFlags bitfield of Aurora::Framework::RegionFlags values
 *	@param mixed $sortRegionName NULL or boolean
 *	@param mixed $sortLocX NULL or boolean
 *	@param mixed $sortLocY NULL or boolean
@@ -559,7 +579,7 @@ namespace Aurora\Addon\WebUI{
 		}
 	}
 
-//!	Seekable iterator for instances of Aurora\Addon\WebUI\GridRegion within range of another region
+//!	Seekable iterator for instances of Aurora::Addon::WebUI::GridRegion within range of another region
 	class GetRegionNeighbours extends RegionsIterator{
 
 //!	string region ID
@@ -627,8 +647,9 @@ namespace Aurora\Addon\WebUI{
 /**
 *	@param object $WebUI instance of Aurora::Addon::WebUI. Used to get instances of Aurora::Addon::WebUI::GridRegion that the instance wasn't instantiated with.
 *	@param string $region UUID of region
-*	@param string $scopeID Scope ID of region
 *	@param integer $range distance in meters from region center to search
+*	@param string $scopeID Scope ID of region
+*	@return bool TRUE if an instance with the supplied arguments has been cached, FALSE otherwise
 */
 		public static function hasInstance(WebUI $WebUI, $region, $range=8, $scopeID='00000000-0000-0000-0000-000000000000'){
 			return isset(static::$registry[md5(
@@ -732,7 +753,19 @@ namespace Aurora\Addon\WebUI{
 			$this->scopeID = $scopeID;
 		}
 
-
+//!	Returns the iterator for the regions in a specified area.
+/**
+*	@param object $WebUI an instance of Aurora::Addon::WebUI
+*	@param integer $startX x-axis start point
+*	@param integer $startY y-axis start point
+*	@param integer $endX x-axis end point
+*	@param integer $endY y-axis end point
+*	@param string $scopeID region scope ID
+*	@param integer $start iterator start point
+*	@param integer $total total results
+*	@param mixed $regions NULL or an array of Aurora::Addon::WebUI::GridRegion
+*	@return object an instance of GetRegionsInArea
+*/
 		public static function r(WebUI $WebUI, $startX, $startY, $endX, $endY, $scopeID='00000000-0000-0000-0000-000000000000', $start=0, $total=0, array $regions=null){
 			$hash = md5(spl_object_hash($WebUI) . '-' . $startX . '-' . $startY . '-' . $endX . '-' . $endY . '-' . $scopeID);
 			if(isset(static::$registry[$hash]) === false){
@@ -742,7 +775,16 @@ namespace Aurora\Addon\WebUI{
 			return static::$registry[$hash];
 		}
 
-
+//!	Determines if an instance has been previously cached with the same arguments
+/**
+*	@param object $WebUI an instance of Aurora::Addon::WebUI
+*	@param integer $startX x-axis start point
+*	@param integer $startY y-axis start point
+*	@param integer $endX x-axis end point
+*	@param integer $endY y-axis end point
+*	@param string $scopeID region scope ID
+*	@return boolean TRUE if an instance has been cached with the supplied arguments, FALSE otherwise
+*/
 		public static function hasInstance(WebUI $WebUI, $startX, $startY, $endX, $endY, $scopeID='00000000-0000-0000-0000-000000000000'){
 			return isset(static::$registry[md5(spl_object_hash($WebUI) . '-' . $startX . '-' . $startY . '-' . $endX . '-' . $endY . '-' . $scopeID)]);
 		}
@@ -1427,7 +1469,11 @@ namespace Aurora\Addon\WebUI{
 			$this->data=$Estates;
 		}
 
-
+//!	@see Aurora::Addon::WORM::offsetSet()
+/**
+*	@param mixed $offset
+*	@param mixed $value
+*/
 		public function offsetSet($offset, $value){
 			throw new BadMethodCallException('Instances of Aurora::Addon::WebUI::EstateSettingsIterator cannot be modified from outside of the object scope.');
 		}

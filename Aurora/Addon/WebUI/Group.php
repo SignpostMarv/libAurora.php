@@ -1,5 +1,5 @@
 <?php
-//!	@file libs/Aurora/Addon/WebUI/Group.php
+//!	@file Aurora/Addon/WebUI/Group.php
 //!	@brief Group-related WebUI code
 //!	@author SignpostMarv
 
@@ -155,68 +155,90 @@ namespace Aurora\Addon\WebUI{
 			return $registry[$uuid];
 		}
 
-
+//!	string group UUID
+//!	@see Aurora::Addon::WebUI::GroupRecord::GroupID()
 		protected $GroupID;
+//!	@see Aurora::Addon::WebUI::GroupRecord::$GroupID
 		public function GroupID(){
 			return $this->GroupID;
 		}
 
-
+//!	string group name
+//!	@see Aurora::Addon::WebUI::GroupRecord::GroupName()
 		protected $GroupName;
+//!	@see Aurora::Addon::WebUI::GroupRecord::$GroupName
 		public function GroupName(){
 			return $this->GroupName;
 		}
 
-
+//!	string group charter/description
+//!	@see Aurora::Addon::WebUI::GroupRecord::Charter()
 		protected $Charter;
+//!	@see Aurora::Addon::WebUI::GroupRecord::$Charter
 		public function Charter(){
 			return $this->Charter;
 		}
 
-
+//!	string asset UUID of group picture
+//!	@see Aurora::Addon::WebUI::GroupRecord::GroupPicture()
 		protected $GroupPicture;
+//!	@see Aurora::Addon::WebUI::GroupRecord::$GroupPicture
 		public function GroupPicture(){
 			return $this->GroupPicture;
 		}
 
-
+//!	string user UUID of group founder
+//!	@see Aurora::Addon::WebUI::GroupRecord::FounderID()
 		protected $FounderID;
+//!	@see Aurora::Addon::WebUI::GroupRecord::$FounderID
 		public function FounderID(){
 			return $this->FounderID;
 		}
 
-
+//!	integer membership fee for joining
+//!	@see Aurora::Addon::WebUI::GroupRecord::MembershipFee()
 		protected $MembershipFee;
+//!	@see Aurora::Addon::WebUI::GroupRecord::$MembershipFee
 		public function MembershipFee(){
 			return $this->MembershipFee;
 		}
 
-
+//!	boolean flag indicating whether the group is open to join or invite-only
+//!	@see Aurora::Addon::WebUI::GroupRecord::OpenEnrollment()
 		protected $OpenEnrollment;
+//!	@see Aurora::Addon::WebUI::GroupRecord::$OpenEnrollment
 		public function OpenEnrollment(){
 			return $this->OpenEnrollment;
 		}
 
-
+//!	boolean flag indicating whether to list the group
+//!	@see Aurora::Addon::WebUI::GroupRecord::ShowInList()
 		protected $ShowInList;
+//!	@see Aurora::Addon::WebUI::GroupRecord::$ShowInList
 		public function ShowInList(){
 			return $this->ShowInList;
 		}
 
-
+//!	boolean flag indicating something that I forget ~SignpostMarv
+//!	@see Aurora::Addon::WebUI::GroupRecord::AllowPublish()
 		protected $AllowPublish;
+//!	@see Aurora::Addon::WebUI::GroupRecord::$AllowPublish
 		public function AllowPublish(){
 			return $this->AllowPublish;
 		}
 
-
+//!	boolean Mature publishing flag
+//!	@see Aurora::Addon::WebUI::GroupRecord::MaturePublish()
 		protected $MaturePublish;
+//!	@see Aurora::Addon::WebUI::GroupRecord::$MaturePublish
 		public function MaturePublish(){
 			return $this->MaturePublish;
 		}
 
-
+//!	string Role ID
+//!	@see Aurora::Addon::WebUI::GroupRecord::OwnerRoleID()
 		protected $OwnerRoleID;
+//!	@see Aurora::Addon::WebUI::GroupRecord::$OwnerRoleID
 		public function OwnerRoleID(){
 			return $this->OwnerRoleID;
 		}
@@ -269,6 +291,7 @@ namespace Aurora\Addon\WebUI{
 //!	News sources iterator
 	class GetNewsSources extends abstractLazyLoadingSeekableIterator{
 
+//!	array Registry array of Aurora::Addon::WebUI::GetNewsSources for all grids
 		protected static $registry = array();
 
 //!	We're hiding this behind a registry method.
@@ -301,7 +324,11 @@ namespace Aurora\Addon\WebUI{
 			return static::$registry[$hash];
 		}
 
-
+//!	Determines whether we have something in the registry or not.
+/**
+*	@param object $WebUI instance of Aurora::Addon::WebUI
+*	@return boolean TRUE if we have populated the registry array, FALSE otherwise.
+*/
 		public static function hasInstance(WebUI $WebUI){
 			return isset(static::$registry[spl_object_hash($WebUI)]);
 		}
@@ -324,7 +351,7 @@ namespace Aurora\Addon\WebUI{
 		}
 	}
 
-//!	Groups iterator
+//!	Groups iterator when we have precise foreknowledge of the contents
 	class foreknowledgeGetGroupRecords extends GetGroupRecords{
 
 		public function current(){
@@ -420,6 +447,7 @@ namespace Aurora\Addon\WebUI{
 *	@param integer $timestamp unix timestamp indicating when the group notice was created.
 *	@param string $FromName Name of user that created the group notice.
 *	@param string $Subject Subject of group notice.
+*	@param string $Message Message of group notice.
 *	@param boolean $HasAttachment TRUE of the group notice has an attachment, FALSE otherwise.
 *	@param string $ItemID attachment ID
 *	@param integer $AssetType asset type
@@ -535,28 +563,31 @@ namespace Aurora\Addon\WebUI{
 	class GetGroupNotices extends Addon\abstractSeekableFilterableIterator{
 
 //!	Will be populated with an array of Group IDs that the class was instantiated with
-	protected $groupIDs;
+		protected $groupIDs;
 
 //!	Will store the group records
-	protected $groups;
+		protected $groups;
 
-	public function Groups(){
-		if(isset($this->groups) === false){
-			$this->groups = $this->WebUI->foreknowledgeGetGroupRecords($this->groupIDs);
-			$this->groups->rewind();
+//!	Gets the groups iterator for the group IDs the instance was instantiated with
+/**
+*	@return object an instance of Aurora::Addon::WebUI::foreknowledgeGetGroupRecords()
+*/
+		public function Groups(){
+			if(isset($this->groups) === false){
+				$this->groups = $this->WebUI->foreknowledgeGetGroupRecords($this->groupIDs);
+				$this->groups->rewind();
+			}
+
+			return $this->groups;
 		}
-
-		return $this->groups;
-	}
 
 //!	Because we use a seekable iterator, we hide the constructor behind a registry method to avoid needlessly calling the end-point if we've rewound the iterator, or moved the cursor to an already populated position.
 /**
 *	@param object $WebUI instance of Aurora::Addon::WebUI We need to specify this in case we want to iterate past the original set of results.
 *	@param integer $start initial cursor position
 *	@param integer $total Total number of results possible with specified filters
-*	@param array $sort optional array of field names for keys and booleans for values, indicating ASC and DESC sort orders for the specified fields.
-*	@param array $boolFields optional array of field names for keys and booleans for values, indicating 1 and 0 for field values.
-*	@param array $groups if specified, should be an array of instances of Aurora::Addon::WebUI::GroupNoticeData that were pre-fetched with a call to the API end-point.
+*	@param array $groups the groups for which group notices were retrieved
+*	@param array $groupNotices if specified, should be an array of instances of Aurora::Addon::WebUI::GroupNoticeData that were pre-fetched with a call to the API end-point.
 */
 		protected function __construct(WebUI $WebUI, $start=0, $total=0, array $groups, array $groupNotices=null){
 			foreach($groups as $groupID){
@@ -586,9 +617,10 @@ namespace Aurora\Addon\WebUI{
 *	@param object $WebUI instance of Aurora::Addon::WebUI We need to specify this in case we want to iterate past the original set of results.
 *	@param integer $start initial cursor position
 *	@param integer $total Total number of results possible with specified filters
-*	@param array $groups array of group IDs that notices should be fetched for
-*	@param array $entities if specified, should be an array of entity objects to be validated by the child constructor
-*	@param array $ignored this parameter is ignored, only here to comply with the method
+*	@param mixed $groups array of group IDs that notices should be fetched for
+*	@param mixed $entities if specified, should be an array of entity objects to be validated by the child constructor
+*	@param mixed $ignored this parameter is ignored, only here to comply with the method
+*	@return object an instance of Aurora::Addon::WebUI::GetGroupNotices
 */
 		public static function r(abstractAPI $WebUI, $start=0, $total=0, array $groups=null, array $entities=null, array $ignored=null){
 			sort($groups);
