@@ -32,7 +32,7 @@
  */
 
 namespace Aurora\Framework{
- 
+
 //!	We don't have enums, so we need a class with constants
 	class IndexType{
 
@@ -56,7 +56,7 @@ namespace Aurora\Framework{
 //!	integer A flag to indicate the type of index the definition represents.
 //!	We're making this private and wrapping it via the __get() and __set() magic methods as a proxy to prevent runtime code from altering the property itself (e.g. replacing it with another type).
 //!	@see Aurora::Framework::IndexType
-//!	Defaults to Aurora::Framework::Index
+//!	Defaults to Aurora::Framework::IndexType::Index
 		private $Type = 1;
 
 //!	we're providing a public constructor to mimic usage in c#
@@ -112,6 +112,8 @@ namespace Aurora\Framework\IndexDefinition{
 
 	use ArrayObject;
 
+	use Aurora\Framework\ColumnDefinition;
+
 
 	abstract class abstractIterator extends ArrayObject{
 
@@ -146,7 +148,7 @@ namespace Aurora\Framework\IndexDefinition{
 		public function offsetSet($offset, $value){
 			if(is_string($value) === false){
 				throw new InvalidArgumentException('values must be strings.');
-			}else if(preg_match('/^[A-z][A-z0-9_]*$/', $value) != 1){
+			}else if(preg_match(ColumnDefinition::regex_fieldName, $value) != 1){
 				throw new InvalidArgumentException('value was not a valid field.');
 			}
 			parent::offsetSet($offset, $value);
@@ -154,4 +156,3 @@ namespace Aurora\Framework\IndexDefinition{
 	}
 }
 ?>
- 
