@@ -33,7 +33,7 @@ namespace libAurora\DataManager{
 				$sth = $PDO->prepare($query);
 			}catch(PDOException $e){
 				throw new RuntimeException('Exception occurred when preparing query.', $e->getCode());
-			}		
+			}
 		}
 
 //!	Binds values to queries

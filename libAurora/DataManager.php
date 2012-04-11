@@ -24,7 +24,7 @@ namespace libAurora\DataManager{
 				throw new InvalidArgumentException('table name must not contain whitespace characters');
 			}else if(preg_match(static::regex_Query_arg_table, $table) != 1){
 				throw new InvalidArgumentException('table name is invalid.');
-			}		
+			}
 		}
 
 //!	This method only performs argument validation to save duplication of code.
@@ -63,7 +63,7 @@ namespace libAurora\DataManager{
 //!	This method only performs argument validation to save duplication of code.
 		public function Insert($table, array $values){
 			static::validateArg_table($table);
-			
+
 			if(count($values) < 1){
 				throw new InvalidArgumentException('Insert query must include at least one value.');
 			}
