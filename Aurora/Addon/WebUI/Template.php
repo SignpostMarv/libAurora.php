@@ -2,7 +2,7 @@
 //!	@file Aurora/Addon/WebUI/Template.php
 //!	@author SignpostMarv
 //!	@brief Template helpers.
-//!	@todo Should probably be moved to anoter namespace at somepoint.
+//!	@todo Should probably be moved to another namespace at somepoint.
 
 //!	Template-related methods
 namespace Aurora\Addon\WebUI\Template{
