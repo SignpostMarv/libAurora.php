@@ -31,8 +31,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+
 namespace Aurora\DataManager\Migration{
+
 	use Aurora\Framework\IDataConnector;
+	use Aurora\Framework\ColumnDefinition\Iterator as ColDefs;
+	use Aurora\Framework\IndexDefinition\Iterator as IndexDefs;
 
 //!	This interface exists purely to give client code the ability to detect all Migration-specific exception classes in one go.
 //!	The purpose of this behaviour is that instances of Aurora::DataManager::Migration::Exception will be more or less "safe" for public consumption.
@@ -56,16 +60,16 @@ namespace Aurora\DataManager\Migration{
 		const MigrationName = '-Example'; // this deliberately starts with an invalid character
 
 
-		private $renameSchema = array();
+		private $renameSchema  = array();
 
 
 		private $renameColumns = array();
 
 
-		private $schema = array();
+		private $schema        = array();
 
 
-		private $dropIndices = array();
+		private $dropIndices   = array();
 
 //!	We're going to hide this behind registry methods
 		protected function __construct(){
@@ -95,6 +99,15 @@ namespace Aurora\DataManager\Migration{
 */
 		abstract protected function DoValidate(IDataConnector $genericData);
 
+//!	prepares a restore point
+		public final function PrepareRestorePoint(IDataConnector $genericData){
+			$this->DoPrepareRestorePoint($genericData);
+			return $this;
+		}
+
+//!	Performs the actual restore point preparation
+		abstract protected function DoPrepareRestorePoint(IDataConnector $genericData);
+
 //!	Performs the migration from the current version to this version
 /**
 *	@param object $genericData instance of Aurora::Framework::IDataConnector
@@ -122,6 +135,16 @@ namespace Aurora\DataManager\Migration{
 */
 		abstract protected function DoCreateDefaults(IDataConnector $genericData);
 
+//!	Queues a schema for creation
+/**
+*	@param string $table name of schema
+*	@param object $definitions an instance of Aurora::Framework::ColumnDefinition::Iterator specifying column definitions
+*	@param mixed NULL indicating no indices or an instance of Aurora::Framework::IndexDefinition::Iterator specifying index definitions
+*/
+		protected final function AddSchema($table, ColDefs $definitions, IndexDefs $indices=null){
+			$this->schema[$table] = new Migrator\Schema($table, $definitions, $indices);
+		}
+
 //!	queues a schema rename operation
 /**
 *	@param string $oldTable current table name
@@ -130,10 +153,86 @@ namespace Aurora\DataManager\Migration{
 		protected final function RenameSchema($oldTable, $newTable){
 			if(is_string($oldTable) === false){
 				throw new InvalidArgumentException('oldTable must be specified as string.');
+			}else if(preg_match(Migrator\Schema::regex_Query_arg_table, $oldTable) != 1){
+				throw new InvalidArgumentException('oldTable name was invalid.');
 			}else if(is_string($newTable) === false){
 				throw new InvalidArgumentException('newTable must be specified as string.');
+			}else if(preg_match(Migrator\Schema::regex_Query_arg_table, $newTable) != 1){
+				throw new InvalidArgumentException('newTable name was invalid.');
 			}
 			$this->renameSchema[$oldTable] = $newTable;
+		}
+
+//!	remove a schema from the queue
+/**
+*	@param string $table schema name
+*/
+		protected function RemoveSchema($table){
+			unset($this->schema[$table]);
+		}
+
+//!	queue an index for removal
+		protected function RemoveIndices($table, IndexDefs $indices){
+			if(is_string($table) === false){
+				throw new InvalidArgumentException('table must be specified as string.');
+			}else if(preg_match(Migrator\Schema::regex_Query_arg_table, $table) != 1){
+				throw new InvalidArgumentException('table was invalid.');
+			}else if(isset($this->dropIndices[$table]) === false){
+				$this->dropIndices[$table] = new IndexDefs;
+			}
+			foreach($indices as $index){
+				$this->dropIndices[] = $index;
+			}
+		}
+
+//!	ensures all tables in schema exist
+		protected function EnsureAllTablesInSchemaExist(IDataConnector $genericData){
+			foreach($this->renameSchema as $k=>$v){
+				$genericData->RenameTable($k, $v);
+			}
+			foreach($this->schema as $def){
+				$genericData->EnsureTableExists($def->Name, $def->ColDefs, $def->IndexDefs, $this->renameColumns);
+			}
+		}
+
+//!	tests that all tables validate
+		protected function TestThatAllTablesValidate(IDataConnector $genericData){
+			foreach($this->schema as $def){
+				if($genericData->VerifyTableExists($def->Name, $def->ColDefs, $def->IndexDefs) === false){
+					return false;
+				}
+			}
+			return true;
+		}
+
+//!	debug-mode version of Aurora::DataManager::Migration::Migrator::TestThatAllTablesValidate()
+		protected function DebugTestThatAllTablesValidate(IDataConnector $genericData, Migrator\Schema $reason=null){
+			foreach($this->schema as $def){
+				if($genericData->VerifyTableExists($def->Name, $def->ColDefs, $def->IndexDefs) === false){
+					$reason = $def;
+					return false;
+				}
+			}
+			return true;
+		}
+
+//!	copies all tables to temp versions
+		protected function CopyAllTablesToTempVersions(IDataConnector $genericData){
+			foreach($this->schema as $def){
+				$this->CopyTableToTempVersion($genericData, $def);
+			}
+		}
+
+//!	restores all temp tables to real tables
+		protected function RestoreTempTablesToReal(IDataConnector $genericData){
+			foreach($this->schema as $def){
+				$this->RestoreTempTableToReal($genericData, $def);
+			}
+		}
+
+//!	copies a table to a temporary table
+		protected function CopyTableToTable(IDataConnector $genericData, Migrator\Schema $table){
+			$genericData->CopyTableToTable($table->Name, static::GetTempTableNameFromTableName($table->Name), $table->ColDefs, $table->IndexDefs);
 		}
 
 //!	get the temporary table name
@@ -143,8 +242,22 @@ namespace Aurora\DataManager\Migration{
 		protected final static function GetTempTableNameFromTableName($tablename){
 			if(is_string($tablename) === false){
 				throw new InvalidArgumentException('tablename must be specified as string.');
+			}else if(preg_match(Migrator\Schema::regex_Query_arg_table, $tablename) != 1){
+				throw new InvalidArgumentException('tablename was invalid.');
 			}
 			return $table . '_temp';
+		}
+
+//!	Restores a temporary table to a real table
+		private function RestoreTempTableToReal(IDataConnector $genericData, Migrator\Schema $table){
+			$genericData->CopyTableToTable(static::GetTempTableNameFromTableName($table->Name), $table->Name, $table->ColDefs, $this->IndexDefs);
+		}
+
+//!	Clears a restore point
+		public function ClearRestorePoint(IDataConnector $genericData){
+			foreach($this->schema as $def){
+				$this->DeleteTempVersion($genericData, $def->Name);
+			}
 		}
 
 //!	Deletes the temporary version of a table.
@@ -163,6 +276,63 @@ namespace Aurora\DataManager\Migration{
 *	@param object $genericData instance of Aurora::Framework::IDataConnector
 */
 		abstract public function FinishedMigration(IDataConnector $genericData);
+	}
+}
+
+
+namespace Aurora\DataManager\Migration\Migrator{
+
+	use Aurora\DataManager\Migration\InvalidArgumentException;
+
+	use ArrayObject;
+
+	use Aurora\Framework\ColumnDefinition\Iterator as ColDefs;
+	use Aurora\Framework\IndexDefinition\Iterator as IndexDefs;
+
+
+	abstract class abstractIterator extends ArrayObject{
+
+
+		public function __construct(array $values=null){
+			if(isset($values) === true){
+				foreach($values as $v){
+					$this[] = $v;
+				}
+			}
+			parent::__construct(null, \ArrayObject::STD_PROP_LIST);
+		}
+	}
+
+	class Schema{
+
+		const regex_Query_arg_table = '/^[A-z0-9_]+$/';
+
+//!	string name of schema
+		private $Name;
+
+//!	object instance of Aurora::Framework::ColumnDefinition::Iterator specifying column definitions
+		private $ColDefs;
+
+//!	object instance of Aurora::Framework::IndexDefinition::Iterator specifying index definitions
+		private $IndexDefs;
+
+
+		public function __get($name){
+			return ($name === 'Name' || $name === 'ColDefs' || $name === 'IndexDefs') ? $this->$name : null;
+		}
+
+
+		public function __construct($table, ColDefs $ColDefs, IndexDefs $IndexDefs=null){
+			if(is_string($table) === false){
+				throw new InvalidArgumentException('Schema name must be specified as string.');
+			}else if(preg_match(static::regex_Query_arg_table, $table) != 1){
+				throw new InvalidArgumentException('Schema name was invalid.');
+			}
+
+			$this->Name      = $table;
+			$this->ColDefs   = $ColDefs;
+			$this->IndexDefs = isset($IndexDefs) ? $IndexDefs : new IndexDefs;
+		}
 	}
 }
 ?>
