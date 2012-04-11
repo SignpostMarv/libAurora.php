@@ -226,4 +226,37 @@ namespace Aurora\Framework{
 		}
 	}
 }
+
+
+namespace Aurora\Framework\ColumnDefinition{
+
+	use ArrayObject;
+
+
+	abstract class abstractIterator extends ArrayObject{
+
+
+		public function __construct(array $values=null){
+			if(isset($values) === true){
+				foreach($values as $v){
+					$this[] = $v;
+				}
+			}
+			parent::__construct(null, \ArrayObject::STD_PROP_LIST);
+		}
+	}
+
+
+	class Iterator extends abstractIterator{
+
+//!	Restricts values to instances of Aurora::Framework::ColumnDefinition
+		public function offsetSet($offset, $value){
+			if($value instanceof \Aurora\Framework\ColumnDefinition){
+				parent::offsetSet($offset, $value);
+			}else{
+				throw new InvalidArgumentException('Values must be instances of ColumnDefinition.');
+			}
+		}
+	}
+
 ?>
