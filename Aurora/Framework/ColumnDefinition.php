@@ -167,7 +167,7 @@ namespace Aurora\Framework{
 			}
 			$this->$name = $value;
 		}
-	
+
 //!	Compares two ColumnTypeDef objects
 		public function Equals(ColumnTypeDef $other=null){
 			return (
@@ -180,7 +180,7 @@ namespace Aurora\Framework{
 				$other->auto_increment === $this->auto_increment
 			);
 		}
-	
+
 	}
 
 
@@ -258,5 +258,5 @@ namespace Aurora\Framework\ColumnDefinition{
 			}
 		}
 	}
-
+}
 ?>

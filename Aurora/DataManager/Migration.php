@@ -34,6 +34,8 @@
 
 namespace Aurora\DataManager\Migration{
 
+	use libAurora\Version;
+
 	use Aurora\Framework\IDataConnector;
 	use Aurora\Framework\ColumnDefinition\Iterator as ColDefs;
 	use Aurora\Framework\IndexDefinition\Iterator as IndexDefs;
@@ -71,6 +73,19 @@ namespace Aurora\DataManager\Migration{
 
 		private $dropIndices   = array();
 
+
+		private static $Version;
+
+		public function __get($name){
+			if($name === 'Version'){
+				if(isset(static::$Version) === false){
+					static::$Version = new Version(static::Version);
+				}
+				return static::$Version;
+			}
+			return null;
+		}
+
 //!	We're going to hide this behind registry methods
 		protected function __construct(){
 			if(preg_match('/^(\d+\.\d+|\d+\.\d+\.\d+|\d+\.\d+\.\d+\.\d+)$/', static::Version) != 1){
@@ -80,13 +95,17 @@ namespace Aurora\DataManager\Migration{
 			}
 		}
 
+		public function DoRestore(IDataConnector $genericData){
+			RestoreTempTablesToReal($genericData);
+		}
+
 //!	Performs validation if necessary
 /**
 *	@param object $genericData instance of Aurora::Framework::IDataConnector
 *	@return boolean not entirely sure what TRUE or FALSE indicates ~SignpostMarv
 */
 		public final function Validate(IDataConnector $genericData){
-			if($genericData->GetAuroraVersion(static::MigrationName) != static::Version){
+			if($genericData->GetAuroraVersion(static::MigrationName) != $this->__get('Version')){
 				return false;
 			}
 			return DoValidate($genericData);

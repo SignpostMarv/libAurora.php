@@ -53,7 +53,7 @@ namespace Aurora\Framework{
 //!	Gets the latest version of the database
 /**
 *	@param string $migratorName corresponds to Aurora::DataManager::Migration::Migrator::MigrationName
-*	@return string corresponds to Aurora::DataManager::Migration::Migrator::Version
+*	@return object instance of libAurora::Version corresponds to Aurora::DataManager::Migration::Migrator::Version
 */
 		public function GetAuroraVersion($migratorName);
 
