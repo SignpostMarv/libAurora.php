@@ -1,5 +1,5 @@
 <?php
-//!	@file libs/Aurora/Addon/WebUI/Friends.php
+//!	@file Aurora/Addon/WebUI/Friends.php
 //!	@brief Friends-related WebUI code
 //!	@author SignpostMarv
 

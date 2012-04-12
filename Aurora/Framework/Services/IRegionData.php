@@ -35,7 +35,9 @@ namespace Aurora\Framework{
 
 	use ReflectionClass;
 
+//!	Since PHP doesn't support enums, we need to use class constants for bitfield flags
 	class RegionFlags{
+
 //!	Used for new Rez. Random if multiple defined
 		const DefaultRegion  = 1   ;
 
@@ -78,6 +80,12 @@ namespace Aurora\Framework{
 //!	Region is not in this grid
 		const Foreign        = 8192;
 
+//!	determines if a bitfield is valid
+//!	@deprecated I really don't know what I was thinking when I wrote this.
+/**
+*	@param integer $flags bitfield to check for validity
+*	@return bool TRUE if $flags is valid, FALSE otherwise
+*/
 		public static function isValid($flags){
 			if(is_integer($flags) === true && $flags >= 0){
 				static $sum;

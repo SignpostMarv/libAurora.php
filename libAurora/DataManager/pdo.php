@@ -21,7 +21,7 @@ namespace libAurora\DataManager{
 
 //!	This will later be turned into a protected method with instantation being driven by a public static method modeled on the c# Aurora::Framework::IGenericData::ConnectToDatabase()
 /**
-*	@param object an instance of PDO
+*	@param object $PDO an instance of PDO
 */
 		public function __construct(\PDO $PDO){
 			$this->PDO = $PDO;
@@ -77,7 +77,13 @@ namespace libAurora\DataManager{
 
 //!	Performs a select query
 /**
-*	@see Aurora::Framework::IGenericData::Query()
+*	@param array $wantedValue an array of fields or operations to return. Must contain only strings.
+*	@param string $table the name of the table to perform the query on.
+*	@param object $queryFilter an instance of Aurora::Framework::QueryFilter
+*	@param array $sort an array with strings for field names/operations for keys and booleans for values- TRUE to sort in ascending order, FALSE to sort in descending order.
+*	@param mixed $start if NULL, the query expects to return all results from result zero. If $count is NULL and $start is an integer, will return $start results
+*	@param mixed $count if NULL and $start is an integer, will return $start results. If $start and $count are integers, will return $count results from point $start
+*	@return array A one-dimensional array of all fields in the result rows.
 */
 		public function Query(array $wantedValue, $table, QueryFilter $queryFilter=null, array $sort=null, $start=null, $count=null){
 			parent::Query($wantedValue, $table, $queryFilter, $sort, $start, $null);
@@ -136,7 +142,9 @@ namespace libAurora\DataManager{
 
 //!	Performs an insert query
 /**
-*	@see Aurora::Framework::IGenericData::Insert()
+*	@param string $table the name of the table to perform the query on.
+*	@param array $values if the keys are numeric will INSERT INTO $table VALUES($values), if the keys are strings will INSERT INTO $table (keys($values)) VALUES($values)
+*	@return bool TRUE on success, FALSE otherwise
 */
 		public function Insert($table, array $values){
 			parent::Insert($table, $values);
@@ -164,7 +172,10 @@ namespace libAurora\DataManager{
 
 //!	Performs an update query
 /**
-*	@see Aurora::Framework::IGenericData::Update()
+*	@param string $table the name of the table to perform the query on.
+*	@param array $set an array of field names for keys
+*	@param object $queryFilter an instance of Aurora::Framework::QueryFilter
+*	@return bool TRUE on success, FALSE otherwise
 */
 		public function Update($table, array $set, QueryFilter $queryFilter=null){
 			parent::Update($table, $set, $queryFilter);
@@ -193,7 +204,9 @@ namespace libAurora\DataManager{
 
 //!	Performs a delete query
 /**
-*	@see Aurora::Framework::IGenericData::Delete()
+*	@param string $table the name of the table to perform the query on.
+*	@param object $queryFilter an instance of Aurora::Framework::QueryFilter
+*	@return bool TRUE on success, FALSE otherwise
 */
 		public function Delete($table, QueryFilter $queryFilter=null){
 			parent::Delete($table, $queryFilter);

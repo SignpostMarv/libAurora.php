@@ -1,5 +1,4 @@
 <?php
-//!	@file load.php
 //!	@brief This file loads all the code.
 //!	@author SignpostMarv
 

@@ -1,5 +1,5 @@
 <?php
-//!	@file libs/Aurora/Addon/abstracts.php
+//!	@file Aurora/Addon/abstracts.php
 //!	@brief abstract classes
 //!	@author SignpostMarv
 
@@ -12,19 +12,26 @@ namespace Aurora\Addon{
 
 	use libAurora\abstractIterator;
 
-//!	Since webui-gpl now houses code for two API implementations, we're adding a common abstract class
+//!	Since libAurora.php now houses code for two API implementations, we're adding a common abstract class
+//!	@todo On Aurora::Addon::abstractAPI::makeCallToAPI(), implement a fallback response structure for error messages sent by the API, rather than just failing and throwing an exception.
 	abstract class abstractAPI{
 
 //!	makes a call to the API end point running on an instance of Aurora.
 /**
-*	@param string $method
-*	@param array $arguments being lazy and future-proofing API methods that have no arguments.
+*	@param string $method the API method to call
+*	@param mixed $arguments NULL if a method is being called with no arguments or an array of named arguments
+*	@param array $expectedResponse a specially-constructed array indicating the expected response format of the API call
 *	@return mixed API results should be JSON-encoded, implementations of Aurora::Addon::abstractAPI::makeCallToAPI() should perform json_decode()
 */
 		abstract protected function makeCallToAPI($method, array $arguments=null, array $expectedResponse);
 
+//!	array stores attached APIs
 		protected $attachedAPIs = array();
 
+//!	Attaches instances of Aurora::Addon::abstractAPI to this instance, while excluding implementations of the same API being attached to each other.
+/**
+*	@param object $API an instance of an implementation for an API
+*/
 		public function attachAPI(abstractAPI $API){
 			if(is_a($API, get_class($this)) === true){
 				throw new InvalidArgumentException('Cannot attach an instnace of an API or a child-implementation of an API to itself.');
@@ -37,6 +44,11 @@ namespace Aurora\Addon{
 			$this->attachedAPIs[$name] = $API;
 		}
 
+//!	Attempt to get the attached API according to the class name of it's implementation
+/**
+*	@param string $className class name of API implementation
+*	@return mixed NULL if the $className is not on Aurora::Addon::abstractAPI::$attachedAPIs, otherwise an instance of Aurora::Addon::abstractAPI
+*/
 		public function getAttachedAPI($className){
 			return isset($this->attachedAPIs[$className]) ? $this->attachedAPIs[$className] : null;
 		}
@@ -49,17 +61,17 @@ namespace Aurora\Addon{
 		protected function __construct(){
 		}
 
-
+//!	Determines if a value exists at the specified offset
 		public function offsetExists($offset){
 			return isset($offset, $this->data[$offset]);
 		}
 
-
+//!	Attempts to get the value at the specified offset
 		public function offsetGet($offset){
 			return isset($this[$offset]) ? $this->data[$offset] : null;
 		}
 
-
+//!	WORM instances can't have properties removed.
 		public function offsetUnset($offset){
 			throw new BadMethodCallException('data cannot be unset.');
 		}
@@ -139,7 +151,7 @@ namespace Aurora\Addon{
 		}
 	}
 	
-
+//!	abstract class for filterable iterators for API method results that use sort arrays and boolean field flags for output filters.
 	abstract class abstractSeekableFilterableIterator extends abstractSeekableIterator{
 
 //!	mixed either NULL indicating no sort filters, or an array of field name keys and boolean values indicating sort order.
@@ -170,6 +182,7 @@ namespace Aurora\Addon{
 *	@param array $sort optional array of field names for keys and booleans for values, indicating ASC and DESC sort orders for the specified fields.
 *	@param array $boolFields optional array of field names for keys and booleans for values, indicating 1 and 0 for field values.
 *	@param array $entities if specified, should be an array of entity objects to be validated by the child constructor
+*	@return object an instance of Aurora::Addon::abstractSeekableFilterableIterator
 */
 		public static function r(abstractAPI $API, $start=0, $total=0, array $sort=null, array $boolFields=null, array $entities=null){
 			static $registry = array();
@@ -196,3 +209,4 @@ namespace Aurora\Addon{
 		}
 	}
 }
+?>

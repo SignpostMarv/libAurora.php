@@ -1,5 +1,5 @@
 <?php
-//!	@file libs/Aurora/Addon/WebUI/AvatarArchives.php
+//!	@file Aurora/Addon/WebUI/AvatarArchives.php
 //!	@brief Avatar Archive-related WebUI code
 //!	@author SignpostMarv
 

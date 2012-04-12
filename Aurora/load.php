@@ -7,48 +7,58 @@ namespace libAurora{
 
 	use Iterator;
 	use Countable;
+	use ArrayAccess;
 
 //!	abstract iterator, not for any particular class but we don't want to duplicate code.
 	abstract class abstractIterator implements Iterator, Countable{
 //!	array holds the values of the iterator class
 		protected $data = array();
 
+//!	Returns the value at the current cursor position of libAurora::abstractIterator::$data
 		public function current(){
 			return current($this->data);
 		}
 
+//!	Returns the key at the current cursor position of libAurora::abstractIterator::$data
 		public function key(){
 			return key($this->data);
 		}
 
+//!	Advances the cursor on libAurora::abstractIterator::$data
 		public function next(){
 			next($this->data);
 		}
 
+//!	Resets the cursor on libAurora::abstractIterator::$data
 		public function rewind(){
 			reset($this->data);
 		}
 
+//!	Determines if the current cursor position of libAurora::abstractIterator::$data is valid
 		public function valid(){
 			return $this->key() !== null;
 		}
 
+//!	Returns the size of libAurora::abstractIterator::$data
 		public function count(){
 			return count($this->data);
 		}
 	}
 
 //!	abstract iterator with ArrayAccess interface
-	abstract class abstractIteratorArrayAccess extends abstractIterator{
+	abstract class abstractIteratorArrayAccess extends abstractIterator implements ArrayAccess{
 
+//!	Determines if a value exists at the specified offset of libAurora::abstractIteratorArrayAccess::$data
 		public function offsetExists($offset){
 			return isset($this->data[$offset]);
 		}
 
+//!	Attempts to get the value at the specified offset of libAurora::abstractIteratorArrayAccess::$data
 		public function offsetGet($offset){
 			return $this->offsetExists($offset) ? $this->data[$offset] : null;
 		}
 
+//!	Attempts to remove the value at the specified offset of libAurora::abstractIteratorArrayAccess::$data
 		public function offsetUnset($offset){
 			unset($this->data[$offset]);
 		}
@@ -198,6 +208,7 @@ namespace OpenMetaverse{
 			$this->z = $z;
 		}
 
+//!	Returns the string representation of the vector instance
 		public function __toString(){
 			return sprintf('<%1$f, %2$f, %3$f>', $this->x, $this->y, $this->z);
 		}
@@ -357,7 +368,14 @@ namespace Aurora\Addon{
 //!	working in the global namespace here
 namespace{
 
+//!	Since libAurora.php was split off from webui-gpl, we need to conditionally implement an is_email() function
 	if(function_exists('is_email') === false){
+
+//!	Determines if a string is a valid email address 
+/**
+*	@param string $email
+*	@return boolean TRUE if $email is a valid email address, FALSE otherwise
+*/
 		function is_email($email){
 			return (is_string($email) && preg_match("/^[a-z0-9!#$%&'*+\/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+\/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+(?:[A-Z]{2}|com|org|net|edu|gov|mil|biz|info|mobi|name|aero|asia|jobs|museum)\b$/", $email) === 1);
 		}
@@ -463,6 +481,7 @@ namespace{
 /**
 *	@param string $name
 *	@param array $arguments
+*	@return mixed wraps to Globals::__call()
 */
 		final public static function __callStatic($name, array $arguments){
 			if(self::i()->__isset($name) === false){ // The reason why we're not just passing straight to Globals::__call() is in the event Globals::__callStatic() is called directly- one could put an invalid value in $name.
