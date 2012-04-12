@@ -6,10 +6,15 @@
 namespace libAurora\DataManager{
 
 	use libAurora\InvalidArgumentException;
+	use libAurora\BadMethodCallException;
 
 	use Aurora\Framework\QueryFilter;
 	use Aurora\Framework\IGenericData;
 	use Aurora\Framework\IDataConnector;
+	use Aurora\Framework\ColumnTypeDef;
+
+	use Aurora\DataManager\Migration\ColumnDefinition\Iterator as ColDefs;
+	use Aurora\DataManager\Migration\IndexDefinition\Iterator as IndexDefs;
 
 //!	abstract implementation of Aurora::Framework::IDataConnector
 	abstract class DataManagerBase implements IDataConnector{
@@ -36,17 +41,23 @@ namespace libAurora\DataManager{
 		const regex_Query_arg_table = '/^[A-z0-9_]+$/';
 
 //!	Performs validation on table names
-		protected static function validateArg_table($table){
-			if(is_string($table) === false){
-				throw new InvalidArgumentException('table name must be specified as string.');
-			}else if(ctype_graph($table) === false){
-				throw new InvalidArgumentException('table name must not contain whitespace characters');
-			}else if(preg_match(static::regex_Query_arg_table, $table) != 1){
-				throw new InvalidArgumentException('table name is invalid.');
+		protected static function validateArg_table(){
+			$args = func_get_args();
+			if(count($args) < 1){
+				throw new BadMethodCallException('No table names were supplied for validation.');
+			}
+			foreach($args as $table){
+				if(is_string($table) === false){
+					throw new InvalidArgumentException('table name must be specified as string.');
+				}else if(ctype_graph($table) === false){
+					throw new InvalidArgumentException('table name must not contain whitespace characters');
+				}else if(preg_match(static::regex_Query_arg_table, $table) != 1){
+					throw new InvalidArgumentException('table name is invalid.');
+				}
 			}
 		}
 
-//!	This method only performs argument validation to save duplication of code.
+//!	This implementation only performs argument validation to save duplication of code.
 		public function Query(array $wantedValue, $table, QueryFilter $queryFilter=null, array $sort=null, $start=null, $count=null){
 			foreach($wantedValue as $value){
 				if(is_string($value) === false){
@@ -79,7 +90,7 @@ namespace libAurora\DataManager{
 			}
 		}
 
-//!	This method only performs argument validation to save duplication of code.
+//!	This implementation only performs argument validation to save duplication of code.
 		public function Insert($table, array $values){
 			static::validateArg_table($table);
 
@@ -98,7 +109,7 @@ namespace libAurora\DataManager{
 			}
 		}
 
-//!	This method only performs argument validation to save duplication of code.
+//!	This implementation only performs argument validation to save duplication of code.
 		public function Update($table, array $set, QueryFilter $queryFilter=null){
 			static::validateArg_table($table);
 
@@ -113,15 +124,56 @@ namespace libAurora\DataManager{
 			}
 		}
 
-//!	This method only performs argument validation to save duplication of code.
+//!	This implementation only performs argument validation to save duplication of code.
 		public function Delete($table, QueryFilter $queryFilter=null){
 			static::validateArg_table($table);
 		}
 
-
-//!	This method only performs argument validation to save duplication of code.
+//!	This implementation only performs argument validation to save duplication of code.
 		public function TableExists($table){
 			static::validateArg_table($table);
+		}
+
+//!	This implementation only performs argument validation to save duplication of code.
+		public function CreateTable($table, ColDefs $columns, IndexDefs $indexDefinitions){
+			static::validateArg_table($table);
+			if($this->TableExists(strtolower($table)) === true){
+				throw new InvalidArgumentException('Trying to create a table with name of one that already exists.');
+			}
+		}
+
+//!	Converts a column type definition object to an implementation-appropriate string
+/**
+*	In c#, this is an object method, not a class method. It's also public, whereas here we make it protected
+*	@param object $coldef an instance of Aurora::Framework::ColumnTypeDef
+*	@return string implementation-appropriate string
+*/
+		abstract protected static function GetColumnTypeStringSymbol(ColumnTypeDef $coldef);
+
+//!	This method performs argument validation then passes the task off to a protected method to be implemented elsewhere.
+		public function RenameTable($oldTableName, $newTableName){
+			static::validateArg_table($oldTableName, $newTableName);
+
+			if($this->TableExists($oldTableName) === true && $this->TableExists($newTableName) === false){
+				$this->ForceRenameTable($oldTableName, $newTableName);
+			}
+		}
+
+//!	Performs table renaming without checking for table existance.
+//!	This implementation only performs argument validation to save duplication of code.
+/**
+*	Unlike the c# code, we're making this a protected method
+*	@param string $oldTableName current table name
+*	@param string $newTableName new table name
+*	@see Aurora::Framework::IDataConnector::RenameTable()
+*/
+		protected function ForceRenameTable($oldTableName, $newTableName){
+			static::validateArg_table($oldTableName, $newTableName);
+		}
+
+//!	This implementation only performs argument validation to save duplication of code.
+		public function DropTable($tableName){
+			static::validateArg_table($tableName);
 		}
 	}
 }

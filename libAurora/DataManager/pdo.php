@@ -59,7 +59,7 @@ namespace libAurora\DataManager{
 		}
 
 //!	Prepares a query
-		private static function prepareSth(\PDO $PDO, PDOStatement & $sth=null, $query){
+		protected static function prepareSth(\PDO $PDO, PDOStatement & $sth=null, $query){
 			try{
 				$sth = $PDO->prepare($query);
 			}catch(PDOException $e){
@@ -68,7 +68,7 @@ namespace libAurora\DataManager{
 		}
 
 //!	Binds values to queries
-		private static function bindValues(PDOStatement $sth, array $ps){
+		protected static function bindValues(PDOStatement $sth, array $ps){
 			try{
 				foreach($ps as $k=>$v){
 					$type = \PDO::PARAM_STR;
@@ -94,7 +94,7 @@ namespace libAurora\DataManager{
 		}
 
 //!	Returns and executes
-		private static function returnExecute(PDOStatement $sth){
+		protected static function returnExecute(PDOStatement $sth){
 			try{
 				$exec = $sth->execute();
 				if(!$exec){
@@ -249,6 +249,18 @@ namespace libAurora\DataManager{
 			static::prepareSth($this->PDO, $sth, $query);
 			static::bindValues($sth, $ps);
 			return static::returnExecute($sth);
+		}
+
+
+		public function DropTable($tableName){
+			parent::DropTable($table);
+			$table = strtolower($table);
+
+			try{
+				$this->PDO->exec(sprintf('DROP TABLE %s', $tableName));
+			}catch(PDOException $e){
+				throw new RuntimeException('Failed to drop table.');
+			}
 		}
 	}
 }
