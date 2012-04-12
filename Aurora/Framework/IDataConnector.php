@@ -33,13 +33,16 @@
 
 namespace Aurora\Framework{
 
+	use Aurora\DataManager\Migration\ColumnDefinition\Iterator as ColDefs;
+	use Aurora\DataManager\Migration\IndexDefinition\Iterator as IndexDefs;
+
 
 	interface IDataConnector extends IGenericData{
 
-//!	Name of the module
+//!	Name of the connector
 /**
 *	interface constants can't be overriden so we're going to make this a public static method.
-*	@return string Name of the module
+*	@return string Name of the connector
 */
 		public static function Identifier();
 
@@ -49,6 +52,14 @@ namespace Aurora\Framework{
 *	@return boolean TRUE if $table exists, FALSE otherwise
 */
 		public function TableExists($table);
+
+//!	Create a table with the supplied columns and indices
+/**
+*	@param string $table name of the table
+*	@param object $columns instance of Aurora::DataManager::Migration::ColumnDefinition::Iterator
+*	@param object $indexDefinitions instance of Aurora::DataManager::Migration::IndexDefinition::Iterator
+*/
+		public function CreateTable($table, ColDefs $columns, IndexDefs $indexDefinitions);
 
 //!	Gets the latest version of the database
 /**
@@ -63,6 +74,33 @@ namespace Aurora\Framework{
 *	@param string $MigrationName migrator module to write to the database
 */
 		public function WriteAuroraVersion($version, $MigrationName);
+
+//!	copy tables
+/**
+*	@param string $sourceTableName name of table to copy from
+*	@param string $destinationTableName name of table to copy to
+*	@param object $columnDefinitions instance of Aurora::DataManager::Migration::ColumnDefinition::Iterator
+*	@param object $indexDefinitions instance of Aurora::DataManager::Migration::IndexDefinition::Iterator
+*/
+		public function CopyTableToTable($sourceTableName, $destinationTableName, ColDefs $columnDefinitions, IndexDefs $indexDefinitions);
+
+//!	Check whether the data table exists and that the columns and indices are correct
+/**
+*	@param string $table name of the table
+*	@param object $columns instance of Aurora::DataManager::Migration::ColumnDefinition::Iterator
+*	@param object $indexDefinitions instance of Aurora::DataManager::Migration::IndexDefinition::Iterator
+*	@return boolean TRUE if the table exists as described, FALSE otherwise
+*/
+		public function VerifyTableExists($table, ColDefs $columns, IndexDefs $indexDefinitions);
+
+//!	Check whether the data table exists and that the columns and indices are correct, creating the table if it doesn't exist.
+/**
+*	@param string $table name of the table
+*	@param object $columns instance of Aurora::DataManager::Migration::ColumnDefinition::Iterator
+*	@param object $indexDefinitions instance of Aurora::DataManager::Migration::IndexDefinition::Iterator
+*	@return boolean TRUE if the table exists as described, FALSE otherwise
+*/
+		public function EnsureTableExists($table, ColDefs $columns, IndexDefs $indexDefinitions);
 
 //!	Rename the table from $oldTableName to $newTableName
 /**

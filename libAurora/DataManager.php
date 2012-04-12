@@ -1,6 +1,6 @@
 <?php
 //!	@file libAurora/DataManager.php
-//!	@brief abstract implementation of Aurora::Framework::IGenericData
+//!	@brief abstract implementation of Aurora::Framework::IDataConnector
 //!	@author SignpostMarv
 
 namespace libAurora\DataManager{
@@ -9,9 +9,28 @@ namespace libAurora\DataManager{
 
 	use Aurora\Framework\QueryFilter;
 	use Aurora\Framework\IGenericData;
+	use Aurora\Framework\IDataConnector;
 
-//!	abstract implementation of Aurora::Framework::IGenericData
-	abstract class DataManagerBase implements IGenericData{
+//!	abstract implementation of Aurora::Framework::IDataConnector
+	abstract class DataManagerBase implements IDataConnector{
+
+//!	although interface constants can't be overridden, class constants can.
+		const Identifier = 'DataManagerBase';
+//!	Name of the connector
+/**
+*	@return string Name of the connector
+*/
+		public static final function Identifier(){
+			return static::Identifier;
+		}
+
+//! Connect to database. We're deviating from the c# design here, using the constructor to connect to the database rather than a method that can be used anywhere during runtime
+/**
+*	@param string $connectionString database connection string
+*	@param string $migratorName migrator module
+*	@param boolean $validateTables specifying TRUE must attempt to validate tables after connecting to the database
+*/
+		abstract public function __construct($connectionString, $migratorName, $validateTables);
 
 //!	string Regular expression used to validate the $table argument of libAurora::DataManager::DataManagerBase::Query()
 		const regex_Query_arg_table = '/^[A-z0-9_]+$/';
@@ -98,10 +117,17 @@ namespace libAurora\DataManager{
 		public function Delete($table, QueryFilter $queryFilter=null){
 			static::validateArg_table($table);
 		}
+
+
+//!	This method only performs argument validation to save duplication of code.
+		public function TableExists($table){
+			static::validateArg_table($table);
+		}
 	}
 }
 
 namespace{
 	require_once('DataManager/pdo.php');
+	require_once('DataManager/mysql.php');
 }
 ?>

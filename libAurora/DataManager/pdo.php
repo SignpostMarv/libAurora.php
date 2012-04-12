@@ -1,6 +1,6 @@
 <?php
 //!	@file libAurora/DataManager/pdo.php
-//!	@brief PDO implementation of Aurora::Framework::IGenericData
+//!	@brief PDO implementation of Aurora::Framework::IDataConnector
 //!	@author SignpostMarv
 
 namespace libAurora\DataManager{
@@ -13,18 +13,49 @@ namespace libAurora\DataManager{
 
 	use Aurora\Framework\QueryFilter;
 
-//!	PDO implementation of Aurora::Framework::IGenericData
-	class PDO extends DataManagerBase{
+//!	PDO implementation of Aurora::Framework::IDataConnector
+	abstract class PDO extends DataManagerBase{
+
+//!	Name of the connector
+		const Identifier = 'PDO';
 
 //!	object an instance of PDO
-		private $PDO;
+		protected $PDO;
 
-//!	This will later be turned into a protected method with instantation being driven by a public static method modeled on the c# Aurora::Framework::IGenericData::ConnectToDatabase()
+//!	string regular expression for finding username & password that have been fudged into the PDO DSN string.
+		const regex_up = '/(;user=(.+);password=(.+);?)/';
+
+//! Connect to database. We're deviating from the c# design here, using the constructor to connect to the database rather than a method that can be used anywhere during runtime
 /**
-*	@param object $PDO an instance of PDO
+*	Important note! Unlike the equivalent c#, this class does not create databases- the database must be created beforehand by the user (except in the case of SQLite)
+*	@param string $connectionString database connection string
+*	@param string $migratorName migrator module
+*	@param boolean $validateTables specifying TRUE must attempt to validate tables after connecting to the database
 */
-		public function __construct(\PDO $PDO){
-			$this->PDO = $PDO;
+		public function __construct($connectionString, $migratorName, $validateTables){
+
+			if(is_string($connectionString) === false){
+				throw new InvalidArgumentException('connection string must be specified as string.');
+			}else if(is_string($migratorName) === false){
+				throw new InvalidArgumentException('migrator name must be specified as string.');
+			}else if(trim($migratorName) === ''){
+				throw new InvalidArgumentException('migrator name cannot be an empty string.');
+			}else if(is_bool($validateTables) === false){
+				throw new InvalidArgumentException('validateTables flag must be specified as boolean.');
+			}
+
+			$username = $password = null; // not all PDO drivers require credentials
+
+			if(substr($connectionString, 0, 6) === 'mysql:' && preg_match(static::regex_up, $connectionString, $matches) == 1){
+				list(,,$username, $password) = $matches;
+				$connectionString = preg_replace(static::regex_up, '', $connectionString);
+			}
+
+			try{
+				$this->PDO = new \PDO($connectionString, $username, $password);
+			}catch(PDOException $e){
+				throw new RuntimeException('Failed to connect to database with supplied connection string.');
+			}
 		}
 
 //!	Prepares a query

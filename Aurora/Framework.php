@@ -7,4 +7,5 @@
 	require_once('Framework/EventData.php');
 	require_once('Framework/QueryFilter.php');
 	require_once('Framework/IGenericData.php');
+	require_once('Framework/IDataConnector.php');
 ?>
