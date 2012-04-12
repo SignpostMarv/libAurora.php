@@ -366,6 +366,7 @@ namespace{
 
 	require_once('Framework.php');
 	require_once('Services.php');
+	require_once('DataManager.php');
 	require_once('Addon.php');
 
 //!	Class used for globally-available stuff, because a) define and const only support scalar values, and b) the global operate is ugly.

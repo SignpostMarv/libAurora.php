@@ -34,9 +34,6 @@
 
 namespace Aurora\DataManager\Migration{
 
-	use Aurora\InvalidArgumentException;
-	use Aurora\BadMethodCallException;
-
 	use libAurora\Version;
 
 	use Aurora\Framework\IDataConnector;

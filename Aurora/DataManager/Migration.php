@@ -45,9 +45,13 @@ namespace Aurora\DataManager\Migration{
 	interface Exception{
 	}
 
+
 	class InvalidArgumentException extends \Aurora\InvalidArgumentException implements Exception{
 	}
 
+
+	class BadMethodCallException extends \Aurora\BadMethodCallException implements Exception{
+	}
 
 //!	The c# uses a couple of interfaces that we're not using
 	abstract class Migrator{
@@ -284,7 +288,7 @@ namespace Aurora\DataManager\Migration{
 *	@param object $genericData instance of Aurora::Framework::IDataConnector
 *	@param string $tableName name of the table
 */
-		private final DeleteTempVersion(IDataConnector $genericData, $tableName){
+		private final function DeleteTempVersion(IDataConnector $genericData, $tableName){
 			$tempTableName = static::GetTempTableNameFromTableName($tableName);
 			if($genericData->TableExists($tempTableName) === true){
 				$genericData->DropTable($tempTableName);
