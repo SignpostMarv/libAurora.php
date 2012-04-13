@@ -33,7 +33,7 @@ namespace libAurora{
 
 
 		public function __construct($major=0, $minor=0, $revision=0, $build=0){
-			if(isset($major) === true && isset($minor, $revision, $build) === false && is_string($major) === true && preg_match(static::regex_asString, $major) == 1){
+			if(is_string($major) === true && ((string)$minor . (string)$revision . (string)$build) === '000' && preg_match(static::regex_asString, $major) == 1){
 				list($major, $minor, $revision, $build) = array_pad(explode('.', $major), 4, 0);
 			}
 			if(is_string($major) === true && ctype_digit($major) === true){
@@ -58,6 +58,11 @@ namespace libAurora{
 			}else if(is_integer($build) === false){
 				throw new InvalidArgumentException('Build number should be specified as integer.');
 			}
+
+			$this->major    = $major;
+			$this->minor    = $minor;
+			$this->revision = $revision;
+			$this->build    = $build;
 		}
 
 
@@ -67,7 +72,7 @@ namespace libAurora{
 				($a->major === $b->major && $a->minor  <  $b->minor                                                          ) ||
 				($a->major === $b->major && $a->minor === $b->minor && $a->revision  <  $b->revision                         ) ||
 				($a->major === $b->major && $a->minor === $b->minor && $a->revision === $b->revision && $a->build < $b->build)
-			) ? -1 : 1;
+			) ? -1 : 1);
 		}
 	}
 }

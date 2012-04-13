@@ -12,6 +12,7 @@ namespace libAurora\DataManager{
 	use PDOStatement;
 
 	use Aurora\Framework\QueryFilter;
+	use Aurora\DataManager\Migration\MigrationManager;
 
 //!	PDO implementation of Aurora::Framework::IDataConnector
 	abstract class PDO extends DataManagerBase{
@@ -56,6 +57,10 @@ namespace libAurora\DataManager{
 			}catch(PDOException $e){
 				throw new RuntimeException('Failed to connect to database with supplied connection string.');
 			}
+
+			$migrationManager = new MigrationManager($this, $migratorName, $validateTables);
+			$migrationManager->DetermineOperation();
+			$migrationManager->ExecuteOperation();
 		}
 
 //!	Prepares a query

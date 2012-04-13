@@ -216,7 +216,7 @@ namespace libAurora\DataManager{
 			$results = $this->Query(array( static::COLUMN_VERSION ), static::VERSION_TABLE_NAME, $filter);
 
 			$highestVersion = null;
-			if($results->count() > 0){
+			if(count($results) > 0){
 				foreach($results as $result){
 					if(trim($result) !== ''){
 						$version = new Version($result);

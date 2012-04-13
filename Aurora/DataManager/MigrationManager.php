@@ -94,7 +94,7 @@ namespace Aurora\DataManager\Migration{
 		private $genericData;
 
 //!	string migrator module name
-		private $migratorName;
+		private $migratorName = '';
 
 //!	array all versions for the specified module
 		private $migrators = array();
@@ -113,6 +113,42 @@ namespace Aurora\DataManager\Migration{
 
 //!	boolean flag controlling rollback operation
 		private $rollback;
+
+
+		private static $allMigrators = array();
+		private static $declaredClassCount = 0;
+
+
+		public function __construct(IDataConnector $genericData, $migratorName, $validateTables){
+			if(is_string($migratorName) === false){
+				throw new InvalidArgumentException('migrator name must be specified as string.');
+			}else if(trim($migratorName) === ''){
+				throw new InvalidArgumentException('migrator name cannot be an empty string.');
+			}else if(is_bool($validateTables) === false){
+				throw new InvalidArgumentException('validate tables flag must be specified as boolean.');
+			}
+
+			$this->genericData    = $genericData;
+			$this->migratorName   = trim($migratorName);
+			$this->validateTables = $validateTables;
+
+			$declared = get_declared_classes();
+			if(isset(static::$allMigrators) === false || count($declared) !== static::$declaredClassCount){
+				$migrators = array();
+				foreach($declared as $possibleMigrator){
+					if(is_subclass_of($possibleMigrator, 'Aurora\DataManager\Migration\Migrator') === true){
+						$migrators[] = $possibleMigrator;
+					}
+				}
+				static::$allMigrators = $migrators;
+			}
+
+			foreach(static::$allMigrators as $migrator){
+				if(constant($migrator . '::MigrationName') === $migratorName){
+					$this->migrators[] = call_user_func($migration . '::f');
+				}
+			}
+		}
 
 
 		public function GetDescriptionOfCurrentOperation(){
@@ -185,6 +221,122 @@ namespace Aurora\DataManager\Migration{
 				return Version::cmp($a->Version, $b->Version);
 			});
 			return current($migrators);
+		}
+
+
+		public function ExecuteOperation(){
+			if($this->migratorName === ''){
+				return;
+			}
+
+			if($this->operationDescription != null && $this->executed === false && $this->operationDescription->OperationType !== MigrationOperationTypes::DoNothing){
+				$currentMigrator = $this->GetMigratorByVersion($this->operationDescription->CurrentVersion);
+
+				if($this->operationDescription->OperationType === MigrationOperationTypes::CreateDefaultAndUpgradeToTarget){
+					try{
+						$this->currentMigrator->CreateDefaults($this->genericData);
+					}catch(\Exception $e){
+					}
+					$this->executed = true;
+				}
+
+				$validated = $currentMigrator != null && $currentMigrator->Validate($this->genericData);
+
+				if($validated === false && $validateTables === true && $currentMigrator !== null){
+					error_log(sprintf('Failed to validated migration %s-%s, retrying...', $currentMigrator->MigrationName, $currentMigrator->Version));
+
+					$currentMigrator->Migrate($this->genericData);
+					$validated = $currentMigrator->Validate($this->genericData);
+					if($validated === false){
+						$rec = null;
+						$currentMigrator->DebugTestThatAllTablesValidate($this->genericData, $rec);
+						error_log(sprintf(
+							'FAILED TO REVALIDATE MIGRATION %s-%s, FIXING TABLE FORCIBLY... NEW TABLE NAME %s',
+							$currentMigrator->MigrationName,
+							$currentMigrator->Version,
+							$rec->Name . '_broken'
+						));
+						$this->genericData->RenameTable($rec->Name, $rec->Name . '_broken');
+						$currentMigrator->Migrate($this->genericData);
+						$validated = $currentMigrator->Validate($this->genericData);
+						if($validated === false){
+							throw new RuntimeException(sprintf(
+								'Current version %s-%s did not validate. Stopping here so we don\'t cause  any trouble. No changes were made.',
+								$currentMigrator->MigrationName,
+								$currentMigrator->Version
+							));
+						}
+					}
+				}
+
+
+				$restoreTaken = false;
+				$executingMigrator = $this->GetMigratorByVersion($this->operationDescription->StartVersion);
+
+				if($executingMigrator !== null){
+					if($validateTables == true && $currentMigrator !== null){
+						//prepare restore point if something goes wrong
+						$this->restorePoint = $currentMigrator->PrepareRestorePoint($this->genericData);
+						$restoreTaken = true;
+					}
+				}
+
+				while($executingMigrator !== null){
+					try{
+						$executingMigrator->Migrate($this->genericData);
+					}catch(\Exception $ex){
+						if($currentMigrator != null){
+							throw new RuntimeException(sprintf('Migrating to version %s failed, exception class %s thrown with code %s', $currentMigrator->Version, get_class($ex), $ex->getCode()));
+						}
+					}
+					$executed = true;
+					$validated = $executingMigrator->Validate($this->genericData);
+
+					//if it doesn't validate, rollback
+					if($validated === false && $validateTables){
+						$this->RollBackOperation();
+						if($currentMigrator != null){
+							throw new RuntimeException(sprintf('Migrating to version %s did not validate. Restoring to restore point.', $currentMigrator->Version));
+						}
+					}else{
+						$executingMigrator->FinishedMigration($this->genericData);
+					}
+					if($executingMigrator->Version == $this->operationDescription->EndVersion){
+						break;
+					}
+
+					$executingMigrator = $this->GetMigratorAfterVersion($executingMigrator->Version);
+				}
+
+				if($restoreTaken){
+					$currentMigrator->ClearRestorePoint($this->genericData);
+				}
+			}
+		}
+
+
+		public function RollBackOperation(){
+			if($this->operationDescription !== null && $this->executed === true && $this->rollback === false && $this->restorePoint != null){
+				$this->restorePoint->DoRestore($this->genericData);
+				$this->rollback = true;
+			}
+		}
+
+
+		public function ValidateVersion(Version $version){
+			return $this->GetMigratorByVersion($version)->Validate($this->genericData);
+		}
+
+
+		public function GetMigratorByVersion(Version $version=null){
+			if(isset($version) === true){
+				foreach($this->migrators as $m){
+					if($m->Version->Equals($version) === true){
+						return $m;
+					}
+				}
+			}
+			return null;
 		}
 	}
 }
