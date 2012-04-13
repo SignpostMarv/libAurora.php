@@ -212,7 +212,7 @@ namespace libAurora\DataManager{
 					$this->PDO->exec(sprintf('ALTER TABLE `%s` ADD %s (`%s`)', $table, $newIndex->Type === IndexType::Primary ? 'PRIMARY KEY' : ($newIndex->Type === IndexType::Unique ? 'UNIQUE' : 'INDEX'), implode('`, `', $newIndex->Fields->getArrayCopy())));
 				}
 			}catch(PDOException $e){
-			
+
 			}
 		}
 

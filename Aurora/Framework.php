@@ -2,20 +2,20 @@
 
 
 namespace Aurora\Framework{
-	
-	
+
+
 	interface Exception extends \Aurora\Exception{
 	}
-	
-	
+
+
 	class RuntimeException extends \Aurora\RuntimeException implements Exception{
 	}
-	
-	
+
+
 	class InvalidArgumentException extends \Aurora\InvalidArgumentException implements Exception{
 	}
-	
-	
+
+
 	class BadMethodCallException extends \Aurora\BadMethodCallException implements Exception{
 	}
 }

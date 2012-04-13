@@ -371,7 +371,7 @@ namespace{
 //!	Since libAurora.php was split off from webui-gpl, we need to conditionally implement an is_email() function
 	if(function_exists('is_email') === false){
 
-//!	Determines if a string is a valid email address 
+//!	Determines if a string is a valid email address
 /**
 *	@param string $email
 *	@return boolean TRUE if $email is a valid email address, FALSE otherwise
@@ -380,7 +380,7 @@ namespace{
 			return (is_string($email) && preg_match("/^[a-z0-9!#$%&'*+\/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+\/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+(?:[A-Z]{2}|com|org|net|edu|gov|mil|biz|info|mobi|name|aero|asia|jobs|museum)\b$/", $email) === 1);
 		}
 	}
-	
+
 
 	require_once('Framework.php');
 	require_once('Services.php');
@@ -445,7 +445,7 @@ namespace{
 
 //!	Determine whether or not a property has been set.
 /**
-*	@param string $name 
+*	@param string $name
 *	@return TRUE if the property has been set, FALSE otherwise.
 */
 		final public function __isset($name){
@@ -454,7 +454,7 @@ namespace{
 
 //!	Since globals cannot be overwritten, they cannot be unset either.
 /**
-*	@param string $name 
+*	@param string $name
 */
 		final public function __unset($name){
 			if(isset($this->data[$name]) === false){ // we will silently fail when values have not been set.
