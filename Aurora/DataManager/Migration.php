@@ -53,6 +53,10 @@ namespace Aurora\DataManager\Migration{
 	class BadMethodCallException extends \Aurora\BadMethodCallException implements Exception{
 	}
 
+
+	class RuntimeException extends \Aurora\RuntimeException implements Exception{
+	}
+
 //!	The c# uses a couple of interfaces that we're not using
 	abstract class Migrator{
 
@@ -80,6 +84,7 @@ namespace Aurora\DataManager\Migration{
 
 		private static $Version;
 
+
 		public function __get($name){
 			if($name === 'Version'){
 				if(isset(static::$Version) === false){
@@ -90,7 +95,7 @@ namespace Aurora\DataManager\Migration{
 			return null;
 		}
 
-//!	We're going to hide this behind registry methods
+//!	We're going to hide this behind factory methods
 		protected function __construct(){
 			if(preg_match('/^(\d+\.\d+|\d+\.\d+\.\d+|\d+\.\d+\.\d+\.\d+)$/', static::Version) != 1){
 				throw new InvalidArgumentException('Version number was invalid, should take the form of a.b, a.b.c or a.b.c.d');
@@ -98,6 +103,12 @@ namespace Aurora\DataManager\Migration{
 				throw new InvalidArgumentException('Migration name was invalid, should start with an upper-case letter and contain only letters, numbers and underscores');
 			}
 		}
+
+
+		public static function f(){
+			return new static();
+		}
+
 
 		public function DoRestore(IDataConnector $genericData){
 			RestoreTempTablesToReal($genericData);
@@ -229,7 +240,7 @@ namespace Aurora\DataManager\Migration{
 		}
 
 //!	debug-mode version of Aurora::DataManager::Migration::Migrator::TestThatAllTablesValidate()
-		protected function DebugTestThatAllTablesValidate(IDataConnector $genericData, Migrator\Schema $reason=null){
+		protected function DebugTestThatAllTablesValidate(IDataConnector $genericData, Migrator\Schema & $reason=null){
 			foreach($this->schema as $def){
 				if($genericData->VerifyTableExists($def->Name, $def->ColDefs, $def->IndexDefs) === false){
 					$reason = $def;
