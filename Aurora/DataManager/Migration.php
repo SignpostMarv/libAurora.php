@@ -317,12 +317,12 @@ namespace Aurora\DataManager\Migration\Migrator{
 
 
 		public function __construct(array $values=null){
+			parent::__construct(array(), \ArrayObject::STD_PROP_LIST);
 			if(isset($values) === true){
 				foreach($values as $v){
 					$this[] = $v;
 				}
 			}
-			parent::__construct(null, \ArrayObject::STD_PROP_LIST);
 		}
 	}
 

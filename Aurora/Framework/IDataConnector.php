@@ -35,8 +35,8 @@ namespace Aurora\Framework{
 
 	use libAurora\Version;
 
-	use Aurora\DataManager\Migration\ColumnDefinition\Iterator as ColDefs;
-	use Aurora\DataManager\Migration\IndexDefinition\Iterator as IndexDefs;
+	use Aurora\Framework\ColumnDefinition\Iterator as ColDefs;
+	use Aurora\Framework\IndexDefinition\Iterator as IndexDefs;
 
 
 	interface IDataConnector extends IGenericData{

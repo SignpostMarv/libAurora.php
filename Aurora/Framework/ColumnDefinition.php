@@ -221,6 +221,8 @@ namespace Aurora\Framework{
 				}else if(preg_match(static::regex_fieldName, $value) != 1){
 					throw new RuntimeException('Field name was not valid.');
 				}
+				$this->$name = $value;
+				return;
 			}
 			throw new RuntimeException($name . ' is an unsupported property.');
 		}
@@ -237,12 +239,12 @@ namespace Aurora\Framework\ColumnDefinition{
 
 
 		public function __construct(array $values=null){
+			parent::__construct(array(), \ArrayObject::STD_PROP_LIST);
 			if(isset($values) === true){
 				foreach($values as $v){
 					$this[] = $v;
 				}
 			}
-			parent::__construct(null, \ArrayObject::STD_PROP_LIST);
 		}
 	}
 

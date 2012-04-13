@@ -62,7 +62,7 @@ namespace Aurora\Framework{
 //!	we're providing a public constructor to mimic usage in c#
 		public function __construct(array $fields=null, $type=1){
 			$this->__set('Type', $type);
-			$this->Fields = new IndexDefinition\fieldArray($fields);
+			$this->Fields = new IndexDefinition\fieldArray(isset($fields) ? $fields : array());
 		}
 
 //!	Compares two index definitions
@@ -119,12 +119,12 @@ namespace Aurora\Framework\IndexDefinition{
 
 
 		public function __construct(array $values=null){
+			parent::__construct(array(), \ArrayObject::STD_PROP_LIST);
 			if(isset($values) === true){
 				foreach($values as $v){
 					$this[] = $v;
 				}
 			}
-			parent::__construct(null, \ArrayObject::STD_PROP_LIST);
 		}
 	}
 

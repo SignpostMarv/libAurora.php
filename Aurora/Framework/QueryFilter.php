@@ -37,8 +37,6 @@ namespace Aurora\Framework{
 
 	use libAurora\abstractIterator;
 
-	use Aurora\InvalidArgumentException;
-
 	use Aurora\Framework\QueryFilter\scalarFilter;
 	use Aurora\Framework\QueryFilter\scalarMultiFilter;
 	use Aurora\Framework\QueryFilter\stringFilter;
@@ -480,7 +478,7 @@ namespace Aurora\Framework\QueryFilter{
 
 	use libAurora\abstractIteratorArrayAccess;
 
-	use Aurora\InvalidArgumentException;
+	use Aurora\Framework\InvalidArgumentException;
 
 //!	Aurora::Framework::Filter requires a bunch of different filters to compile the WHERE statement in an SQL query
 	abstract class Filter extends abstractIteratorArrayAccess implements ArrayAccess{

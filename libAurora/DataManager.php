@@ -21,8 +21,8 @@ namespace libAurora\DataManager{
 
 	use Aurora\Framework\IndexDefinition;
 
-	use Aurora\DataManager\Migration\ColumnDefinition\Iterator as ColDefs;
-	use Aurora\DataManager\Migration\IndexDefinition\Iterator as IndexDefs;
+	use Aurora\Framework\ColumnDefinition\Iterator as ColDefs;
+	use Aurora\Framework\IndexDefinition\Iterator as IndexDefs;
 
 //!	abstract implementation of Aurora::Framework::IDataConnector
 	abstract class DataManagerBase implements IDataConnector{
@@ -197,7 +197,7 @@ namespace libAurora\DataManager{
 						static::COLUMN_NAME,
 						array( 'Type' => ColumnType::Text, 'Size' => 100 )
 					)
-				)), new IndexDefinition);
+				)), new IndexDefs);
 			}
 		}
 

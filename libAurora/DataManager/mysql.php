@@ -16,8 +16,8 @@ namespace libAurora\DataManager{
 	use Aurora\Framework\ColumnType;
 	use Aurora\Framework\ColumnTypeDef;
 
-	use Aurora\DataManager\Migration\ColumnDefinition\Iterator as ColDefs;
-	use Aurora\DataManager\Migration\IndexDefinition\Iterator as IndexDefs;
+	use Aurora\Framework\ColumnDefinition\Iterator as ColDefs;
+	use Aurora\Framework\IndexDefinition\Iterator as IndexDefs;
 
 //!	mysql-specific PDO implementation of Aurora::Framework::IDataConnector
 	class MySQLDataLoader extends PDO{
@@ -64,7 +64,7 @@ namespace libAurora\DataManager{
 			foreach($columns as $column){
 				$columnDefinition[] = '`' . $column->Name . '` ' . static::GetColumnTypeStringSymbol($column->Type);
 			}
-			if($primary != null & $primary->Fields->count() > 0){
+			if($primary != null && $primary->Fields->count() > 0){
 				$columnDefinition[] = 'PRIMARY KEY (`' . implode('`, ', $primary->Fields->getArrayCopy()) . '`)';
 			}
 
@@ -89,7 +89,9 @@ namespace libAurora\DataManager{
 			$query = sprintf('CREATE TABLE ' . $table . ' ( %s %s) ', implode(', ', $columnDefinition), count($indicesQuery) > 0 ? ', ' . implode(', ', $indicesQuery) : '');
 
 			try{
-				$this->PDO->exec($query);
+				if($this->PDO->exec($query) === false){
+					throw new RuntimeException('Failed to create table but did not throw an exception.');
+				}
 			}catch(PDOException $e){
 				throw new RuntimeException('Failed to create table.', $e->getCode());
 			}
@@ -268,7 +270,7 @@ namespace libAurora\DataManager{
 				break;
             }
 
-            return $symbol . ($coldef->isNull ? ' NULL' : ' NOT NULL') + (($coldef->isNull && $coldef->defaultValue == null) ? ' DEFAULT NULL' : ($coldef->defaultValue != null ? ' DEFAULT \'' . mysql_real_escape_string($coldef->defaultValue) . '\'' : '')) . (($coldef->Type == ColumnType::Integer || $coldef->Type == ColumnType::TinyInt) && $coldef->auto_increment ? ' AUTO_INCREMENT' : '');
+            return $symbol . ($coldef->isNull ? ' NULL' : ' NOT NULL') . (($coldef->isNull && $coldef->defaultValue == null) ? ' DEFAULT NULL' : ($coldef->defaultValue != null ? ' DEFAULT \'' . mysql_real_escape_string($coldef->defaultValue) . '\'' : '')) . (($coldef->Type == ColumnType::Integer || $coldef->Type == ColumnType::TinyInt) && $coldef->auto_increment ? ' AUTO_INCREMENT' : '');
         }
 
 
