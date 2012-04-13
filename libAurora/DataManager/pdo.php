@@ -102,9 +102,6 @@ namespace libAurora\DataManager{
 		protected static function returnExecute(PDOStatement $sth){
 			try{
 				$exec = $sth->execute();
-				if(!$exec){
-					print_r($sth->errorInfo());
-				}
 				return $exec;
 			}catch(PDOException $e){
 				throw new RuntimeException('Execution of the query threw an exception.', $e->getCode());
