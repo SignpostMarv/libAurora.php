@@ -5,8 +5,9 @@
 
 namespace libAurora\DataManager{
 
-	use libAurora\InvalidArgumentException;
+	use libAurora\RuntimeException;
 	use libAurora\BadMethodCallException;
+	use libAurora\InvalidArgumentException;
 
 	use libAurora\Version;
 
@@ -34,8 +35,8 @@ namespace libAurora\DataManager{
 
 
 		const COLUMN_NAME = 'name';
-		
-		
+
+
 		const COLUMN_VERSION = 'version';
 
 //!	Name of the connector
@@ -195,7 +196,7 @@ namespace libAurora\DataManager{
 					new ColumnDefinition(
 						static::COLUMN_NAME,
 						array( 'Type' => ColumnType::Text, 'Size' => 100 )
-					)					
+					)
 				)), new IndexDefinition);
 			}
 		}
@@ -228,7 +229,7 @@ namespace libAurora\DataManager{
 			return $highestVersion;
 		}
 
-		
+
 		public function WriteAuroraVersion(Version $version, $MigrationName){
 			if(is_string($MigrationName) === false){
 				throw new InvalidArgumentException('migrator name must be specified as string.');
@@ -244,8 +245,8 @@ namespace libAurora\DataManager{
 
 			$this->Insert(static::VERSION_TABLE_NAME, array((string)$version, $MigrationName));
 		}
-		
-		
+
+
 		public function CopyTableToTable($sourceTableName, $destinationTableName, ColDefs $columnDefinitions, IndexDefs $indexDefinitions){
 			static::validateArg_table($sourceTableName, $destinationTableName);
 
@@ -261,7 +262,116 @@ namespace libAurora\DataManager{
 			$this->EnsureTableExists($destinationTableName, $columnDefinitions, $indexDefinitions, null);
 			$this->CopyAllDataBetweenMatchingTables($sourceTableName, $destinationTableName, $columnDefinitions, $indexDefinitions);
 		}
-		
+
+
+		public function VerifyTableExists($tableName, ColDefs $columnDefinitions, IndexDefs $indexDefinitions){
+			static::validateArg_table($tableName);
+			if($this->TableExists($tableName) === false){
+				error_log('Issue finding table ' . $tableName . ' when verifying table exist!');
+				return false;
+			}
+
+			$extractedColumns = $this->ExtractColumnsFromTable($tableName);
+			$newColumns       = array();
+			foreach($columnDefinitions as $columnDefinition){
+				$newColumns[strtolower($columnDefinition->Name)] = $columnDefinition;
+				foreach($extractedColumns as $extractedDefinition){
+					if($columnDefinition->Equals($extractedDefinition) === true){
+						continue 2;
+					}
+				}
+				$thisDef = null;
+				foreach($extractedColumns as $extractedDefinition){
+					if(strtolower($extractedDefinition->Name) === strtolower($columnDefinition->Name)){
+						$thisDef = $extractedDefinition;
+						break;
+					}
+				}
+
+				if($thisDef !== null){
+					if($this->GetColumnTypeStringSymbol($thisDef->Type) === $this->GetColumnTypeStringSymbol($columnDefinition->Type)){
+						continue;
+					}else{
+						error_log('Mismatched Column Type on ' . $tableName . '.' . $thisDef->Name . ': ' . $this->GetColumnTypeStringSymbol($thisDef->Type) . ', ' . $this->GetColumnTypeStringSymbol($columnDefinition->Type));
+					}
+				}
+				error_log('Issue verifying table ' . $tableName . ' column ' . $columnDefinition->Name . ' when verifying tables exist, problem with new column definitions.');
+				return false;
+			}
+			foreach($extractedColumns as $columnDefinition){
+				if(isset($newColumns[strtolower($columnDefinition->Name)]) === false){
+					$thisDef = null;
+					foreach($newColumns as $extractedDefinition){
+						if(strtolower($extractedDefinition->Name) === strtolower($columnDefinition->Name)){
+							$thisDef = $extractedDefinition;
+							break;
+						}
+					}
+					if($thisDef === null){
+						if($this->GetColumnTypeStringSymbol($thisDef->Type) === $this->GetColumnTypeStringSymbol($columnDefinition->Type)){
+                            continue; //They are the same type, let them go on through
+						}
+					}
+					error_log('Issue verifing table ' . $tableName . ' column ' . $columnDefinition->Name . ' when verifing tables exist, problem with old column definitions');
+					return false;
+				}
+			}
+
+			$ei               = $this->ExtractIndicesFromTable($tableName);
+			$extractedIndices = array();
+			foreach($ei as $v){
+				$extractedIndices[] = $v;
+			}
+			$newIndices       = array();
+			foreach($indexDefinitions as $indexDefinition){
+				$newIndices[] = $indexDefinition;
+				$found = false;
+				foreach($extractedIndices as $v){
+					if($indexDefinition->Equals($v) === true){
+						$found = true;
+						break;
+					}
+				}
+				if($found === false){
+					$thisDef = null;
+					foreach($extractedDefinitions as $extractedDefinition){
+						if($extractedDefinition->Equals($indexDefinition) === true){
+							$thisDef = $extractedDefinition;
+							break;
+						}
+					}
+					if($thisDef === null){
+						error_log('Issue verifying table ' . $tableName . ' index ' . (string)$indexDefinition->Type . ' (' . implode(', ', $indexDefinition->Fields->getArrayCopy()) . ') when verifying table exist');
+						return false;
+					}
+				}
+			}
+			foreach($extractedDefinitions as $indexDefinition){
+				$found = false;
+				foreach($newIndices as $v){
+					if($indexDefinition->Equals($v) === true){
+						$found = true;
+						break;
+					}
+				}
+				if($found === false){
+					$thisDef = null;
+					foreach($newIndices as $extractedDefinition){
+						if($extractedDefinition->Equals($indexDefinition) === true){
+							$thisDef = $extractedDefinition;
+							break;
+						}
+					}
+					if($thisDef === null){
+						error_log('Issue verifying table ' . $tableName . ' index ' . (string)$indexDefinition->Type . ' (' . implode(', ', $indexDefinition->Fields->getArrayCopy()) . ') when verifying table exist');
+						return false;
+					}
+				}
+			}
+
+			return true;
+		}
+
 //!	Converts a column type definition object to an implementation-appropriate string
 /**
 *	In c#, this is an object method, not a class method. It's also public, whereas here we make it protected
