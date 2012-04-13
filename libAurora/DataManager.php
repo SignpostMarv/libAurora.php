@@ -372,6 +372,19 @@ namespace libAurora\DataManager{
 			return true;
 		}
 
+
+		public function EnsureTableExists($tableName, ColDefs $columnDefinitions, IndexDefs $indexDefinitions, array $renameColumns=null){
+			static::validateArg_table($tableName);
+			if($this->TableExists($tableName) === true){
+				if($this->VerifyTableExists($tableName, $columnDefinitions, $indexDefinitions) === false){
+					$this->UpdateTable($tableName, $columnDefinitions, $indexDefinitions, $renameColumns);
+				}
+				return;
+			}
+
+			$this->CreateTable($tableName, $columnDefinitions, $indexDefinitions);
+		}
+
 //!	Converts a column type definition object to an implementation-appropriate string
 /**
 *	In c#, this is an object method, not a class method. It's also public, whereas here we make it protected
