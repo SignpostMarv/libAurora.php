@@ -33,6 +33,8 @@
 
 namespace Aurora\Framework{
 
+	use libAurora\Version;
+
 	use Aurora\DataManager\Migration\ColumnDefinition\Iterator as ColDefs;
 	use Aurora\DataManager\Migration\IndexDefinition\Iterator as IndexDefs;
 
@@ -73,7 +75,7 @@ namespace Aurora\Framework{
 *	@param string $version version to write to the database
 *	@param string $MigrationName migrator module to write to the database
 */
-		public function WriteAuroraVersion($version, $MigrationName);
+		public function WriteAuroraVersion(Version $version, $MigrationName);
 
 //!	copy tables
 /**
@@ -100,7 +102,7 @@ namespace Aurora\Framework{
 *	@param object $indexDefinitions instance of Aurora::DataManager::Migration::IndexDefinition::Iterator
 *	@return boolean TRUE if the table exists as described, FALSE otherwise
 */
-		public function EnsureTableExists($table, ColDefs $columns, IndexDefs $indexDefinitions);
+		public function EnsureTableExists($table, ColDefs $columns, IndexDefs $indexDefinitions, array $renameColumns=null);
 
 //!	Rename the table from $oldTableName to $newTableName
 /**

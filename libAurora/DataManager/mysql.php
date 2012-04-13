@@ -95,11 +95,129 @@ namespace libAurora\DataManager{
 			}
 		}
 
+
+		public function UpdateTable($table, ColDefs $columns, IndexDefs $indices, array $renameColumns){
+			parent::UpdateTable($table, $columns, $indices, $renameColumns);
+
+			$table = strtolower($table);
+			if($this->TableExists($table) === false){
+				throw new RuntimeException('Trying to update a table with name of one that does not exist.');
+			}
+
+			$oldColumns = $this->ExtractColumnsFromTable($table);
+
+			$removedColums   = array();
+			$modifiedColumns = array();
+			$addedColumns    = array();
+
+			foreach($columns as $column){
+				$isOld = false;
+				foreach($oldColumns as $oldColumn){
+					if($column->Equals($oldColumn) === true){
+						$isOld = true;
+						break;
+					}
+				}
+				if($isOld === false){
+					$addedColumns[strtolower($column->Name)] = $column;
+				}
+			}
+
+			foreach($oldColumns as $column){
+				$isNew = false;
+				foreach($columns as $newColumn){
+					if($column->Equals($newColumn) === true){
+						$isNew = true;
+						break;
+					}
+				}
+				if($isNew === false){
+					if(isset($addedColumns[strtolower($column->Name)]) === true){
+						if(strtolower($column->Name) !== strtolower($addedColumns[strtolower($column->Name)]->Name) || $column->Type !== $addedColumns[strtolower($column->Name)]->Type){
+							$modifiedColumns[strtolower($column->Name)] = $addedColumns[strtolower($column->Name)];
+						}
+						unset($addedColumns[strtolower($column->Name)]);
+					}else{
+						$removedColums[strtolower($column->Name)] = $column;
+					}
+				}
+			}
+
+			try{
+				foreach($addedColumns as $column){
+					$addedColumnsQuery = 'add `' . $column->Name . '` ' . $this->GetColumnTypeStringSymbol($column->Type) . ' ';
+					$query             = 'alter table ' . $table . ' ' . $addedColumnsQuery;
+					$this->PDO->exec($query);
+				}
+				foreach($modifiedColumns as $column){
+					$modifiedColumnsQuery = 'modify column `' . $column->Name . '` ' . GetColumnTypeStringSymbol($column->Type) . ' ';
+					$query                = 'alter table ' . $table . ' ' . $modifiedColumnsQuery;
+					$this->PDO->exec($query);
+				}
+				foreach($removedColums as $column){
+					$droppedColumnsQuery = 'drop `' . $column->Name . '` ';
+					$query               = 'alter table ' . $table . ' ' . $droppedColumnsQuery;
+					$this->PDO->exec($query);
+				}
+			}catch(PDOException $e){
+				throw new RuntimeException('Failed to update table.', $e->getCode());
+			}
+
+			$oldIndicesDict = $this->ExtractIndicesFromTable($table);
+
+			$removeIndices  = array();
+			$oldIndexNames  = array();
+			$oldIndices     = array();
+			$newIndices     = array();
+
+			foreach($oldIndicesDict as $k=>$v){
+				$oldIndexNames[] = $k;
+				$oldIndices[]    = $v;
+			}
+			$i = 0;
+			foreach($oldIndices as $oldIndex){
+				$found = false;
+				foreach($newIndices as $newIndex){
+					if($oldIndex->Equals($newIndex) === true){
+						$found = true;
+						break;
+					}
+				}
+				if($found === false){
+					$removeIndices[] = $oldIndexNames[$i];
+				}
+				++$i;
+			}
+
+			foreach($indices as $newIndex){
+				$found = false;
+				foreach($oldIndices as $oldIndex){
+					if($oldIndex->Equals($newIndex) === true){
+						$found = true;
+						break;
+					}
+				}
+				if($found === false){
+					$newIndices[] = $newIndex;
+				}
+			}
+
+			try{
+				foreach($removeIndices as $oldIndex){
+					$this->PDO->exec(sprintf('ALTER TABLE `%s` DROP INDEX `%s`', $table, $oldIndex));
+				}
+				foreach($newIndices as $newIndex){
+					$this->PDO->exec(sprintf('ALTER TABLE `%s` ADD %s (`%s`)', $table, $newIndex->Type === IndexType::Primary ? 'PRIMARY KEY' : ($newIndex->Type === IndexType::Unique ? 'UNIQUE' : 'INDEX'), implode('`, `', $newIndex->Fields->getArrayCopy())));
+				}
+			}catch(PDOException $e){
+			
+			}
+		}
+
 //!	syntax differences aside, this is lifted straight from the c#
         protected static function GetColumnTypeStringSymbol(ColumnTypeDef $coldef){
             $symbol = '';
-            switch($coldef->Type)
-            {
+            switch($coldef->Type){
                 case ColumnType::Blob:
                     $symbol = 'BLOB';
 				break;
@@ -152,6 +270,7 @@ namespace libAurora\DataManager{
 
             return $symbol . ($coldef->isNull ? ' NULL' : ' NOT NULL') + (($coldef->isNull && $coldef->defaultValue == null) ? ' DEFAULT NULL' : ($coldef->defaultValue != null ? ' DEFAULT \'' . mysql_real_escape_string($coldef->defaultValue) . '\'' : '')) . (($coldef->Type == ColumnType::Integer || $coldef->Type == ColumnType::TinyInt) && $coldef->auto_increment ? ' AUTO_INCREMENT' : '');
         }
+
 
 		protected function ForceRenameTable($oldTableName, $newTableName){
 			parent::ForceRenameTable($oldTableName, $newTableName);
