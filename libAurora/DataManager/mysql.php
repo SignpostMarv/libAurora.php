@@ -70,10 +70,10 @@ namespace libAurora\DataManager{
 
 			$indicesQuery = array();
 			foreach($indices as $index){
-				$type = 'KEY';
+				$type = false;
 				switch($index->Type){
 					case IndexType::Primary:
-						continue;
+						continue 2;
 					break;
 					case IndexType::Unique:
 						$type = 'UNIQUE';
@@ -83,7 +83,7 @@ namespace libAurora\DataManager{
 						$type = 'KEY';
 					break;
 				}
-				$indicesQuery[] = sprintf('%s( %s )', $type, '`' . implode('`, ', $index->Fields->getArrayCopy()));
+				$indicesQuery[] = sprintf('%s( %s )', $type, '`' . implode('`, ', $index->Fields->getArrayCopy()) . '`');
 			}
 
 			$query = sprintf('CREATE TABLE ' . $table . ' ( %s %s) ', implode(', ', $columnDefinition), count($indicesQuery) > 0 ? ', ' . implode(', ', $indicesQuery) : '');
@@ -147,12 +147,12 @@ namespace libAurora\DataManager{
 
 			try{
 				foreach($addedColumns as $column){
-					$addedColumnsQuery = 'add `' . $column->Name . '` ' . $this->GetColumnTypeStringSymbol($column->Type) . ' ';
+					$addedColumnsQuery = 'add `' . $column->Name . '` ' . static::GetColumnTypeStringSymbol($column->Type) . ' ';
 					$query             = 'alter table ' . $table . ' ' . $addedColumnsQuery;
 					$this->PDO->exec($query);
 				}
 				foreach($modifiedColumns as $column){
-					$modifiedColumnsQuery = 'modify column `' . $column->Name . '` ' . GetColumnTypeStringSymbol($column->Type) . ' ';
+					$modifiedColumnsQuery = 'modify column `' . $column->Name . '` ' . static::GetColumnTypeStringSymbol($column->Type) . ' ';
 					$query                = 'alter table ' . $table . ' ' . $modifiedColumnsQuery;
 					$this->PDO->exec($query);
 				}

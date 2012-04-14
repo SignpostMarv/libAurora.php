@@ -73,13 +73,13 @@ namespace Aurora\DataManager\Migration{
 		const DisableUntilUpgrade = '';
 
 
-		private $renameSchema  = array();
+		protected $renameSchema  = array();
 
 
-		private $renameColumns = array();
+		protected $renameColumns = array();
 
 
-		private $schema        = array();
+		protected $schema        = array();
 
 
 		private $dropIndices   = array();

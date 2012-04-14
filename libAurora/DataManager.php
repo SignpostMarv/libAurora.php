@@ -289,10 +289,10 @@ namespace libAurora\DataManager{
 				}
 
 				if($thisDef !== null){
-					if($this->GetColumnTypeStringSymbol($thisDef->Type) === $this->GetColumnTypeStringSymbol($columnDefinition->Type)){
+					if(static::GetColumnTypeStringSymbol($thisDef->Type) === static::GetColumnTypeStringSymbol($columnDefinition->Type)){
 						continue;
 					}else{
-						error_log('Mismatched Column Type on ' . $tableName . '.' . $thisDef->Name . ': ' . $this->GetColumnTypeStringSymbol($thisDef->Type) . ', ' . $this->GetColumnTypeStringSymbol($columnDefinition->Type));
+						error_log('Mismatched Column Type on ' . $tableName . '.' . $thisDef->Name . ': ' . static::GetColumnTypeStringSymbol($thisDef->Type) . ', ' . static::GetColumnTypeStringSymbol($columnDefinition->Type));
 					}
 				}
 				error_log('Issue verifying table ' . $tableName . ' column ' . $columnDefinition->Name . ' when verifying tables exist, problem with new column definitions.');
@@ -308,7 +308,7 @@ namespace libAurora\DataManager{
 						}
 					}
 					if($thisDef === null){
-						if($this->GetColumnTypeStringSymbol($thisDef->Type) === $this->GetColumnTypeStringSymbol($columnDefinition->Type)){
+						if(static::GetColumnTypeStringSymbol($thisDef->Type) === static::GetColumnTypeStringSymbol($columnDefinition->Type)){
                             continue; //They are the same type, let them go on through
 						}
 					}
