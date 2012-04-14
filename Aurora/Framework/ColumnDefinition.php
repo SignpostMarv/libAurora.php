@@ -37,52 +37,52 @@ namespace Aurora\Framework{
 	class ColumnType{
 
 
-        const Blob       = 0;
+        const Unknown    = 0;
 
 
-        const LongBlob   = 1;
+        const Blob       = 1;
 
 
-        const Char       = 2;
+        const LongBlob   = 2;
 
 
-        const Date       = 3;
+        const Char       = 3;
 
 
-        const DateTime   = 4;
+        const Date       = 4;
 
 
-        const Double     = 5;
+        const DateTime   = 5;
 
 
-        const Integer    = 6;
+        const Double     = 6;
 
 
-        const String     = 7;
+        const Integer    = 7;
 
 
-        const Text       = 8;
+        const String     = 8;
 
 
-        const MediumText = 9;
+        const Text       = 9;
 
 
-        const LongText   = 10;
+        const MediumText = 10;
 
 
-        const TinyInt    = 11;
+        const LongText   = 11;
 
 
-        const Float      = 12;
+        const TinyInt    = 12;
 
 
-        const Boolean    = 13;
+        const Float      = 13;
 
 
-        const UUID       = 14;
+        const Boolean    = 14;
 
 
-        const Unknown    = 15;
+        const UUID       = 15;
 	}
 
 
@@ -200,7 +200,7 @@ namespace Aurora\Framework{
 //!	we're providing a public constructor to mimic usage in c#
 		public function __construct($name, array $type=null){
 			$this->__set('Name', $name);
-			$this->Type = new ColumnTypeDef($type=null);
+			$this->Type = new ColumnTypeDef($type);
 		}
 
 
