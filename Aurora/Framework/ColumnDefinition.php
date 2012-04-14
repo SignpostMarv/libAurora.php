@@ -232,6 +232,8 @@ namespace Aurora\Framework{
 
 namespace Aurora\Framework\ColumnDefinition{
 
+	use Aurora\Framework\InvalidArgumentException;
+
 	use ArrayObject;
 
 

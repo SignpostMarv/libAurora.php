@@ -14,6 +14,11 @@ namespace libAurora\DataManager{
 	use Aurora\Framework\QueryFilter;
 	use Aurora\DataManager\Migration\MigrationManager;
 
+	use Aurora\Framework\ColumnType;
+	use Aurora\Framework\ColumnTypeDef;
+	use Aurora\Framework\ColumnDefinition\Iterator as ColDefs;
+	use Aurora\Framework\IndexDefinition\Iterator as IndexDefs;
+
 //!	PDO implementation of Aurora::Framework::IDataConnector
 	abstract class PDO extends DataManagerBase{
 
@@ -263,6 +268,87 @@ namespace libAurora\DataManager{
 			}catch(PDOException $e){
 				throw new RuntimeException('Failed to drop table.');
 			}
+		}
+
+
+		protected function CopyAllDataBetweenMatchingTables($sourceTableName, $destinationTableName, ColDefs $columnDefinitions, IndexDefs $indexDefinitions){
+			static::validateArg_table($sourceTableName, $destinationTableName);
+			$sourceTableName      = strtolower($sourceTableName);
+			$destinationTableName = strtolower($destinationTableName);
+			try{
+				$this->PDO->exec(sprintf('INSERT INTO %s SELECT * FROM %s', $destinationTableName, $sourceTableName));
+			}catch(PDOException $e){
+				throw new RuntimeException('An exception was thrown when copying data between tables.', $e->getCode());
+			}
+		}
+
+
+		protected static function ConvertTypeToColumnType($typeString){
+			if(is_string($typeString) === false){
+				throw new InvalidArgumentException('typeString must be specified as string.');
+			}
+
+			$tStr = strtolower($typeString);
+
+			$typeDef = new ColumnTypeDef;
+
+			switch($tStr){
+                case 'blob':
+                    $typeDef->Type = ColumnType::Blob;
+				break;
+                case 'longblob':
+                    $typeDef->Type = ColumnType::LongBlob;
+				break;
+                case 'date':
+                    $typeDef->Type = ColumnType::Date;
+				break;
+                case 'datetime':
+                    $typeDef->Type = ColumnType::DateTime;
+				break;
+                case 'double':
+                    $typeDef->Type = ColumnType::Double;
+				break;
+                case 'float':
+                    $typeDef->Type = ColumnType::Float;
+				break;
+                case 'text':
+                    $typeDef->Type = ColumnType::Text;
+				break;
+                case 'mediumtext':
+                    $typeDef->Type = ColumnType::MediumText;
+				break;
+                case 'longtext':
+                    $typeDef->Type = ColumnType::LongText;
+				break;
+                case 'uuid':
+                    $typeDef->Type = ColumnType::UUID;
+				break;
+                case 'integer':
+                    $typeDef->Type = ColumnType::Integer;
+                    $typeDef->Size = 11;
+				break;
+				default:
+					static $regexTypes = array(
+						'/^int\((\d+)\)( unsigned)?$/'     => ColumnType::Integer,
+						'/^tinyint\((\d+)\)( unsigned)?$/' => ColumnType::TinyInt,
+						'/^char\((\d+)\)$/'                => ColumnType::Char,
+						'/^varchar\((\d+)\)$/'             => ColumnType::String
+					);
+
+					foreach($regexTypes as $regex => $regexType){
+						if(preg_match($regex, $tStr, $matches) == 1){
+							$typeDef->Type     = $regexType;
+							$typeDef->Size     = (integer)$matches[1];
+							$typeDef->unsigned = ($regexType === ColumnType::Integer || $regexType === ColumnType::TinyInt) ? isset($matches[2]) && $matches[2] === ' unsigned' : false;
+							break 2;
+						}
+					}
+
+					throw new RuntimeException('You\'ve discovered some type that\'s not reconized by Aurora, please place the correct conversion in ConvertTypeToColumnType. Type: ' + $tStr);
+				break;
+			}
+
+			return $typeDef;
 		}
 	}
 }

@@ -276,7 +276,7 @@ namespace libAurora\DataManager{
 			foreach($columnDefinitions as $columnDefinition){
 				$newColumns[strtolower($columnDefinition->Name)] = $columnDefinition;
 				foreach($extractedColumns as $extractedDefinition){
-					if($columnDefinition->Equals($extractedDefinition) === true){
+					if($columnDefinition->Type->Equals($extractedDefinition->Type) === true){
 						continue 2;
 					}
 				}
@@ -418,6 +418,16 @@ namespace libAurora\DataManager{
 		public function DropTable($tableName){
 			static::validateArg_table($tableName);
 		}
+
+
+		abstract protected function CopyAllDataBetweenMatchingTables($sourceTableName, $destinationTableName, ColDefs $columnDefinitions, IndexDefs $indexDefinitions);
+
+
+/**
+*	@param string $tableName name of table to extract columns from.
+*	@return object instance of Aurora::Framework::ColumnDefinition::Iterator
+*/
+		abstract protected function ExtractColumnsFromTable($tableName);
 	}
 }
 

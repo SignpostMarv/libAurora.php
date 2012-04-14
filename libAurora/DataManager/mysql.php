@@ -16,6 +16,7 @@ namespace libAurora\DataManager{
 	use Aurora\Framework\ColumnType;
 	use Aurora\Framework\ColumnTypeDef;
 
+	use Aurora\Framework\ColumnDefinition;
 	use Aurora\Framework\ColumnDefinition\Iterator as ColDefs;
 	use Aurora\Framework\IndexDefinition\Iterator as IndexDefs;
 
@@ -282,6 +283,52 @@ namespace libAurora\DataManager{
 			}catch(PDOException $e){
 				throw new RuntimeException('Failed to rename table.', $e->getCode());
 			}
+		}
+
+
+		protected function ExtractColumnsFromTable($tableName){
+			static::validateArg_table($tableName);
+
+			$defs = new ColDefs;
+			$tableName = strtolower($tableName);
+
+			$sth = null;
+			static::prepareSth($this->PDO, $sth, 'DESC ' . $tableName);
+			static::returnExecute($sth);
+
+			$results = array();
+			$parts   = array();
+			try{
+				$parts = $sth->fetchAll(\PDO::FETCH_NUM);
+			}catch(PDOException $e){
+				throw new RuntimeException('Failed to fetch query results.');
+			}
+
+			foreach($parts as $v){
+				$results = array_merge($results, $v);
+			}
+
+			if(count($results) % 6 !== 0){
+				throw new RuntimeException('MySQL table description should consist of 6 fields per row.');
+			}
+
+			$j = count($results);
+			for($i=0;$i<$j;$i += 6){
+				list($name, $type, $null, $key, $default, $extra) = array_slice($results, $i, 6);
+
+				$column                       = new ColumnDefinition($name);
+				$type                         = static::ConvertTypeToColumnType($type);
+				$column->Type->Type           = $type->Type;
+				$column->Type->Size           = $type->Size;
+				$column->Type->unsigned       = $type->unsigned;
+				$column->Type->isNull         = $null === 'YES';
+				$column->Type->auto_increment = strpos($extra, 'auto_increment') >= 0;
+				$column->Type->defaultValue   = $default;
+
+				$defs[] = $column;
+			}
+
+			return $defs;
 		}
 	}
 }
