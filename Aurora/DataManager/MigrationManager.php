@@ -77,13 +77,12 @@ namespace Aurora\DataManager\Migration{
 				throw new InvalidArgumentException('OperationType must be specified as integer.');
 			}else if($createDefaultAndUpgradeToTarget < 0 || $createDefaultAndUpgradeToTarget > 2){
 				throw new InvalidArgumentException('OperationType must be 0, 1 or 2.');
-			}else if(isset($endVersion) === true && isset($currentVersion, $startVersion) === false){
-				throw new BadMethodCallException('Cannot specify endVersion without specifying startVersion.');
 			}
 
-			$this->CurrentVersion = $currentVersion;
-			$this->StartVersion   = $startVersion  ;
-			$this->EndVersion     = $endVersion    ;
+			$this->OperationType  = $createDefaultAndUpgradeToTarget;
+			$this->CurrentVersion = $currentVersion                 ;
+			$this->StartVersion   = $startVersion                   ;
+			$this->EndVersion     = $endVersion                     ;
 		}
 	}
 
@@ -145,7 +144,7 @@ namespace Aurora\DataManager\Migration{
 
 			foreach(static::$allMigrators as $migrator){
 				if(constant($migrator . '::MigrationName') === $migratorName){
-					$this->migrators[] = call_user_func($migration . '::f');
+					$this->migrators[] = call_user_func($migrator . '::f');
 				}
 			}
 		}
@@ -166,14 +165,19 @@ namespace Aurora\DataManager\Migration{
 			if($currentVersion == null){
 
 				$defaultMigrator = $this->GetHighestVersionMigratorThatCanProvideDefaultSetup();
-				$this->currentVersion = $defaultMigrator->Version;
+				$currentVersion = $defaultMigrator->Version;
 
 				$startMigrator   = $this->GetMigratorAfterVersion($defaultMigrator->Version);
 				$latestMigrator  = $this->GetLatestVersionMigrator();
 
 				$targetMigrator  = $defaultMigrator->Version === $latestMigrator ? null : $latestMigrator;
 
-				$this->operationDescription = new MigrationOperationDescription(MigrationOperationTypes::CreateDefaultAndUpgradeToTarget, $currentVersion, isset($startMigrator) ? $startMigrator->Version : null, isset($targetMigrator) ? $targetMigrator->Version : null);
+				$this->operationDescription = new MigrationOperationDescription(
+					MigrationOperationTypes::CreateDefaultAndUpgradeToTarget,
+					$currentVersion,
+					isset($startMigrator) ? $startMigrator->Version : null,
+					isset($targetMigrator) ? $targetMigrator->Version : null
+				);
 			}else{
 
 				$startMigrator   = $this->GetMigratorAfterVersion($currentVersion);
@@ -234,7 +238,7 @@ namespace Aurora\DataManager\Migration{
 
 				if($this->operationDescription->OperationType === MigrationOperationTypes::CreateDefaultAndUpgradeToTarget){
 					try{
-						$this->currentMigrator->CreateDefaults($this->genericData);
+						$currentMigrator->CreateDefaults($this->genericData);
 					}catch(\Exception $e){
 					}
 					$this->executed = true;
@@ -331,7 +335,7 @@ namespace Aurora\DataManager\Migration{
 		public function GetMigratorByVersion(Version $version=null){
 			if(isset($version) === true){
 				foreach($this->migrators as $m){
-					if($m->Version->Equals($version) === true){
+					if(Version::cmp($m->Version, $version) === 0){
 						return $m;
 					}
 				}

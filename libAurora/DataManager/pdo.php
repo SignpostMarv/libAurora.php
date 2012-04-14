@@ -191,7 +191,7 @@ namespace libAurora\DataManager{
 
 			$ps = array();
 			foreach($values as $k=>$v){
-				$ps[':' . QueryFilter::preparedKey($k)] = $v;
+				$ps[':' . QueryFilter::preparedKey(is_integer($k) ? 'insert_' . $k : $k )] = $v;
 			}
 			unset($values);
 

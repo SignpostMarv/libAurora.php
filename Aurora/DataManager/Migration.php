@@ -85,7 +85,7 @@ namespace Aurora\DataManager\Migration{
 		private $dropIndices   = array();
 
 
-		private static $Version;
+		protected static $Version;
 
 
 		public function __get($name){
@@ -126,7 +126,7 @@ namespace Aurora\DataManager\Migration{
 			if($genericData->GetAuroraVersion(static::MigrationName) != $this->__get('Version')){
 				return false;
 			}
-			return DoValidate($genericData);
+			return $this->DoValidate($genericData);
 		}
 
 //!	Performs the actual validation
@@ -150,8 +150,8 @@ namespace Aurora\DataManager\Migration{
 *	@param object $genericData instance of Aurora::Framework::IDataConnector
 */
 		public final function Migrate(IDataConnector $genericData){
-			DoMigrate($genericData);
-			$genericData->WriteAuroraVersion(static::Version, static::MigrationName);
+			$this->DoMigrate($genericData);
+			$genericData->WriteAuroraVersion(new Version(static::Version), static::MigrationName);
 		}
 
 //!	pre-flights the migration ? ~SignpostMarv
@@ -162,8 +162,8 @@ namespace Aurora\DataManager\Migration{
 *	@param object $genericData instance of Aurora::Framework::IDataConnector
 */
 		public final function CreateDefaults(IDataConnector $genericData){
-			DoCreateDefaults($genericData);
-			$genericData->WriteAuroraVersion(static::Version, static::MigrationName);
+			$this->DoCreateDefaults($genericData);
+			$genericData->WriteAuroraVersion(new Version(static::Version), static::MigrationName);
 		}
 
 //!	performs the actual CreateDefaults operation ? ~SignpostMarv
