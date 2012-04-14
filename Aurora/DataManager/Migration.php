@@ -69,6 +69,9 @@ namespace Aurora\DataManager\Migration{
 //!	string in c# this is an property with a getter only.
 		const MigrationName = '-Example'; // this deliberately starts with an invalid character
 
+//!	string a space-seperated list of tables that have major changes made to them, requiring portions of a website that use them to be disabled until after an upgrade has been performed.
+		const DisableUntilUpgrade = '';
+
 
 		private $renameSchema  = array();
 
