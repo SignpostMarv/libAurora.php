@@ -188,7 +188,7 @@ namespace libAurora\DataManager{
 
 		protected function ensureVersionTableExists(){
 			if($this->TableExists(static::VERSION_TABLE_NAME) === false){
-				$this->CreateTable(static::VERSION_TABLE_NAME, new ColDefs(array(
+				$this->CreateTable(static::VERSION_TABLE_NAME, new ColDefs(
 					new ColumnDefinition(
 						static::COLUMN_VERSION,
 						array( 'Type' => ColumnType::Text, 'Size' => 100 )
@@ -197,7 +197,7 @@ namespace libAurora\DataManager{
 						static::COLUMN_NAME,
 						array( 'Type' => ColumnType::Text, 'Size' => 100 )
 					)
-				)), new IndexDefs);
+				), new IndexDefs);
 			}
 		}
 

@@ -118,8 +118,9 @@ namespace Aurora\Framework\IndexDefinition{
 	abstract class abstractIterator extends ArrayObject{
 
 
-		public function __construct(array $values=null){
+		public function __construct(){
 			parent::__construct(array(), \ArrayObject::STD_PROP_LIST);
+			$values = func_get_args();
 			if(isset($values) === true){
 				foreach($values as $k => $v){
 					$this[$k] = $v;
