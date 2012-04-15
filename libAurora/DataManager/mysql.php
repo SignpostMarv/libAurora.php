@@ -61,7 +61,7 @@ namespace libAurora\DataManager{
 				$columnDefinition[] = '`' . $column->Name . '` ' . static::GetColumnTypeStringSymbol($column->Type);
 			}
 			if($primary != null && $primary->Fields->count() > 0){
-				$columnDefinition[] = 'PRIMARY KEY (`' . implode('`, ', $primary->Fields->getArrayCopy()) . '`)';
+				$columnDefinition[] = 'PRIMARY KEY (`' . implode('`, `', $primary->Fields->getArrayCopy()) . '`)';
 			}
 
 			$indicesQuery = array();
@@ -79,7 +79,7 @@ namespace libAurora\DataManager{
 						$type = 'KEY';
 					break;
 				}
-				$indicesQuery[] = sprintf('%s( %s )', $type, '`' . implode('`, ', $index->Fields->getArrayCopy()) . '`');
+				$indicesQuery[] = sprintf('%s( %s )', $type, '`' . implode('`, `', $index->Fields->getArrayCopy()) . '`');
 			}
 
 			$query = sprintf('CREATE TABLE ' . $table . ' ( %s %s) ', implode(', ', $columnDefinition), count($indicesQuery) > 0 ? ', ' . implode(', ', $indicesQuery) : '');
@@ -111,7 +111,7 @@ namespace libAurora\DataManager{
 			foreach($columns as $column){
 				$isOld = false;
 				foreach($oldColumns as $oldColumn){
-					if($column->Equals($oldColumn) === true){
+					if($column->Type->Equals($oldColumn->Type) === true){
 						$isOld = true;
 						break;
 					}
@@ -124,7 +124,7 @@ namespace libAurora\DataManager{
 			foreach($oldColumns as $column){
 				$isNew = false;
 				foreach($columns as $newColumn){
-					if($column->Equals($newColumn) === true){
+					if($column->Type->Equals($newColumn->Type) === true){
 						$isNew = true;
 						break;
 					}
@@ -266,7 +266,7 @@ namespace libAurora\DataManager{
 				break;
             }
 
-            return $symbol . ($coldef->isNull ? ' NULL' : ' NOT NULL') . (($coldef->isNull && $coldef->defaultValue == null) ? ' DEFAULT NULL' : ($coldef->defaultValue != null ? ' DEFAULT \'' . mysql_real_escape_string($coldef->defaultValue) . '\'' : '')) . (($coldef->Type == ColumnType::Integer || $coldef->Type == ColumnType::TinyInt) && $coldef->auto_increment ? ' AUTO_INCREMENT' : '');
+            return $symbol . ($coldef->isNull ? ' NULL' : ' NOT NULL') . (($coldef->isNull && $coldef->defaultValue == null) ? ' DEFAULT NULL' : ($coldef->defaultValue != null ? ' DEFAULT ' . ($coldef->defaultValue === 'NULL' ? 'NULL' : '\'' . preg_replace('/([\r\n\x00\x1a\\\'"])/', '\\\1', $coldef->defaultValue) . '\'') : '')) . (($coldef->Type == ColumnType::Integer || $coldef->Type == ColumnType::TinyInt) && $coldef->auto_increment ? ' AUTO_INCREMENT' : '');
         }
 
 
@@ -314,7 +314,9 @@ namespace libAurora\DataManager{
 				$column                       = new ColumnDefinition($name);
 				$type                         = static::ConvertTypeToColumnType($type);
 				$column->Type->Type           = $type->Type;
-				$column->Type->Size           = $type->Size;
+				if(isset($column->Type->Size) === true){
+					$column->Type->Size       = $type->Size;
+				}
 				$column->Type->unsigned       = $type->unsigned;
 				$column->Type->isNull         = $null === 'YES';
 				$column->Type->auto_increment = strpos($extra, 'auto_increment') >= 0;
