@@ -182,7 +182,9 @@ namespace libAurora\DataManager{
 		public function UpdateTable($table, ColDefs $column, IndexDefs $indices, array $renameColumns){
 			static::validateArg_table($table);
 
-			call_user_func_array(get_class($this) . '::validateArg_field', array_merge(array_keys($renameColumns), array_values($renameColumns)));
+			if(count($renameColumns) > 0){
+				call_user_func_array(get_class($this) . '::validateArg_field', array_merge(array_keys($renameColumns), array_values($renameColumns)));
+			}
 		}
 
 
