@@ -121,8 +121,8 @@ namespace Aurora\Framework\IndexDefinition{
 		public function __construct(array $values=null){
 			parent::__construct(array(), \ArrayObject::STD_PROP_LIST);
 			if(isset($values) === true){
-				foreach($values as $v){
-					$this[] = $v;
+				foreach($values as $k => $v){
+					$this[$k] = $v;
 				}
 			}
 		}
@@ -131,9 +131,14 @@ namespace Aurora\Framework\IndexDefinition{
 
 	class Iterator extends abstractIterator{
 
+//!	This is identical to the regex on libAurora::DataManager::DataManagerBase::regex_Query_arg_table, but the idea of referencing the libAurora namespace from the Aurora namespace made me uncomfortable. ~SignpostMarv
+		const regex_Query_arg_table = '/^[A-z0-9_]+$/';
+
 //!	Restricts values to instances of Aurora::Framework::IndexDefinition
 		public function offsetSet($offset, $value){
-			if($value instanceof \Aurora\Framework\IndexDefinition){
+			if(is_string($offset) === true && preg_match(ColumnDefinition::regex_fieldName, $offset) != 1){
+				throw new InvalidArgumentException('When array offsets are strings, they must be valid field names.');
+			}else if($value instanceof \Aurora\Framework\IndexDefinition){
 				parent::offsetSet($offset, $value);
 			}else{
 				throw new InvalidArgumentException('Values must be instances of IndexDefinition.');

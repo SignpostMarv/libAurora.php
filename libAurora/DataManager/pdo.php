@@ -113,6 +113,24 @@ namespace libAurora\DataManager{
 			}
 		}
 
+//!	Gets the results of a query as a one-dimensional array
+		protected static function linearResults(PDOStatement $sth){
+			$retVal = array();
+
+			$parts = array();
+			try{
+				$parts = $sth->fetchAll(\PDO::FETCH_NUM);
+			}catch(PDOException $e){
+				throw new RuntimeException('Failed to fetch query results.');
+			}
+
+			foreach($parts as $v){
+				$retVal = array_merge($retVal, $v);
+			}
+
+			return $retVal;
+		}
+
 //!	Performs a select query
 /**
 *	@param array $wantedValue an array of fields or operations to return. Must contain only strings.
@@ -128,7 +146,6 @@ namespace libAurora\DataManager{
 
 			$query = sprintf('SELECT %s FROM %s', implode(', ', $wantedValue), $table);
 			$ps = array();
-			$retVal = array();
 
 			if(isset($queryFilter) === true && $queryFilter->count() > 0){
 				$query .= ' WHERE ' . $queryFilter->ToSQL($ps);
@@ -164,18 +181,7 @@ namespace libAurora\DataManager{
 				throw new RuntimeException('Execution of the query threw an exception.', $e->getCode());
 			}
 
-			$parts = array();
-			try{
-				$parts = $sth->fetchAll(\PDO::FETCH_NUM);
-			}catch(PDOException $e){
-				throw new RuntimeException('Failed to fetch query results.');
-			}
-
-			foreach($parts as $v){
-				$retVal = array_merge($retVal, $v);
-			}
-
-			return $retVal;
+			return static::linearResults($sth);
 		}
 
 //!	Performs an insert query

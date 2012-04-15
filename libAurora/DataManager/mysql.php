@@ -12,12 +12,14 @@ namespace libAurora\DataManager{
 	use PDOStatement;
 
 	use Aurora\Framework\QueryFilter;
-	use Aurora\Framework\IndexType;
+
 	use Aurora\Framework\ColumnType;
 	use Aurora\Framework\ColumnTypeDef;
-
 	use Aurora\Framework\ColumnDefinition;
 	use Aurora\Framework\ColumnDefinition\Iterator as ColDefs;
+
+	use Aurora\Framework\IndexType;
+	use Aurora\Framework\IndexDefinition;
 	use Aurora\Framework\IndexDefinition\Iterator as IndexDefs;
 
 //!	mysql-specific PDO implementation of Aurora::Framework::IDataConnector
@@ -32,18 +34,11 @@ namespace libAurora\DataManager{
 
 			$retVal = array();
 
-			try{
-				$sth = null;
-				static::prepareSth($this->PDO, $sth, 'SHOW TABLES');
-				$sth->execute();
-				$parts = $sth->fetchAll(\PDO::FETCH_NUM);
-				foreach($parts as $v){
-					$retVal = array_merge($retVal, $v);
-				}
-			}catch(PDOException $e){
-			}
+			$sth = null;
+			static::prepareSth($this->PDO, $sth, 'SHOW TABLES');
+			static::returnExecute($sth);
 
-			return in_array($table, $retVal);
+			return in_array($table, static::linearResults($sth));
 		}
 
 
@@ -326,6 +321,47 @@ namespace libAurora\DataManager{
 				$column->Type->defaultValue   = $default;
 
 				$defs[] = $column;
+			}
+
+			return $defs;
+		}
+
+
+		protected function ExtractIndicesFromTable($tableName){
+			static::validateArg_table($tableName);
+
+			$defs          = new IndexDefs;
+			$tableName     = strtolower($tableName);
+			$indexLookup   = array();
+			$indexIsUnique = array();
+
+			$sth = null;
+			static::prepareSth($this->PDO, $sth, 'SHOW INDEX IN ' . $tableName);
+			static::returnExecute($sth);
+
+			$rdr = static::linearResults($sth);
+			if(count($rdr) % 13 !== 0){
+				throw new RuntimeException('MySQL index description should consist of 6 fields per row.');
+			}
+
+			$j = count($rdr);
+			for($i=0;$i<$j;$i+=13){
+				list($table, $non_unique, $key_name, $seq_in_index, $column_name, $collation, $cardinality, $sub_part, $packed, $null, $index_type, $comment, $index_comment) = array_slice($rdr, $i, 13);
+				$seq_in_index = (integer)$seq_in_index;
+
+				if(isset($indexLookup[$key_name]) === false){
+					$indexLookup[$key_name] = array();
+				}
+				$indexIsUnique[$key_name] = (integer)$non_unique === 0;
+				$indexLookup[$key_name][$seq_in_index - 1] = $column_name;
+			}
+
+			foreach($indexLookup as $indexKey => $index){
+				sort($index);
+				$defs[$indexKey] = new IndexDefinition(
+					array_values($index),
+					$indexIsUnique[$indexKey] ? ($indexKey === 'PRIMARY' ? IndexType::Primary : IndexType::Unique) : IndexType::Index
+				);
 			}
 
 			return $defs;

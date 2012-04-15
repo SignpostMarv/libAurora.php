@@ -346,7 +346,7 @@ namespace libAurora\DataManager{
 					}
 				}
 			}
-			foreach($extractedDefinitions as $indexDefinition){
+			foreach($extractedIndices as $indexDefinition){
 				$found = false;
 				foreach($newIndices as $v){
 					if($indexDefinition->Equals($v) === true){
@@ -428,6 +428,12 @@ namespace libAurora\DataManager{
 *	@return object instance of Aurora::Framework::ColumnDefinition::Iterator
 */
 		abstract protected function ExtractColumnsFromTable($tableName);
+
+/**
+*	@param string $tableName name of table to extract columns from.
+*	@return object instance of Aurora::Framework::IndexDefinition::Iterator with array keys being the names of indices
+*/
+		abstract protected function ExtractIndicesFromTable($tableName);
 	}
 }
 
