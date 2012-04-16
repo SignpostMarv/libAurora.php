@@ -336,7 +336,7 @@ namespace libAurora\DataManager{
 				}
 				if($found === false){
 					$thisDef = null;
-					foreach($extractedDefinitions as $extractedDefinition){
+					foreach($extractedIndices as $extractedDefinition){
 						if($extractedDefinition->Equals($indexDefinition) === true){
 							$thisDef = $extractedDefinition;
 							break;

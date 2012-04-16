@@ -314,12 +314,12 @@ namespace libAurora\DataManager{
 				$column                       = new ColumnDefinition($name);
 				$type                         = static::ConvertTypeToColumnType($type);
 				$column->Type->Type           = $type->Type;
-				if(isset($column->Type->Size) === true){
+				if($type->Size !== null){
 					$column->Type->Size       = $type->Size;
 				}
 				$column->Type->unsigned       = $type->unsigned;
 				$column->Type->isNull         = $null === 'YES';
-				$column->Type->auto_increment = strpos($extra, 'auto_increment') >= 0;
+				$column->Type->auto_increment = strpos($extra, 'auto_increment') !== false;
 				$column->Type->defaultValue   = $default;
 
 				$defs[] = $column;
@@ -359,7 +359,7 @@ namespace libAurora\DataManager{
 			}
 
 			foreach($indexLookup as $indexKey => $index){
-				sort($index);
+				ksort($index);
 				$defs[$indexKey] = new IndexDefinition(
 					array_values($index),
 					$indexIsUnique[$indexKey] ? ($indexKey === 'PRIMARY' ? IndexType::Primary : IndexType::Unique) : IndexType::Index
