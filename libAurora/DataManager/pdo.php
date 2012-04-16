@@ -65,7 +65,8 @@ namespace libAurora\DataManager{
 
 			$migrationManager = new MigrationManager($this, $migratorName, $validateTables);
 			$migrationManager->DetermineOperation();
-			if($migrationManager->GetDescriptionOfCurrentOperation()->BreakingChanges === false || $forceBreakingChanges === true){
+			$this->hasBreakingChanges = $migrationManager->GetDescriptionOfCurrentOperation()->BreakingChanges;
+			if($this->hasBreakingChanges === false || $forceBreakingChanges === true){
 				$migrationManager->ExecuteOperation();
 			}
 		}

@@ -59,6 +59,14 @@ namespace libAurora\DataManager{
 		const regex_Query_arg_table = '/^[A-z0-9_]+$/';
 		const regex_Query_arg_field = '/^[A-z][A-z0-9_]+$/';
 
+
+		protected $hasBreakingChanges = false;
+
+
+		public function HasBreakingChanges(){
+			return $this->hasBreakingChanges;
+		}
+
 //!	Performs validation on table names
 		protected static function validateArg_table(){
 			$args = func_get_args();

@@ -48,6 +48,9 @@ namespace Aurora\Framework{
 */
 		public static function Identifier();
 
+
+		public function HasBreakingChanges();
+
 //!	Checks to see if $table exists
 /**
 *	@param string $table name of the table
