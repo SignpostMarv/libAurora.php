@@ -186,7 +186,6 @@ namespace Aurora\DataManager\Migration{
 					$targetMigrator = $this->GetLatestVersionMigrator();
 					$this->operationDescription = new MigrationOperationDescription(MigrationOperationTypes::UpgradeToTarget, $currentVersion, $startMigrator->Version, $targetMigrator->Version);
 				}else{
-
 					$this->operationDescription = new MigrationOperationDescription(MigrationOperationTypes::DoNothing, $currentVersion);
 				}
 			}
