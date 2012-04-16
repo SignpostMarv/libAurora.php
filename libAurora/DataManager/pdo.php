@@ -90,7 +90,7 @@ namespace libAurora\DataManager{
 							$type = \PDO::PARAM_INT;
 						break;
 						case 'NULL':
-							throw new RuntimeException('NULL is not a supported parameter.');
+							$type = \PDO::PARAM_NULL;
 						break;
 						default:
 							$v = (string)$v;
