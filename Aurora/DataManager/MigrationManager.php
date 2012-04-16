@@ -67,22 +67,28 @@ namespace Aurora\DataManager\Migration{
 		private $OperationType;
 
 
+		private $BreakingChanges = false;
+
+
 		public function __get($name){
-			return ($name === 'CurrentVersion' || $name === 'StartVersion' || $name === 'EndVersion' || $name === 'OperationType') ? $this->$name : null;
+			return ($name === 'CurrentVersion' || $name === 'StartVersion' || $name === 'EndVersion' || $name === 'OperationType' || $name === 'BreakingChanges') ? $this->$name : null;
 		}
 
 
-		public function __construct($createDefaultAndUpgradeToTarget, Version $currentVersion, Version $startVersion=null, Version $endVersion=null){
+		public function __construct($createDefaultAndUpgradeToTarget, Version $currentVersion, Version $startVersion=null, Version $endVersion=null, $breakingChanges=false){
 			if(is_integer($createDefaultAndUpgradeToTarget) === false){
 				throw new InvalidArgumentException('OperationType must be specified as integer.');
 			}else if($createDefaultAndUpgradeToTarget < 0 || $createDefaultAndUpgradeToTarget > 2){
 				throw new InvalidArgumentException('OperationType must be 0, 1 or 2.');
+			}else if(is_bool($breakingChanges) === false){
+				throw new InvalidArgumentException('breaking changes flag must be specified as boolean.');
 			}
 
-			$this->OperationType  = $createDefaultAndUpgradeToTarget;
-			$this->CurrentVersion = $currentVersion                 ;
-			$this->StartVersion   = $startVersion                   ;
-			$this->EndVersion     = $endVersion                     ;
+			$this->OperationType   = $createDefaultAndUpgradeToTarget;
+			$this->CurrentVersion  = $currentVersion                 ;
+			$this->StartVersion    = $startVersion                   ;
+			$this->EndVersion      = $endVersion                     ;
+			$this->BreakingChanges = $breakingChanges                ;
 		}
 	}
 
@@ -176,7 +182,8 @@ namespace Aurora\DataManager\Migration{
 					MigrationOperationTypes::CreateDefaultAndUpgradeToTarget,
 					$currentVersion,
 					isset($startMigrator) ? $startMigrator->Version : null,
-					isset($targetMigrator) ? $targetMigrator->Version : null
+					isset($targetMigrator) ? $targetMigrator->Version : null,
+					(isset($startMigrator) ? $startMigrator->HasBreakingchanges($this->genericData) : false) || (isset($targetMigrator) ? $targetMigrator->HasBreakingchanges($this->genericData) : false)
 				);
 			}else{
 
@@ -184,9 +191,18 @@ namespace Aurora\DataManager\Migration{
 				if(isset($startMigrator) === true){
 
 					$targetMigrator = $this->GetLatestVersionMigrator();
-					$this->operationDescription = new MigrationOperationDescription(MigrationOperationTypes::UpgradeToTarget, $currentVersion, $startMigrator->Version, $targetMigrator->Version);
+					$this->operationDescription = new MigrationOperationDescription(
+						MigrationOperationTypes::UpgradeToTarget,
+						$currentVersion,
+						$startMigrator->Version,
+						$targetMigrator->Version,
+						$targetMigrator->HasBreakingchanges($this->genericData)
+					);
 				}else{
-					$this->operationDescription = new MigrationOperationDescription(MigrationOperationTypes::DoNothing, $currentVersion);
+					$this->operationDescription = new MigrationOperationDescription(
+						MigrationOperationTypes::DoNothing,
+						$currentVersion
+					);
 				}
 			}
 		}

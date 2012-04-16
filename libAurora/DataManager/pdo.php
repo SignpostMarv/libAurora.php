@@ -38,7 +38,7 @@ namespace libAurora\DataManager{
 *	@param string $migratorName migrator module
 *	@param boolean $validateTables specifying TRUE must attempt to validate tables after connecting to the database
 */
-		public function __construct($connectionString, $migratorName, $validateTables){
+		public function __construct($connectionString, $migratorName, $validateTables, $forceBreakingChanges=false){
 
 			if(is_string($connectionString) === false){
 				throw new InvalidArgumentException('connection string must be specified as string.');
@@ -65,7 +65,9 @@ namespace libAurora\DataManager{
 
 			$migrationManager = new MigrationManager($this, $migratorName, $validateTables);
 			$migrationManager->DetermineOperation();
-			$migrationManager->ExecuteOperation();
+			if($migrationManager->GetDescriptionOfCurrentOperation()->BreakingChanges === false || $forceBreakingChanges === true){
+				$migrationManager->ExecuteOperation();
+			}
 		}
 
 //!	Prepares a query

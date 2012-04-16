@@ -70,7 +70,7 @@ namespace Aurora\DataManager\Migration{
 		const MigrationName = '-Example'; // this deliberately starts with an invalid character
 
 //!	string a space-seperated list of tables that have major changes made to them, requiring portions of a website that use them to be disabled until after an upgrade has been performed.
-		const DisableUntilUpgrade = '';
+		const BreakingChanges = '';
 
 
 		protected $renameSchema  = array();
@@ -205,7 +205,15 @@ namespace Aurora\DataManager\Migration{
 *	@param string $table schema name
 */
 		protected function RemoveSchema($table){
-			unset($this->schema[$table]);
+			$remove = array();
+			foreach($this->schema as $k=>$schema){
+				if(strtolower($schema->Name) === strtolower($table)){
+					$remove[] = $k;
+				}
+			}
+			foreach($remove as $removeTable){
+				unset($this->schema[$removeTable]);
+			}
 		}
 
 //!	queue an index for removal
@@ -313,6 +321,32 @@ namespace Aurora\DataManager\Migration{
 *	@param object $genericData instance of Aurora::Framework::IDataConnector
 */
 		abstract public function FinishedMigration(IDataConnector $genericData);
+
+
+		public function HasBreakingchanges(IDataConnector $genericData){
+			static $hasBreakingChanges = null;
+			if(isset($hasBreakingChanges) === false){
+				if(count($this->schema) === 0 || trim(static::BreakingChanges) === ''){
+					$hasBreakingChanges = false;
+				}else{
+					$breakingChanges = explode(' ', static::BreakingChanges);
+					$regex = constant(get_class($genericData) . '::regex_Query_arg_table');
+					$tables = array();
+					foreach($this->schema as $schema){
+						$tables[] = $schema->Name;
+					}
+					foreach($breakingChanges as $breakingChange){
+						if(preg_match($regex, $breakingChange) != 1){
+							throw new RuntimeException('A table listed in the breaking changes list has an invalid name.');
+						}else if(in_array($breakingChange, $tables) === false){
+							throw new RuntimeException('A table listed in the breaking changes list is not listed in the schema for this migrator.');
+						}
+					}
+					$hasBreakingChanges = count($breakingChanges) > 0;
+				}
+			}
+			return $hasBreakingChanges;
+		}
 	}
 }
 
