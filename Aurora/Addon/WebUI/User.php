@@ -1044,7 +1044,7 @@ namespace Aurora\Addon\WebUI{
 			if($has === false && isset($total) === false){
 				throw new InvalidArgumentException('When no instance has been cached the total results must be specified');
 			}
-			$makeNew = !$has || $registry[$hash]->count() !== $total;
+			$makeNew = !$has || ($total !== null && $registry[$hash]->count() !== $total);
 
 			if($makeNew === true && $total > 0 && count($users) === 0){
 				throw new BadMethodCallException('When the total number of users is greater than zero, there should always be a subset of the results to pre-populate an instance with.');

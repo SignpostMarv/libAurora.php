@@ -328,7 +328,7 @@ namespace Aurora\Addon\WebUI{
 
 			$create = (
 				isset($registry[$hash1][$hash2][$hash3]) === false ||
-				$registry[$hash1][$hash2][$hash3]->count() !== $total
+				($total !== null && $registry[$hash1][$hash2][$hash3]->count() !== $total)
 			);
 
 			if($create === true){

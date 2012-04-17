@@ -316,7 +316,7 @@ namespace Aurora\Addon\WebUI{
 
 			if(isset(static::$registry[$hash]) === false && isset($total) === false){
 				throw new InvalidArgumentException('Total must be specified when no instance has been cached.');
-			}else if(isset(static::$registry[$hash]) === false || static::$registry[$hash]->count() !== $total){
+			}else if(isset(static::$registry[$hash]) === false || ($total !== null && static::$registry[$hash]->count() !== $total)){
 				static::$registry[$hash] = new static($WebUI, $start, $total, $groups);
 			}
 
@@ -632,7 +632,7 @@ namespace Aurora\Addon\WebUI{
 				$registry[$hash1] = array();
 			}
 
-			$create = (isset($registry[$hash1][$hash2]) === false) || ($create === false && $registry[$hash1][$hash2]->count() !== $total);
+			$create = (isset($registry[$hash1][$hash2]) === false) || ($create === false && ($total !== null && $registry[$hash1][$hash2]->count() !== $total));
 
 			if($create === true){
 				$registry[$hash1][$hash2] = new static($WebUI, $start, $total, $groups, $entities);

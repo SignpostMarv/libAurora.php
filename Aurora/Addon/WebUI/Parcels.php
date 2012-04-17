@@ -1009,7 +1009,7 @@ namespace Aurora\Addon\WebUI{
 				$registry[$hash1][$hash2][$scopeID] = array();
 			}
 
-			$create = (isset($registry[$hash1][$hash2][$scopeID][$owner]) === false || $registry[$hash1][$hash2][$scopeID][$owner]->count() !== $total);
+			$create = (isset($registry[$hash1][$hash2][$scopeID][$owner]) === false || ($total !== null && $registry[$hash1][$hash2][$scopeID][$owner]->count() !== $total));
 
 			if($create === true){
 				$registry[$hash1][$hash2][$scopeID][$owner] = new static($WebUI, $start, $total, $region, $owner, $scopeID, $parcels);
@@ -1114,7 +1114,7 @@ namespace Aurora\Addon\WebUI{
 				$registry[$hash1][$hash2][$scopeID] = array();
 			}
 
-			$create = (isset($registry[$hash1][$hash2][$scopeID][$name]) === false || $registry[$hash1][$hash2][$scopeID][$name]->count() !== $total);
+			$create = (isset($registry[$hash1][$hash2][$scopeID][$name]) === false || ($total !== null && $registry[$hash1][$hash2][$scopeID][$name]->count() !== $total));
 
 			if($create === true){
 				$registry[$hash1][$hash2][$scopeID][$name] = new static($WebUI, $start, $total, $name, $region, $scopeID, $parcels);

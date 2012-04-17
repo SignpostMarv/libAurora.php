@@ -386,7 +386,7 @@ namespace Aurora\Addon\WebUI{
 				(integer)$excludeFlags
 			);
 
-			if(!$has || static::$registry[$hash]->count() !== $total){
+			if(!$has || ($total !== null && static::$registry[$hash]->count() !== $total)){
 				static::$registry[$hash] = new static($WebUI, $flags, $excludeFlags, $start, $total, $sortRegionName, $sortLocX, $sortLocY, $regions);
 			}
 
@@ -523,7 +523,7 @@ namespace Aurora\Addon\WebUI{
 				(integer)$excludeFlags
 			);
 
-			if(!$has || static::$registry[$hash]->count() !== $total){
+			if(!$has || ($total !== null && static::$registry[$hash]->count() !== $total)){
 				static::$registry[$hash] = new static($WebUI, $Estate, $flags, $excludeFlags, $start, $total, $sortRegionName, $sortLocX, $sortLocY, $regions);
 			}
 
@@ -635,7 +635,7 @@ namespace Aurora\Addon\WebUI{
 				$range
 			);
 
-			if(!$has || static::$registry[$hash]->count() !== $total){
+			if(!$has || ($total !== null && static::$registry[$hash]->count() !== $total)){
 				static::$registry[$hash] = new static($WebUI, $region, $range, $scopeID, $start, $total, $regions);
 			}
 

@@ -197,7 +197,7 @@ namespace Aurora\Addon{
 				$registry[$hash1][$hash2] = array();
 			}
 
-			$create = (isset($registry[$hash1][$hash2][$hash3]) === false) || ($create === false && $registry[$hash1][$hash2][$hash3]->count() !== $total);
+			$create = (isset($registry[$hash1][$hash2][$hash3]) === false) || ($create === false && ($total !== null && $registry[$hash1][$hash2][$hash3]->count() !== $total));
 
 			if($create === true){
 				$registry[$hash1][$hash2][$hash3] = new static($API, $start, $total, $sort, $boolFields, $entities);
