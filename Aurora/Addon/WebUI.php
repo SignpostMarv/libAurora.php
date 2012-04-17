@@ -1857,7 +1857,7 @@ namespace Aurora\Addon{
 				}
 			}
 
-			return $asArray ? $response : WebUI\GetRegionsInEstate::r($this, $Estate, $flags, $start, $has ? null : $result->Total, $sortRegionName, $sortLocX, $sortLocY, $response);
+			return $asArray ? $response : WebUI\GetRegionsInEstate::r($this, $Estate, $flags, 0, $start, $has ? null : $result->Total, $sortRegionName, $sortLocX, $sortLocY, $response);
 		}
 
 //!	Get a single region
