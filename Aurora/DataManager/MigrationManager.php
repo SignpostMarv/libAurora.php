@@ -255,6 +255,7 @@ namespace Aurora\DataManager\Migration{
 					try{
 						$currentMigrator->CreateDefaults($this->genericData);
 					}catch(\Exception $e){
+						error_log($e);
 					}
 					$this->executed = true;
 				}
@@ -304,6 +305,7 @@ namespace Aurora\DataManager\Migration{
 					try{
 						$executingMigrator->Migrate($this->genericData);
 					}catch(\Exception $ex){
+						error_log($ex);
 						if($currentMigrator != null){
 							throw new RuntimeException(sprintf('Migrating to version %s failed, exception class %s thrown with code %s', $currentMigrator->Version, get_class($ex), $ex->getCode()));
 						}
