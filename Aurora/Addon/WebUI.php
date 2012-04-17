@@ -2845,39 +2845,6 @@ namespace Aurora\Addon{
 		}
 
 #endregion
-
-//!	Gets the client implementation data
-/**
-*	@return array
-*/
-		public function WebUIClientImplementationData(){
-			$result = $this->makeCallToAPI('WebUIClientImplementationData', array(), array(
-				'adminmodules' => array('object' => array()),
-				'adminsetting' => array('object' => array()),
-				'startregion' => array('string' => array())
-			));
-			if(preg_match(static::regex_UUID, $result->startregion) != 1){
-				throw new UnexpectedValueException('Start region ID was not a valid UUID.');
-			}
-
-			$resp = array(
-				'adminmodules' => array(),
-				'adminsetting' => array()
-			);
-
-			foreach($result->adminmodules as $k=>$v){
-				$resp['adminmodules'][$k] = $v;
-			}
-
-			foreach($result->adminsetting as $k=>$v){
-				$resp['adminsetting'][$k] = $v;
-			}
-
-			$resp['adminmodules'] = WebUI\BoolWORM::f($resp['adminmodules']);
-			$resp['startregion'] = $result->startregion;
-
-			return $resp;
-		}
 	}
 }
 
