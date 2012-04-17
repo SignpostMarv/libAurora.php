@@ -217,7 +217,7 @@ namespace Aurora\DataManager\Migration{
 				return Version::cmp($a->Version, $b->Version);
 			});
 			foreach($migrators as $migrator){
-				if(Version::cmp($version, $migrator->Version) > 0){
+				if(Version::cmp($migrator->Version, $version) > 0){
 					return $migrator;
 				}
 			}

@@ -85,15 +85,15 @@ namespace Aurora\DataManager\Migration{
 		private $dropIndices   = array();
 
 
-		protected static $Version;
+		private $Version;
 
 
 		public function __get($name){
 			if($name === 'Version'){
-				if(isset(static::$Version) === false){
-					static::$Version = new Version(static::Version);
+				if(isset($this->Version) === false){
+					$this->Version = new Version(static::Version);
 				}
-				return static::$Version;
+				return $this->Version;
 			}
 			return null;
 		}
