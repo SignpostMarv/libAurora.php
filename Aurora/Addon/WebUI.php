@@ -2251,18 +2251,19 @@ namespace Aurora\Addon{
 *	Throws an exception on failure, for laziness :P
 *	@param object $group instance of Aurora::Addon::WebUI::GroupRecord
 *	@param boolean $useAsNewsSource TRUE to enable, FALSE to disable
+*	@return boolean TRUE if successful, FALSE otherwise
 */
 		public function GroupAsNewsSource(WebUI\GroupRecord $group, $useAsNewsSource=true){
 			if(is_bool($useAsNewsSource) === false){
 				throw new InvalidArgumentException('flag must be a boolean.');
 			}
 
-			$this->makeCallToAPI('GroupAsNewsSource', array(
+			return $this->makeCallToAPI('GroupAsNewsSource', array(
 				'Group' => $group->GroupID(),
 				'Use'   => $useAsNewsSource
 			), array(
 				'Verified' => array('boolean'=>array(true))
-			));
+			))->Verified;
 		}
 
 //!	Gets an iterator for the number of groups specified, with optional filters.
