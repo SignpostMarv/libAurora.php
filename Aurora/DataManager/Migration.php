@@ -31,7 +31,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
+//!	Transposition of automated table installation/upgrading code from aurora-sim c#
 namespace Aurora\DataManager\Migration{
 
 	use libAurora\Version;
@@ -45,15 +45,15 @@ namespace Aurora\DataManager\Migration{
 	interface Exception{
 	}
 
-
+//!	Migration-specific invalid argument exception
 	class InvalidArgumentException extends \Aurora\InvalidArgumentException implements Exception{
 	}
 
-
+//!	Migration-specific bad method call exception
 	class BadMethodCallException extends \Aurora\BadMethodCallException implements Exception{
 	}
 
-
+//!	Migration-specific runtime exception
 	class RuntimeException extends \Aurora\RuntimeException implements Exception{
 	}
 
@@ -72,22 +72,28 @@ namespace Aurora\DataManager\Migration{
 //!	string a space-seperated list of tables that have major changes made to them, requiring portions of a website that use them to be disabled until after an upgrade has been performed.
 		const BreakingChanges = '';
 
-
+//!	array tables to rename
 		protected $renameSchema  = array();
 
-
+//!	array fields to rename
 		protected $renameColumns = array();
 
-
+//!	array of Aurora::DataManager::Migration::Migrator::Schema instances
 		protected $schema        = array();
 
-
+//!	array indexes on the tables to drop
 		private $dropIndices   = array();
 
-
+//!	object instance of libAurora::Version
 		private $Version;
 
-
+//!	Since we don't have proper getters & setters in PHP, we wrap to the magic method
+/**
+*	@param string $name name of property access is attempted on
+*	@return mixed
+*	@see Aurora::DataManager::Migration::Migrator::$Version
+*	@see Aurora::DataManager::Migration::Migrator::Version
+*/
 		public function __get($name){
 			if($name === 'Version'){
 				if(isset($this->Version) === false){
@@ -107,12 +113,18 @@ namespace Aurora\DataManager\Migration{
 			}
 		}
 
-
+//!	factory method
+/**
+*	@return object instance of Aurora::DataManager::Migration::Migrator
+*/
 		public static function f(){
 			return new static();
 		}
 
-
+//!	Performs a table restoration when a migration failed
+/**
+*	@param object $genericData instance of Aurora::Framework::IDataConnector
+*/
 		public function DoRestore(IDataConnector $genericData){
 			RestoreTempTablesToReal($genericData);
 		}
@@ -176,7 +188,7 @@ namespace Aurora\DataManager\Migration{
 /**
 *	@param string $table name of schema
 *	@param object $definitions an instance of Aurora::Framework::ColumnDefinition::Iterator specifying column definitions
-*	@param mixed NULL indicating no indices or an instance of Aurora::Framework::IndexDefinition::Iterator specifying index definitions
+*	@param mixed $indices NULL indicating no indices or an instance of Aurora::Framework::IndexDefinition::Iterator specifying index definitions
 */
 		protected final function AddSchema($table, ColDefs $definitions, IndexDefs $indices=null){
 			$this->schema[$table] = new Migrator\Schema($table, $definitions, $indices);
@@ -276,13 +288,18 @@ namespace Aurora\DataManager\Migration{
 		}
 
 //!	copies a table to a temporary table
-		protected function CopyTableToTable(IDataConnector $genericData, Migrator\Schema $table){
+/**
+*	@param object $genericData Aurora::Framework::IDataConnector database tables are on
+*	@param object $table table definition to copy
+*/
+		protected function CopyTableToTempVersion(IDataConnector $genericData, Migrator\Schema $table){
 			$genericData->CopyTableToTable($table->Name, static::GetTempTableNameFromTableName($table->Name), $table->ColDefs, $table->IndexDefs);
 		}
 
 //!	get the temporary table name
 /**
 *	@param string $tablename name of the table
+*	@return string temporary table name
 */
 		protected final static function GetTempTableNameFromTableName($tablename){
 			if(is_string($tablename) === false){
@@ -317,12 +334,16 @@ namespace Aurora\DataManager\Migration{
 			}
 		}
 
+//!	performed when migration finishes ? ~SignpostMarv
 /**
 *	@param object $genericData instance of Aurora::Framework::IDataConnector
 */
 		abstract public function FinishedMigration(IDataConnector $genericData);
 
-
+//!	non-transposed method, used to determine if a migrator has breaking changes that required changes in code so if the old tables run with the new code, stuff will break.
+/**
+*	@param object $genericData instance of Aurora::Framework::IDataConnector
+*/
 		public function HasBreakingchanges(IDataConnector $genericData){
 			static $hasBreakingChanges = null;
 			if(isset($hasBreakingChanges) === false){
@@ -350,32 +371,18 @@ namespace Aurora\DataManager\Migration{
 	}
 }
 
-
+//!	This namespace holds code that avoids transposing the C5 library to PHP
 namespace Aurora\DataManager\Migration\Migrator{
 
 	use Aurora\DataManager\Migration\InvalidArgumentException;
 
-	use ArrayObject;
-
 	use Aurora\Framework\ColumnDefinition\Iterator as ColDefs;
 	use Aurora\Framework\IndexDefinition\Iterator as IndexDefs;
 
-
-	abstract class abstractIterator extends ArrayObject{
-
-
-		public function __construct(array $values=null){
-			parent::__construct(array(), \ArrayObject::STD_PROP_LIST);
-			if(isset($values) === true){
-				foreach($values as $v){
-					$this[] = $v;
-				}
-			}
-		}
-	}
-
+//!	Table definition
 	class Schema{
 
+//!	string regular expression for validating table names
 		const regex_Query_arg_table = '/^[A-z0-9_]+$/';
 
 //!	string name of schema
@@ -388,11 +395,24 @@ namespace Aurora\DataManager\Migration\Migrator{
 		private $IndexDefs;
 
 
+//!	Since we don't have proper getters & setters in PHP, we wrap to the magic method
+/**
+*	@param string $name name of property access is attempted on
+*	@return mixed
+*	@see Aurora::DataManager::Migration::Migrator::Schema::$Name
+*	@see Aurora::DataManager::Migration::Migrator::Schema::$ColDefs
+*	@see Aurora::DataManager::Migration::Migrator::Schema::$IndexDefs
+*/
 		public function __get($name){
 			return ($name === 'Name' || $name === 'ColDefs' || $name === 'IndexDefs') ? $this->$name : null;
 		}
 
-
+//!	Creates a table definition
+/**
+*	@param string $table name of table
+*	@param object $ColDefs instance of Aurora::Framework::ColumnDefinition::Iterator specifying column definitions
+*	@param mixed $IndexDefs NULL or instance of Aurora::Framework::IndexDefinition::Iterator specifying index definitions
+*/
 		public function __construct($table, ColDefs $ColDefs, IndexDefs $IndexDefs=null){
 			if(is_string($table) === false){
 				throw new InvalidArgumentException('Schema name must be specified as string.');

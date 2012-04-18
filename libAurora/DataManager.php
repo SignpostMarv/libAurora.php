@@ -33,10 +33,10 @@ namespace libAurora\DataManager{
 //!	string name of version control table
 		const VERSION_TABLE_NAME = 'aurora_migrator_version';
 
-
+//!	string name of migrator name column
 		const COLUMN_NAME = 'name';
 
-
+//!	string name of version column
 		const COLUMN_VERSION = 'version';
 
 //!	Name of the connector
@@ -57,12 +57,17 @@ namespace libAurora\DataManager{
 
 //!	string Regular expression used to validate the $table argument of libAurora::DataManager::DataManagerBase::Query()
 		const regex_Query_arg_table = '/^[A-z0-9_]+$/';
+
+//!	string Regular expression used to validate field names
 		const regex_Query_arg_field = '/^[A-z][A-z0-9_]+$/';
 
-
+//!	boolean TRUE if the migrator makes breaking changes to tables, FALSE otherwise
 		protected $hasBreakingChanges = false;
 
-
+//!	Indicates whether a migrator has breaking changes or not.
+/**
+*	@return boolean TRUE if the migrator makes breaking changes to tables, FALSE otherwise
+*/
 		public function HasBreakingChanges(){
 			return $this->hasBreakingChanges;
 		}
@@ -195,7 +200,7 @@ namespace libAurora\DataManager{
 			}
 		}
 
-
+//!	Checks if the version table exists in the database and creates it if necessary
 		protected function ensureVersionTableExists(){
 			if($this->TableExists(static::VERSION_TABLE_NAME) === false){
 				$this->CreateTable(static::VERSION_TABLE_NAME, new ColDefs(
@@ -211,7 +216,11 @@ namespace libAurora\DataManager{
 			}
 		}
 
-
+//!	Gets the latest version of the database
+/**
+*	@param string $migratorName corresponds to Aurora::DataManager::Migration::Migrator::MigrationName
+*	@return object instance of libAurora::Version corresponds to Aurora::DataManager::Migration::Migrator::Version
+*/
 		public function GetAuroraVersion($migratorName){
 			if(is_string($migratorName) === false){
 				throw new InvalidArgumentException('migrator name must be specified as string.');
@@ -239,7 +248,11 @@ namespace libAurora\DataManager{
 			return $highestVersion;
 		}
 
-
+//!	Set the version of the database
+/**
+*	@param string $version version to write to the database
+*	@param string $MigrationName migrator module to write to the database
+*/
 		public function WriteAuroraVersion(Version $version, $MigrationName){
 			if(is_string($MigrationName) === false){
 				throw new InvalidArgumentException('migrator name must be specified as string.');
@@ -256,7 +269,13 @@ namespace libAurora\DataManager{
 			$this->Insert(static::VERSION_TABLE_NAME, array((string)$version, $MigrationName));
 		}
 
-
+//!	copy tables
+/**
+*	@param string $sourceTableName name of table to copy from
+*	@param string $destinationTableName name of table to copy to
+*	@param object $columnDefinitions instance of Aurora::DataManager::Migration::ColumnDefinition::Iterator
+*	@param object $indexDefinitions instance of Aurora::DataManager::Migration::IndexDefinition::Iterator
+*/
 		public function CopyTableToTable($sourceTableName, $destinationTableName, ColDefs $columnDefinitions, IndexDefs $indexDefinitions){
 			static::validateArg_table($sourceTableName, $destinationTableName);
 
@@ -273,7 +292,13 @@ namespace libAurora\DataManager{
 			$this->CopyAllDataBetweenMatchingTables($sourceTableName, $destinationTableName, $columnDefinitions, $indexDefinitions);
 		}
 
-
+//!	Check whether the data table exists and that the columns and indices are correct
+/**
+*	@param string $tableName name of the table
+*	@param object $columnDefinitions instance of Aurora::DataManager::Migration::ColumnDefinition::Iterator
+*	@param object $indexDefinitions instance of Aurora::DataManager::Migration::IndexDefinition::Iterator
+*	@return boolean TRUE if the table exists as described, FALSE otherwise
+*/
 		public function VerifyTableExists($tableName, ColDefs $columnDefinitions, IndexDefs $indexDefinitions){
 			static::validateArg_table($tableName);
 			if($this->TableExists($tableName) === false){
@@ -382,7 +407,14 @@ namespace libAurora\DataManager{
 			return true;
 		}
 
-
+//!	Check whether the data table exists and that the columns and indices are correct, creating the table if it doesn't exist.
+/**
+*	@param string $tableName name of the table
+*	@param object $columnDefinitions instance of Aurora::DataManager::Migration::ColumnDefinition::Iterator
+*	@param object $indexDefinitions instance of Aurora::DataManager::Migration::IndexDefinition::Iterator
+*	@param mixed $renameColumns array of columns to rename or NULL
+*	@return boolean TRUE if the table exists as described, FALSE otherwise
+*/
 		public function EnsureTableExists($tableName, ColDefs $columnDefinitions, IndexDefs $indexDefinitions, array $renameColumns=null){
 			static::validateArg_table($tableName);
 			if($this->TableExists($tableName) === true){
@@ -429,16 +461,23 @@ namespace libAurora\DataManager{
 			static::validateArg_table($tableName);
 		}
 
-
+//!	Copies data between tables
+/**
+*	@param string $sourceTableName table to copy from
+*	@param string $destinationTableName table to copy to
+*	@param object $columnDefinitions instance of Aurora::Framework::ColumnDefinition::Iterator column definitions 
+*	@param object $indexDefinitions instance of Aurora::Framework::IndexDefinition::Iterator index definitions 
+*/
 		abstract protected function CopyAllDataBetweenMatchingTables($sourceTableName, $destinationTableName, ColDefs $columnDefinitions, IndexDefs $indexDefinitions);
 
-
+//!	Extract the existing column definitions from a table
 /**
 *	@param string $tableName name of table to extract columns from.
 *	@return object instance of Aurora::Framework::ColumnDefinition::Iterator
 */
 		abstract protected function ExtractColumnsFromTable($tableName);
 
+//!	Extract the existing index definitions from a table
 /**
 *	@param string $tableName name of table to extract columns from.
 *	@return object instance of Aurora::Framework::IndexDefinition::Iterator with array keys being the names of indices

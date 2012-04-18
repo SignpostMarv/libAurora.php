@@ -3,19 +3,20 @@
 
 namespace Aurora\Framework{
 
-
+//!	This interface exists purely to give client code the ability to detect all Aurora::Framework-specific exception classes in one go.
+//!	The purpose of this behaviour is that instances of Aurora::Framework::Exception will be more or less "safe" for public consumption.
 	interface Exception extends \Aurora\Exception{
 	}
 
-
+//!	Aurora::Framework-specific runtime exception
 	class RuntimeException extends \Aurora\RuntimeException implements Exception{
 	}
 
-
+//!	Aurora::Framework-specific invalid argument exception
 	class InvalidArgumentException extends \Aurora\InvalidArgumentException implements Exception{
 	}
 
-
+//!	Aurora::Framework-specific bad method call exception
 	class BadMethodCallException extends \Aurora\BadMethodCallException implements Exception{
 	}
 }

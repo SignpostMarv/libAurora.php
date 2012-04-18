@@ -31,6 +31,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+//!	transposition of aurora-sim c# code from it's Aurora::Framework namespace
 namespace Aurora\Framework{
 
 	use libAurora\Version;
@@ -38,7 +39,7 @@ namespace Aurora\Framework{
 	use Aurora\Framework\ColumnDefinition\Iterator as ColDefs;
 	use Aurora\Framework\IndexDefinition\Iterator as IndexDefs;
 
-
+//!	Transposition of the IDataConnector interface from aurora-sim
 	interface IDataConnector extends IGenericData{
 
 //!	Name of the connector
@@ -48,7 +49,10 @@ namespace Aurora\Framework{
 */
 		public static function Identifier();
 
-
+//!	Indicates whether a migrator has breaking changes or not.
+/**
+*	@return boolean TRUE if the migrator makes breaking changes to tables, FALSE otherwise
+*/
 		public function HasBreakingChanges();
 
 //!	Checks to see if $table exists
@@ -103,6 +107,7 @@ namespace Aurora\Framework{
 *	@param string $table name of the table
 *	@param object $columns instance of Aurora::DataManager::Migration::ColumnDefinition::Iterator
 *	@param object $indexDefinitions instance of Aurora::DataManager::Migration::IndexDefinition::Iterator
+*	@param mixed $renameColumns array of columns to rename or NULL
 *	@return boolean TRUE if the table exists as described, FALSE otherwise
 */
 		public function EnsureTableExists($table, ColDefs $columns, IndexDefs $indexDefinitions, array $renameColumns=null);

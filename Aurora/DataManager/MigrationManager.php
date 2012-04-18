@@ -31,50 +31,66 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
+//!	Transposition of automated table installation/upgrading code from aurora-sim c#
 namespace Aurora\DataManager\Migration{
 
 	use libAurora\Version;
 
 	use Aurora\Framework\IDataConnector;
 
-
+//!	Acts as an enum for the various migration operation types
 	class MigrationOperationTypes{
 
-
+//!	integer Tables probably doesn't exist and this is likely a fresh install
 		const CreateDefaultAndUpgradeToTarget = 0;
 
-
+//!	integer Tables probably exist and likely need upgrading
 		const UpgradeToTarget                 = 1;
 
-
+//!	integer Tables probably exist and are at latest version
 		const DoNothing                       = 2;
 	}
 
-
+//!	A description of a migration operation to be performed
 	class MigrationOperationDescription{
 
-
+//! object An instance of libAurora::Version corresponding to the current version of the migrator installed
 		private $CurrentVersion;
 
-
+//!	mixed An instance of libAurora::Version or NULL corresponding to the version of the migrator to start at
 		private $StartVersion;
 
-
+//!	mixed An instance of libAurora::Version or NULL corresponding to the version of the migrator to end at
 		private $EndVersion;
 
-
+//!	integer corresponds to Aurora::DataManager::Migration::MigrationOperationTypes contants
 		private $OperationType;
 
-
+//!	boolean TRUE if there are breaking changes, FALSE otherwise
 		private $BreakingChanges = false;
 
-
+//!	Since we don't have proper getters & setters in PHP, we wrap to the magic method
+/**
+*	@param string $name name of property access is attempted on
+*	@return mixed
+*	@see Aurora::DataManager::Migration::MigrationOperationDescription::$CurrentVersion
+*	@see Aurora::DataManager::Migration::MigrationOperationDescription::$StartVersion
+*	@see Aurora::DataManager::Migration::MigrationOperationDescription::$EndVersion
+*	@see Aurora::DataManager::Migration::MigrationOperationDescription::$OperationType
+*	@see Aurora::DataManager::Migration::MigrationOperationDescription::$BreakingChanges
+*/
 		public function __get($name){
 			return ($name === 'CurrentVersion' || $name === 'StartVersion' || $name === 'EndVersion' || $name === 'OperationType' || $name === 'BreakingChanges') ? $this->$name : null;
 		}
 
-
+//!	Sets the parameters of the operation description
+/**
+*	@param integer $createDefaultAndUpgradeToTarget corresponds to Aurora::DataManager::Migration::MigrationOperationTypes contants
+*	@param object $currentVersion An instance of libAurora::Version corresponding to the current version of the migrator installed
+*	@param mixed $startVersion An instance of libAurora::Version or NULL corresponding to the version of the migrator to start at
+*	@param mixed $endVersion An instance of libAurora::Version or NULL corresponding to the version of the migrator to end at
+*	@param boolean $breakingChanges TRUE if there are breaking changes, FALSE otherwise
+*/
 		public function __construct($createDefaultAndUpgradeToTarget, Version $currentVersion, Version $startVersion=null, Version $endVersion=null, $breakingChanges=false){
 			if(is_integer($createDefaultAndUpgradeToTarget) === false){
 				throw new InvalidArgumentException('OperationType must be specified as integer.');
@@ -92,7 +108,7 @@ namespace Aurora\DataManager\Migration{
 		}
 	}
 
-
+//!	Manages the installation & upgrading of various tables described in migrators
 	class MigrationManager{
 
 //!	object instance of Aurora::Framework::IDataConnector
@@ -119,11 +135,18 @@ namespace Aurora\DataManager\Migration{
 //!	boolean flag controlling rollback operation
 		private $rollback;
 
-
+//!	array names of migrator classes
 		private static $allMigrators = array();
+
+//!	integer Holds the number of declared classes in case more classes are loaded at runtime between instantiation
 		private static $declaredClassCount = 0;
 
-
+//!	Determines what operation if any is necessary and performs it
+/**
+*	@param object $genericData the database connector that houses tables
+*	@param string $migratorName the name of the migrator
+*	@param boolean $validateTables Validate tables if TRUE
+*/
 		public function __construct(IDataConnector $genericData, $migratorName, $validateTables){
 			if(is_string($migratorName) === false){
 				throw new InvalidArgumentException('migrator name must be specified as string.');
@@ -155,12 +178,22 @@ namespace Aurora\DataManager\Migration{
 			}
 		}
 
-
+//!	Gets the description of the current migration operation
+/**
+*	@return Aurora::DataManager::Migration::MigrationOperationDescription
+*/
 		public function GetDescriptionOfCurrentOperation(){
 			return $this->operationDescription;
 		}
 
-
+//!	Determines which operation should be performed.
+/**
+*	@see Aurora::DataManager::Migration::MigrationManager::$genericData
+*	@see Aurora::DataManager::Migration::MigrationManager::GetHighestVersionMigratorThatCanProvideDefaultSetup()
+*	@see Aurora::DataManager::Migration::MigrationManager::GetMigratorAfterVersion()
+*	@see Aurora::DataManager::Migration::MigrationManager::GetLatestVersionMigrator()
+*	@see Aurora::DataManager::Migration::MigrationManager::$operationDescription
+*/
 		public function DetermineOperation(){
 			if(trim($this->migratorName) === ''){
 				return false;
@@ -207,7 +240,11 @@ namespace Aurora\DataManager\Migration{
 			}
 		}
 
-
+//!	Gets the next migrator after the specified version
+/**
+*	@param mixed $version an instance of libAurora::Version or NULL
+*	@return mixed An instance of Aurora::DataManager::Migration::Migrator or NULL
+*/
 		public function GetMigratorAfterVersion(Version $version=null){
 			if(isset($version) === false){
 				return null;
@@ -224,7 +261,10 @@ namespace Aurora\DataManager\Migration{
 			return null;
 		}
 
-
+//!	Gets migrator with highest version number
+/**
+*	@return object An instance of Aurora::DataManager::Migration::Migrator
+*/
 		public function GetLatestVersionMigrator(){
 			$migrators = $this->migrators;
 			usort($migrators, function(Migrator $a, Migrator $b){
@@ -233,7 +273,10 @@ namespace Aurora\DataManager\Migration{
 			return end($migrators);
 		}
 
-
+//!	Gets the migrator with highest version number that can provide setup
+/**
+*	@return object An instance of Aurora::DataManager::Migration::Migrator
+*/
 		public function GetHighestVersionMigratorThatCanProvideDefaultSetup(){
 			$migrators = $this->migrators;
 			usort($migrators, function(Migrator $a, Migrator $b){
@@ -242,7 +285,17 @@ namespace Aurora\DataManager\Migration{
 			return current($migrators);
 		}
 
-
+//!	Executes the operation determined by Aurora::DataManager::Migration::MigrationManager::DetermineOperation()
+/**
+*	@see Aurora::DataManager::Migration::MigrationManager::$migratorName
+*	@see Aurora::DataManager::Migration::MigrationManager::$operationDescription
+*	@see Aurora::DataManager::Migration::MigrationManager::GetMigratorByVersion()
+*	@see Aurora::DataManager::Migration::MigrationManager::$executed
+*	@see Aurora::DataManager::Migration::MigrationManager::$genericData
+*	@see Aurora::DataManager::Migration::MigrationManager::$restorePoint
+*	@see Aurora::DataManager::Migration::MigrationManager::RollBackOperation()
+*	@see Aurora::DataManager::Migration::MigrationManager::GetMigratorAfterVersion()
+*/
 		public function ExecuteOperation(){
 			if($this->migratorName === ''){
 				return;
@@ -335,7 +388,7 @@ namespace Aurora\DataManager\Migration{
 			}
 		}
 
-
+//!	Undoes any migration work
 		public function RollBackOperation(){
 			if($this->operationDescription !== null && $this->executed === true && $this->rollback === false && $this->restorePoint != null){
 				$this->restorePoint->DoRestore($this->genericData);
@@ -343,12 +396,21 @@ namespace Aurora\DataManager\Migration{
 			}
 		}
 
-
+//!	Performs validation on the specified version
+/**
+*	@param mixed $version an instance of libAurora::Version or NULL
+*	@return boolean TRUE if data is valid, FALSE otherwise
+*	@see Aurora::DataManager::Migration::MigrationManager::$genericData
+*/
 		public function ValidateVersion(Version $version){
 			return $this->GetMigratorByVersion($version)->Validate($this->genericData);
 		}
 
-
+//!	Attempts to find an instance of the migrator for this manager with the specified libAurora::Version object
+/**
+*	@param mixed $version an instance of libAurora::Version or NULL
+*	@return mixed An instance of Aurora::DataManager::Migration::Migrator or NULL
+*/
 		public function GetMigratorByVersion(Version $version=null){
 			if(isset($version) === true){
 				foreach($this->migrators as $m){

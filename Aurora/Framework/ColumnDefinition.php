@@ -33,59 +33,59 @@
 
 namespace Aurora\Framework{
 
-//!	We don't have enums, so we need a class with constants
+//!	Various column types. We don't have enums, so we need a class with constants
 	class ColumnType{
 
-
+//!	integer unknown/unsupported column type
         const Unknown    = 0;
 
-
+//!	integer binary blob
         const Blob       = 1;
 
-
+//!	integer long binary blob
         const LongBlob   = 2;
 
-
+//!	integer fixed-length string
         const Char       = 3;
 
-
+//!	integer date
         const Date       = 4;
 
-
+//!	integer date & time
         const DateTime   = 5;
 
-
+//!	integer double
         const Double     = 6;
 
-
+//!	integer integer
         const Integer    = 7;
 
-
+//!	integer variable-length string
         const String     = 8;
 
-
+//!	integer text
         const Text       = 9;
 
-
+//!	integer medium-length text
         const MediumText = 10;
 
-
+//!	integer long text
         const LongText   = 11;
 
-
+//!	integer small integer
         const TinyInt    = 12;
 
-
+//!	integer float
         const Float      = 13;
 
-
+//!	integer boolean (usually wraps to ColumnType::TinyInt with a size of 1)
         const Boolean    = 14;
 
-
+//!	integer UUID string (usually wraps to ColumnType::Char with a size of 36)
         const UUID       = 15;
 	}
 
-
+//!	Column type definition
 	class ColumnTypeDef{
 
 //!	integer A flag to indicate the type of column the definition represents.
@@ -119,8 +119,10 @@ namespace Aurora\Framework{
 			}
 		}
 
-//!	magic method used to act as a proxy to the private properties
+//!	Since we don't have proper getters & setters in PHP, we wrap to the magic method
 /**
+*	@param string $name name of property access is attempted on
+*	@return mixed
 *	@see Aurora::Framework::ColumnTypeDef::$Type
 *	@see Aurora::Framework::ColumnTypeDef::$Size
 *	@see Aurora::Framework::ColumnTypeDef::$defaultValue
@@ -183,9 +185,10 @@ namespace Aurora\Framework{
 
 	}
 
-
+//!	Defines a table column, specifying 
 	class ColumnDefinition{
 
+//!	regular expression for validating field names
 		const regex_fieldName = '/^[A-z][A-z0-9_]*$/';
 
 //!	string name of the field.
@@ -198,14 +201,19 @@ namespace Aurora\Framework{
 		private $Type;
 
 //!	we're providing a public constructor to mimic usage in c#
+/**
+*	@param string $name field name
+*	@param mixed $type value gets passed onto Aurora::Framework::ColumnTypeDef::__construct()
+*/
 		public function __construct($name, array $type=null){
 			$this->__set('Name', $name);
 			$this->Type = new ColumnTypeDef($type);
 		}
 
-
-//!	magic method used to act as a proxy to the private properties
+//!	Since we don't have proper getters & setters in PHP, we wrap to the magic method
 /**
+*	@param string $name name of property access is attempted on
+*	@return mixed
 *	@see Aurora::Framework::ColumnDefinition::$Name
 *	@see Aurora::Framework::ColumnDefinition::$Type
 */
@@ -236,10 +244,10 @@ namespace Aurora\Framework\ColumnDefinition{
 
 	use ArrayObject;
 
-
+//!	abstract iterator for strongly-typed column definition-related classes or properties
 	abstract class abstractIterator extends ArrayObject{
 
-
+//!	sets up the array object and passes values onto Aurora::Framework
 		public function __construct(){
 			parent::__construct(array(), \ArrayObject::STD_PROP_LIST);
 			$values = func_get_args();
@@ -251,7 +259,7 @@ namespace Aurora\Framework\ColumnDefinition{
 		}
 	}
 
-
+//!	strongly-typed array for column definitions
 	class Iterator extends abstractIterator{
 
 //!	Restricts values to instances of Aurora::Framework::ColumnDefinition

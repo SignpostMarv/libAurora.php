@@ -3,6 +3,7 @@
 //!	@brief PDO implementation of Aurora::Framework::IDataConnector
 //!	@author SignpostMarv
 
+//!	non-transposed implementation of Aurora::DataManager classes
 namespace libAurora\DataManager{
 
 	use PDOException;
@@ -37,6 +38,7 @@ namespace libAurora\DataManager{
 *	@param string $connectionString database connection string
 *	@param string $migratorName migrator module
 *	@param boolean $validateTables specifying TRUE must attempt to validate tables after connecting to the database
+*	@param boolean $forceBreakingChanges TRUE forces breaking changes to be applied
 */
 		public function __construct($connectionString, $migratorName, $validateTables, $forceBreakingChanges=false){
 
@@ -267,7 +269,10 @@ namespace libAurora\DataManager{
 			return static::returnExecute($sth);
 		}
 
-
+//!	Drops a table
+/**
+*	@param string $tableName name of table to drop
+*/
 		public function DropTable($tableName){
 			parent::DropTable($table);
 			$table = strtolower($table);
@@ -279,7 +284,13 @@ namespace libAurora\DataManager{
 			}
 		}
 
-
+//!	Copies data between tables
+/**
+*	@param string $sourceTableName table to copy from
+*	@param string $destinationTableName table to copy to
+*	@param object $columnDefinitions instance of Aurora::Framework::ColumnDefinition::Iterator column definitions 
+*	@param object $indexDefinitions instance of Aurora::Framework::IndexDefinition::Iterator index definitions 
+*/
 		protected function CopyAllDataBetweenMatchingTables($sourceTableName, $destinationTableName, ColDefs $columnDefinitions, IndexDefs $indexDefinitions){
 			static::validateArg_table($sourceTableName, $destinationTableName);
 			$sourceTableName      = strtolower($sourceTableName);
@@ -291,7 +302,11 @@ namespace libAurora\DataManager{
 			}
 		}
 
-
+//!	Converts a type string to a column type definition object
+/**
+*	@param string $typeString
+*	@return object an instance of Aurora::Framework::ColumnTypeDef
+*/
 		protected static function ConvertTypeToColumnType($typeString){
 			if(is_string($typeString) === false){
 				throw new InvalidArgumentException('typeString must be specified as string.');

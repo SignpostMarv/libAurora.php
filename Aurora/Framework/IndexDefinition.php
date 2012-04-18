@@ -85,8 +85,10 @@ namespace Aurora\Framework{
 			return true;
 		}
 
-//!	magic method used to act as a proxy to the private properties
+//!	Since we don't have proper getters & setters in PHP, we wrap to the magic method
 /**
+*	@param string $name name of property access is attempted on
+*	@return mixed
 *	@see Aurora::Framework::IndexDefinition::$Fields
 *	@see Aurora::Framework::IndexDefinition::$Type
 */
@@ -114,10 +116,10 @@ namespace Aurora\Framework\IndexDefinition{
 
 	use Aurora\Framework\ColumnDefinition;
 
-
+//!	abstract iterator for strongly-typed index definition-related classes or properties
 	abstract class abstractIterator extends ArrayObject{
 
-
+//!	sets up the array object and passes values onto Aurora::Framework
 		public function __construct(){
 			parent::__construct(array(), \ArrayObject::STD_PROP_LIST);
 			$values = func_get_args();
@@ -129,7 +131,7 @@ namespace Aurora\Framework\IndexDefinition{
 		}
 	}
 
-
+//!	strongly-typed array for index definitions
 	class Iterator extends abstractIterator{
 
 //!	This is identical to the regex on libAurora::DataManager::DataManagerBase::regex_Query_arg_table, but the idea of referencing the libAurora namespace from the Aurora namespace made me uncomfortable. ~SignpostMarv
@@ -147,8 +149,8 @@ namespace Aurora\Framework\IndexDefinition{
 		}
 	}
 
-
-	class fieldArray extends \ArrayObject{
+//!	array of field names, lazy way of ensuring the field names will be valid
+	class fieldArray extends abstractIterator{
 
 //!	Restricts values to strings
 		public function offsetSet($offset, $value){
