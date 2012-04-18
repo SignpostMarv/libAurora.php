@@ -62,6 +62,7 @@ namespace libAurora\DataManager{
 			try{
 				$this->PDO = new \PDO($connectionString, $username, $password);
 			}catch(PDOException $e){
+				error_log($e);
 				throw new RuntimeException('Failed to connect to database with supplied connection string.');
 			}
 
@@ -78,6 +79,7 @@ namespace libAurora\DataManager{
 			try{
 				$sth = $PDO->prepare($query);
 			}catch(PDOException $e){
+				error_log($e);
 				throw new RuntimeException('Exception occurred when preparing query.', $e->getCode());
 			}
 		}
@@ -104,6 +106,7 @@ namespace libAurora\DataManager{
 					$sth->bindValue($k, $v, $type);
 				}
 			}catch(PDOException $e){
+				error_log($e);
 				throw new RuntimeException('Exception occurred when binding values to query.', $e->getCode());
 			}
 		}
@@ -114,6 +117,7 @@ namespace libAurora\DataManager{
 				$exec = $sth->execute();
 				return $exec;
 			}catch(PDOException $e){
+				error_log($e);
 				throw new RuntimeException('Execution of the query threw an exception.', $e->getCode());
 			}
 		}
@@ -126,6 +130,7 @@ namespace libAurora\DataManager{
 			try{
 				$parts = $sth->fetchAll(\PDO::FETCH_NUM);
 			}catch(PDOException $e){
+				error_log($e);
 				throw new RuntimeException('Failed to fetch query results.');
 			}
 
@@ -183,6 +188,7 @@ namespace libAurora\DataManager{
 					throw new RuntimeException('Execution of the query failed.', $sth->errorCode());
 				}
 			}catch(PDOException $e){
+				error_log($e);
 				throw new RuntimeException('Execution of the query threw an exception.', $e->getCode());
 			}
 
@@ -280,6 +286,7 @@ namespace libAurora\DataManager{
 			try{
 				$this->PDO->exec(sprintf('DROP TABLE %s', $tableName));
 			}catch(PDOException $e){
+				error_log($e);
 				throw new RuntimeException('Failed to drop table.');
 			}
 		}
@@ -298,6 +305,7 @@ namespace libAurora\DataManager{
 			try{
 				$this->PDO->exec(sprintf('INSERT INTO %s SELECT * FROM %s', $destinationTableName, $sourceTableName));
 			}catch(PDOException $e){
+				error_log($e);
 				throw new RuntimeException('An exception was thrown when copying data between tables.', $e->getCode());
 			}
 		}
