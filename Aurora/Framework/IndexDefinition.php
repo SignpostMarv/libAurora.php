@@ -118,24 +118,19 @@ namespace Aurora\Framework\IndexDefinition{
 
 	use Aurora\Framework\ColumnDefinition;
 
-//!	abstract iterator for strongly-typed index definition-related classes or properties
-	abstract class abstractIterator extends ArrayObject{
+//!	strongly-typed array for index definitions
+	class Iterator extends ArrayObject{
 
-//!	sets up the array object and passes values onto Aurora::Framework
+//!	sets up the array object and passes values onto Aurora::Framework::IndexDefinition::Iterator::offsetSet()
 		public function __construct(){
 			parent::__construct(array(), \ArrayObject::STD_PROP_LIST);
 			$values = func_get_args();
-			if(is_array($values) === true && count($values) > 0 && is_array($values[0])){
-				$values = current($values);
+			if(is_array($values) === true){
 				foreach($values as $k => $v){
 					$this[$k] = $v;
 				}
 			}
 		}
-	}
-
-//!	strongly-typed array for index definitions
-	class Iterator extends abstractIterator{
 
 //!	This is identical to the regex on libAurora::DataManager::DataManagerBase::regex_Query_arg_table, but the idea of referencing the libAurora namespace from the Aurora namespace made me uncomfortable. ~SignpostMarv
 		const regex_Query_arg_table = '/^[A-z0-9_]+$/';
@@ -153,7 +148,19 @@ namespace Aurora\Framework\IndexDefinition{
 	}
 
 //!	array of field names, lazy way of ensuring the field names will be valid
-	class fieldArray extends abstractIterator{
+	class fieldArray extends ArrayObject{
+
+//!	sets up the array object and passes values onto Aurora::Framework::IndexDefinition::fieldArray::offsetSet()
+		public function __construct(){
+			parent::__construct(array(), \ArrayObject::STD_PROP_LIST);
+			$values = func_get_args();
+			if(is_array($values) === true && count($values) > 0 && is_array($values[0])){
+				$values = current($values);
+				foreach($values as $k => $v){
+					$this[$k] = $v;
+				}
+			}
+		}
 
 //!	Restricts values to strings
 		public function offsetSet($offset, $value){
