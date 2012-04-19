@@ -315,7 +315,7 @@ namespace Aurora\DataManager\Migration{
 
 				$validated = $currentMigrator != null && $currentMigrator->Validate($this->genericData);
 
-				if($validated === false && $validateTables === true && $currentMigrator !== null){
+				if($validated === false && $this->validateTables === true && $currentMigrator !== null){
 					error_log(sprintf('Failed to validated migration %s-%s, retrying...', $currentMigrator->MigrationName, $currentMigrator->Version));
 
 					$currentMigrator->Migrate($this->genericData);
@@ -347,7 +347,7 @@ namespace Aurora\DataManager\Migration{
 				$executingMigrator = $this->GetMigratorByVersion($this->operationDescription->StartVersion);
 
 				if($executingMigrator !== null){
-					if($validateTables == true && $currentMigrator !== null){
+					if($this->validateTables == true && $currentMigrator !== null){
 						//prepare restore point if something goes wrong
 						$this->restorePoint = $currentMigrator->PrepareRestorePoint($this->genericData);
 						$restoreTaken = true;
@@ -367,7 +367,7 @@ namespace Aurora\DataManager\Migration{
 					$validated = $executingMigrator->Validate($this->genericData);
 
 					//if it doesn't validate, rollback
-					if($validated === false && $validateTables){
+					if($validated === false && $this->validateTables){
 						$this->RollBackOperation();
 						if($currentMigrator != null){
 							throw new RuntimeException(sprintf('Migrating to version %s did not validate. Restoring to restore point.', $currentMigrator->Version));
