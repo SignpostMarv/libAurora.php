@@ -344,7 +344,7 @@ namespace libAurora\DataManager{
 
 			$rdr = static::linearResults($sth);
 			if(count($rdr) % 13 !== 0){
-				throw new RuntimeException('MySQL index description should consist of 6 fields per row.');
+				throw new RuntimeException('MySQL index description should consist of 13 fields per row.');
 			}
 
 			$j = count($rdr);
