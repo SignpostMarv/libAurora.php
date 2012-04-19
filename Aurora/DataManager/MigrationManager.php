@@ -204,7 +204,7 @@ namespace Aurora\DataManager\Migration{
 			if($currentVersion == null){
 
 				$defaultMigrator = $this->GetHighestVersionMigratorThatCanProvideDefaultSetup();
-				$currentVersion = $defaultMigrator->Version;
+				$currentVersion  = $defaultMigrator->Version;
 
 				$startMigrator   = $this->GetMigratorAfterVersion($defaultMigrator->Version);
 				$latestMigrator  = $this->GetLatestVersionMigrator();
