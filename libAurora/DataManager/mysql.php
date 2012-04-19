@@ -11,6 +11,8 @@ namespace libAurora\DataManager{
 
 	use PDOStatement;
 
+	use libAurora\Version;
+
 	use Aurora\Framework\QueryFilter;
 
 	use Aurora\Framework\ColumnType;
@@ -25,8 +27,25 @@ namespace libAurora\DataManager{
 //!	mysql-specific PDO implementation of Aurora::Framework::IDataConnector
 	class MySQLDataLoader extends PDO{
 
-//!	Name of the connector
+//!	string Name of the connector
 		const Identifier = 'MySQLData';
+		
+//!	object instance of libAurora::Version indicating what version of MySQL the server is
+		private $MySQLVersion;
+
+//! Connect to database. We're deviating from the c# design here, using the constructor to connect to the database rather than a method that can be used anywhere during runtime
+/**
+*	Important note! Unlike the equivalent c#, this class does not create databases- the database must be created beforehand by the user (except in the case of SQLite)
+*	@param string $connectionString database connection string
+*	@param string $migratorName migrator module
+*	@param boolean $validateTables specifying TRUE must attempt to validate tables after connecting to the database
+*	@param boolean $forceBreakingChanges TRUE forces breaking changes to be applied
+*	@param string $mysqlVersion Specifies the version of the MySQL server so queries can take into account the differences between query results
+*/
+		public function __construct($connectionString, $migratorName, $validateTables, $forceBreakingChanges=false, $mysqlVersion='5.1'){
+			$this->MySQLVersion = new Version($mysqlVersion);
+			parent::__construct($connectionString, $migratorName, $validateTables, $forceBreakingChanges);
+		}
 
 
 		public function TableExists($table){
@@ -343,13 +362,19 @@ namespace libAurora\DataManager{
 			static::returnExecute($sth);
 
 			$rdr = static::linearResults($sth);
-			if(count($rdr) % 13 !== 0){
-				throw new RuntimeException('MySQL index description should consist of 13 fields per row.');
+			static $version_5_5 = null;
+			if(isset($version_5_5) === false){
+				$version_5_5 = new Version('5.5');
+			}
+			
+			$expectedFields = Version::cmp($this->MySQLVersion, $version_5_5) >= 0 ? 13 : 12;
+			if(count($rdr) % $expectedFields !== 0){
+				throw new RuntimeException('MySQL index description should consist of ' . $expectedFields . ' fields per row.');
 			}
 
 			$j = count($rdr);
-			for($i=0;$i<$j;$i+=13){
-				list($table, $non_unique, $key_name, $seq_in_index, $column_name, $collation, $cardinality, $sub_part, $packed, $null, $index_type, $comment, $index_comment) = array_slice($rdr, $i, 13);
+			for($i=0;$i<$j;$i+=$expectedFields){
+				list($table, $non_unique, $key_name, $seq_in_index, $column_name, $collation, $cardinality, $sub_part, $packed, $null, $index_type) = array_slice($rdr, $i, $expectedFields);
 				$seq_in_index = (integer)$seq_in_index;
 
 				if(isset($indexLookup[$key_name]) === false){
