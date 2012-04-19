@@ -125,7 +125,8 @@ namespace Aurora\Framework\IndexDefinition{
 		public function __construct(){
 			parent::__construct(array(), \ArrayObject::STD_PROP_LIST);
 			$values = func_get_args();
-			if(isset($values) === true){
+			if(is_array($values) === true && count($values) > 0 && is_array($values[0])){
+				$values = current($values);
 				foreach($values as $k => $v){
 					$this[$k] = $v;
 				}
