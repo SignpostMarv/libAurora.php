@@ -152,7 +152,7 @@ namespace libAurora\DataManager{
 *	@return array A one-dimensional array of all fields in the result rows.
 */
 		public function Query(array $wantedValue, $table, QueryFilter $queryFilter=null, array $sort=null, $start=null, $count=null){
-			parent::Query($wantedValue, $table, $queryFilter, $sort, $start, $null);
+			parent::Query($wantedValue, $table, $queryFilter, $sort, $start, $count);
 
 			$query = sprintf('SELECT %s FROM %s', implode(', ', $wantedValue), $table);
 			$ps = array();
