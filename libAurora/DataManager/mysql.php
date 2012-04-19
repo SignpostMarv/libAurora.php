@@ -86,6 +86,7 @@ namespace libAurora\DataManager{
 
 			try{
 				if($this->PDO->exec($query) === false){
+					error_log(print_r($this->PDO->errorInfo(), true));
 					throw new RuntimeException('Failed to create table but did not throw an exception.');
 				}
 			}catch(PDOException $e){
