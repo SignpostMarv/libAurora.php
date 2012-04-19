@@ -112,6 +112,8 @@ namespace Aurora\Framework{
 
 namespace Aurora\Framework\IndexDefinition{
 
+	use Aurora\Framework\InvalidArgumentException;
+
 	use ArrayObject;
 
 	use Aurora\Framework\ColumnDefinition;
