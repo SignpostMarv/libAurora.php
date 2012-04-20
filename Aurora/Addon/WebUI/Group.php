@@ -574,7 +574,7 @@ namespace Aurora\Addon\WebUI{
 */
 		public function Groups(){
 			if(isset($this->groups) === false){
-				$this->groups = $this->WebUI->foreknowledgeGetGroupRecords($this->groupIDs);
+				$this->groups = $this->API->foreknowledgeGetGroupRecords($this->groupIDs);
 				$this->groups->rewind();
 			}
 
@@ -652,7 +652,7 @@ namespace Aurora\Addon\WebUI{
 				return null;
 			}else if(isset($this->data[$this->key()]) === false){
 				$start   = $this->key();
-				$results = $this->WebUI->GroupNotices($start, 10, $this->groupIDs, true);
+				$results = $this->API->GroupNotices($start, 10, $this->groupIDs, true);
 				foreach($results as $group){
 					$this->data[$start++] = $group;
 				}
@@ -672,7 +672,7 @@ namespace Aurora\Addon\WebUI{
 				return null;
 			}else if(isset($this->data[$this->key()]) === false){
 				$start   = $this->key();
-				$results = $this->WebUI->NewsFromGroupNotices($start, 10);
+				$results = $this->API->NewsFromGroupNotices($start, 10);
 				foreach($results as $group){
 					$this->data[$start++] = $group;
 				}
