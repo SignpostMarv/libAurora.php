@@ -412,6 +412,10 @@ namespace Aurora\Addon\WebUI{
 			if(is_string($userLevel) === true && ctype_digit($userLevel) === true){
 				$userLevel = (integer)$userLevel;
 			}
+			if(is_string($webURL) === true && trim($webURL) !== '' && in_array(parse_url($webURL, \PHP_URL_SCHEME), array('http', 'https')) === false){
+				error_log('third-party user web profile must be either http or https url. Invalid url on user ' . (string)$uuid . ': ' . $webURL);
+				$webURL = '';
+			}
 
 			if(is_integer($created) === false){
 				throw new InvalidArgumentException('created must be an integer.');
@@ -443,8 +447,6 @@ namespace Aurora\Addon\WebUI{
 				throw new InvalidArgumentException('first life about text must be a string.');
 			}else if(is_string($webURL) === false){
 				throw new InvalidArgumentException('third-party user web profile must be a string.');
-			}else if(trim($webURL) !== '' && in_array(parse_url($webURL, \PHP_URL_SCHEME), array('http', 'https')) === false){
-				throw new InvalidArgumentException('third-party user web profile must be either http or https url.');
 			}else if(is_string($displayName) === false){
 				throw new InvalidArgumentException('display name must be a string.');
 			}else if(is_string($partnerUUID) === false){
