@@ -165,4 +165,8 @@ namespace Aurora\Addon\WebUI\Template{
 		}
 	}
 }
+
+namespace{
+	require_once('Template/navigation.php');
+}
 ?>
