@@ -1,5 +1,5 @@
 <?php
-//!	@file Aurora/Addon/WebUI/Template.php
+//!	@file libAurora/Template.php
 //!	@author SignpostMarv
 //!	@brief Template helpers.
 //!	@todo Should probably be moved to another namespace at somepoint.

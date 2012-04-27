@@ -62,5 +62,6 @@ namespace{
 	require_once('Aurora/load.php');
 	require_once('libAurora/Version.php');
 	require_once('libAurora/DataManager.php');
+	require_once('libAurora/Template.php');
 }
 ?>

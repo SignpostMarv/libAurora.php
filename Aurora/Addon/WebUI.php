@@ -2862,7 +2862,6 @@ namespace{
 	require_once('WebUI/AbuseReports.php');
 	require_once('WebUI/AvatarArchives.php');
 	require_once('WebUI/Friends.php');
-	require_once('WebUI/Template.php');
 }
 
 //!	Code specific to the WebUI
