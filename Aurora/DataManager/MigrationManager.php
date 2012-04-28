@@ -195,7 +195,7 @@ namespace Aurora\DataManager\Migration{
 *	@see Aurora::DataManager::Migration::MigrationManager::$operationDescription
 */
 		public function DetermineOperation(){
-			if(trim($this->migratorName) === ''){
+			if(trim($this->migratorName) === '' || count($this->migrators) === 0){
 				return false;
 			}
 			$this->executed = false;
