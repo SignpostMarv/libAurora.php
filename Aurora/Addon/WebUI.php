@@ -6,6 +6,8 @@
 //	Defining exception classes in the top of the file for purposes of clarity.
 namespace Aurora\Addon\WebUI{
 
+	use Aurora\Addon\APIAccessFailedException;
+
 	use Aurora\Addon;
 
 //!	This interface exists purely to give client code the ability to detect all WebUI-specific exception classes in one go.
@@ -118,6 +120,8 @@ namespace Aurora\Addon{
 				CURLOPT_POSTFIELDS     => implode(',', array(json_encode($arguments)))
 			));
 			$result = curl_exec($ch);
+			$error = $result ? null : curl_error($ch);
+			$info  = $result ? null : curl_getinfo($ch, CURLINFO_HTTP_CODE);
 			curl_close($ch);
 			if(is_string($result) === true){
 				$result = json_decode($result);
@@ -212,7 +216,13 @@ namespace Aurora\Addon{
 				}
 				return $result;
 			}
-			throw new RuntimeException('API call failed to execute.'); // if this starts happening frequently, we'll add in some more debugging code.
+
+			if($result === false){
+				if($info === 0){
+					throw new APIAccessFailedException('API end-point is either not reachable or not online.');
+				}
+			}
+			throw new APIAccessFailedException('API call failed to execute.'); // if this starts happening frequently, we'll add in some more debugging code.
 		}
 
 #region textures

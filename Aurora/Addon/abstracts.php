@@ -5,6 +5,9 @@
 
 namespace Aurora\Addon{
 
+	class APIAccessFailedException extends RuntimeException{
+	}
+
 	use Iterator;
 	use SeekableIterator;
 	use Countable;
