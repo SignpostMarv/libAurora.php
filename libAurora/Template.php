@@ -105,7 +105,12 @@ namespace Aurora\Addon\WebUI\Template{
 		if(Addon\is_uuid($uuid) === false){
 			throw new InvalidArgumentException('Input value must be a valid UUID');
 		}
-		return base_convert(str_replace('-', '', $uuid), 16, 36);
+		$uuid = str_split(str_replace('-','', $uuid), 8);
+		$_1 = base_convert($uuid[0], 16, 36);
+		$_2 = base_convert($uuid[1], 16, 36);
+		$_3 = base_convert($uuid[2], 16, 36);
+		$_4 = base_convert($uuid[3], 16, 36);
+		return ($_1 === '0' ? '' : $_1) . '-' . ($_2 === '0' ? '' : $_2) . '-' . ($_3 === '0' ? '' : $_3) . '-' . ($_4 === '0' ? '' : $_4);
 	}
 
 //!	Converts a squished UUID to a valid UUID string.
@@ -115,7 +120,14 @@ namespace Aurora\Addon\WebUI\Template{
 *	@return a valid UUID
 */
 	function unsquishUUID($string){
-		$string = str_split(str_pad(base_convert($string, 36, 16), 32, '0', STR_PAD_LEFT), 4);
+		$string = explode('-', $string);
+		if(count($string) !== 4){
+			throw new InvalidArgumentException('Input value was not a valid squished UUID');
+		}
+		foreach($string as $k=>$v){
+			$string[$k] = str_pad(base_convert($string[$k], 36, 16), 8, '0', STR_PAD_LEFT);
+		}
+		$string = str_split($string[0] . $string[1] . $string[2] . $string[3], 4);
 		$uuid   =
 			$string[0] . $string[1] . '-' .
 			$string[2] . '-' .
