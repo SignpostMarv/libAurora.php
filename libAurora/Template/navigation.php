@@ -49,7 +49,7 @@ namespace libAurora\Template\navigation{
 				}
 				$results = array_merge($results, $v->query($parent, $display));
 			}
-			
+
 			return $results;
 		}
 
@@ -64,6 +64,17 @@ namespace libAurora\Template\navigation{
 			foreach($this as $v){
 				$v->sort();
 			}
+		}
+
+
+		public function toHTML(array $display=null){
+			$doc = '<ul>';
+
+			foreach($this as $v){
+				$doc .= $v->toHTML($display);
+			}
+
+			return $doc . '</ul>';
 		}
 	}
 
@@ -89,7 +100,7 @@ namespace libAurora\Template\navigation{
 				throw new InvalidArgumentException('Rank must be specified as float.');
 			}else if(is_integer($display) === false){
 				throw new InvalidArgumentException('Display must be specified as integer.');
-			}else if(is_string($url) === false){
+			}else if($url !== null && is_string($url) === false){
 				throw new InvalidArgumentException('URL must be specified as string.');
 			}else if(is_string($target) === false){
 				throw new InvalidArgumentException('Target must be specified as string.');
@@ -140,6 +151,28 @@ namespace libAurora\Template\navigation{
 
 		public function display(){
 			return $this->display;
+		}
+
+
+		public function toHTML(array $display=null){
+			$display = $display === null ? array(2) : $display;
+			if(in_array($this->display(), $display) === false){
+				return '';
+			}
+			$doc = '<li>';
+			if($this->url() !== null){
+				$doc .= '<a href="' . $this->url() . '"' . (trim($this->target()) === '' ? '' : ' target="' . $this->target() . '"') . '>' . $this->id(). '</a>';
+			}else{
+				$doc .= $this->id();
+			}
+			if($this->count() > 0){
+				$doc .= ' <ul>';
+				foreach($this as $v){
+					$doc .= $v->toHTML();
+				}
+				$doc .= '</ul>';
+			}
+			return $doc .= '</li>';
 		}
 	}
 }
