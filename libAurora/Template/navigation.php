@@ -24,7 +24,7 @@ namespace libAurora\Template\navigation{
 		public function offsetSet($offset, $value){
 			if(($value instanceof Page) === false){
 				throw new InvalidArgumentException('Only instances of libAurora::Template::navigation::Page should be appended to instances of libAurora::Template::navigation::Pages');
-			}else if($offset !== $value->id()){
+			}else if(defined('libAuroraTemplateNavigationNoStrictID') === false && $offset !== $value->id()){
 				throw new InvalidArgumentException('Offset does not match page ID');
 			}else if(isset($this[$offset]) === true){
 				throw new InvalidArgumentException('page already set');
@@ -94,7 +94,7 @@ namespace libAurora\Template\navigation{
 
 			if(is_string($id) === false){
 				throw new InvalidArgumentException('ID must be specified as string.');
-			}else if(preg_match('/^[A-z][A-z0-9_]+$/', $id) != 1){
+			}else if(defined('libAuroraTemplateNavigationNoStrictID') === false && preg_match('/^[A-z][A-z0-9_]+$/', $id) != 1){
 				throw new InvalidArgumentException('ID not valid.');
 			}else if(is_float($rank) === false){
 				throw new InvalidArgumentException('Rank must be specified as float.');
@@ -168,7 +168,7 @@ namespace libAurora\Template\navigation{
 			if($this->count() > 0){
 				$doc .= ' <ul>';
 				foreach($this as $v){
-					$doc .= $v->toHTML();
+					$doc .= $v->toHTML($display);
 				}
 				$doc .= '</ul>';
 			}
