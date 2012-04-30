@@ -1326,6 +1326,34 @@ namespace Aurora\Addon{
 
 #region IAbuseReports
 
+//!	Validator array to be used with Aurora::Addon::WebUI::makeCallToAPI()
+/**
+*	@return array Validator array to be used with Aurora::Addon::WebUI::makeCallToAPI()
+*	@see Aurora::Addon::WebUI::GetAbuseReports()
+*	@see Aurora::Addon::WebUI::GetAbuseReport()
+*/
+		protected static function GetAbuseReportValidator(){
+			static $validator = array(
+				'AbuseDetails'   => array('string' =>array()),
+				'AbuseLocation'  => array('string' =>array()),
+				'AbuserName'     => array('string' =>array()),
+				'AbuseSummary'   => array('string' =>array()),
+				'Active'         => array('boolean'=>array()),
+				'AssignedTo'     => array('string' =>array()),
+				'Category'       => array('string' =>array()),
+				'Checked'        => array('boolean'=>array()),
+				'Notes'          => array('string' =>array()),
+				'Number'         => array('integer'=>array()),
+				'ObjectName'     => array('string' =>array()),
+				'ObjectPosition' => array('string' =>array()),
+				'ObjectUUID'     => array('string' =>array()),
+				'RegionName'     => array('string' =>array()),
+				'ReporterName'   => array('string' =>array()),
+				'ScreenshotID'   => array('string' =>array())
+			);
+			return $validator;
+		}
+
 //!	Attempt to fetch all Abuse Reports.
 /**
 *	@param integer $start start point for abuse reports
@@ -1343,24 +1371,7 @@ namespace Aurora\Addon{
 
 			$result = $this->makeCallToAPI('GetAbuseReports', array('Start' => $start, 'Count' => $count, 'Active' => $active), array(
 				'AbuseReports' => array('array'=>array(array(
-					'object' => array(array(
-						'AbuseDetails'   => array('string' =>array()),
-						'AbuseLocation'  => array('string' =>array()),
-						'AbuserName'     => array('string' =>array()),
-						'AbuseSummary'   => array('string' =>array()),
-						'Active'         => array('boolean'=>array()),
-						'AssignedTo'     => array('string' =>array()),
-						'Category'       => array('string' =>array()),
-						'Checked'        => array('boolean'=>array()),
-						'Notes'          => array('string' =>array()),
-						'Number'         => array('integer'=>array()),
-						'ObjectName'     => array('string' =>array()),
-						'ObjectPosition' => array('string' =>array()),
-						'ObjectUUID'     => array('string' =>array()),
-						'RegionName'     => array('string' =>array()),
-						'ReporterName'   => array('string' =>array()),
-						'ScreenshotID'   => array('string' =>array())
-					))
+					'object' => array(static::GetAbuseReportValidator())
 				)))
 			));
 
