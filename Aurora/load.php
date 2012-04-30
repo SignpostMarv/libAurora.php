@@ -185,6 +185,12 @@ namespace OpenMetaverse{
 *	@param float $z z-axis
 */
 		public function __construct($x=0.0, $y=0.0, $z=0.0){
+			if(is_string($x) === true && $y === 0.0 && $z === 0.0 && preg_match('/^\<\s*(\d+|\d*\.\d+)\s*\,\s*(\d+|\d*\.\d+)\s*\,\s*(\d+|\d*\.\d+)\s*\>$/', $x, $matches) === 1){
+				$x = (float)$matches[1];
+				$y = (float)$matches[2];
+				$z = (float)$matches[3];
+			}
+
 			if(is_integer($x) === true){
 				$x = (float)$x;
 			}
