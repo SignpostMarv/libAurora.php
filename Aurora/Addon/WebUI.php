@@ -1377,10 +1377,29 @@ namespace Aurora\Addon{
 
 			$results = array();
 			foreach($result->AbuseReports as $AR){
-				$results[] = WebUI\AbuseReport::r($AR->Number, $AR->AbuseDetails, $AR->AbuseLocation, $AR->AbuserName, $AR->AbuseSummary, $AR->Active, $AR->AssignedTo, $AR->Category, $AR->Checked, $AR->Notes, $AR->ObjectName, $AR->ObjectPosition, $AR->ObjectUUID, $AR->RegionName, $AR->ReporterName, $AR->ScreenshotID);
+				$results[] = WebUI\AbuseReport::r($AR);
 			}
 
 			return new WebUI\AbuseReports($results);
+		}
+
+//!	Attempts to fetch the specific Abuse Report
+/**
+*	@param integer $id
+*	@return object an instance of Aurora::Addon::WebUI::AbuseReport
+*/
+		public function GetAbuseReport($id){
+			if(is_string($id) === true && ctype_digit($id) === true){
+				$id = (integer)$id;
+			}
+
+			if(is_integer($id) === false){
+				throw new InvalidArgumentException('Abuse Report ID must be specified as integer.');
+			}
+
+			return WebUI\AbuseReport::r($this->makeCallToAPI('GetAbuseReport', array('AbuseReport' => $id), array(
+					'AbuseReport' => array(array('object'=>static::GetAbuseReportValidator()))
+			))->AbuseReport);
 		}
 
 //!	Attempts to mark the specified Abuse Report as complete

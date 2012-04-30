@@ -107,6 +107,43 @@ namespace Aurora\Addon\WebUI{
 *	@return object an instance of Aurora::Addon::WebUI::AbuseReport
 */
 		public static function r($number, $details=null, $location=null, $userName=null, $summary=null, $active=null, $assignedTo=null, $category=null, $checked=null, $notes=null, $objectName=null, $objectPosition=null, $objectUUID=null, $regionName=null, $reporterName=null, $screenshot=null){
+			if(
+				is_object($number)                        &&
+				property_exists($number,'Number')         &&
+				property_exists($number,'AbuseDetails')   &&
+				property_exists($number,'AbuseLocation')  &&
+				property_exists($number,'AbuserName')     &&
+				property_exists($number,'AbuseSummary')   &&
+				property_exists($number,'Active')         &&
+				property_exists($number,'AssignedTo')     &&
+				property_exists($number,'Category')       &&
+				property_exists($number,'Checked')        &&
+				property_exists($number,'Notes')          &&
+				property_exists($number,'ObjectName')     &&
+				property_exists($number,'ObjectPosition') &&
+				property_exists($number,'ObjectUUID')     &&
+				property_exists($number,'RegionName')     &&
+				property_exists($number,'ReporterName')   &&
+				property_exists($number,'ScreenshotID')
+			){
+				$details        = $number->AbuseDetails;
+				$location       = $number->AbuseLocation;
+				$userName       = $number->AbuserName;
+				$summary        = $number->AbuseSummary;
+				$active         = $number->Active;
+				$assignedTo     = $number->AssignedTo;
+				$category       = $number->Category;
+				$checked        = $number->Checked;
+				$notes          = $number->Notes;
+				$objectName     = $number->ObjectName;
+				$objectPosition = $number->ObjectPosition;
+				$objectUUID     = $number->ObjectUUID;
+				$regionName     = $number->RegionName;
+				$reporterName   = $number->ReporterName;
+				$screenshot     = $number->ScreenshotID;
+				$number         = $number->Number;
+			}
+
 			if(is_integer($number) === false){
 				throw new InvalidArgumentException('AR number must be an integer.');
 			}
