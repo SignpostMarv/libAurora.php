@@ -105,35 +105,53 @@ namespace Aurora\Addon\WebUI\Template{
 		if(Addon\is_uuid($uuid) === false){
 			throw new InvalidArgumentException('Input value must be a valid UUID');
 		}
-		$uuid = str_split(str_replace('-','', $uuid), 8);
-		$_1 = base_convert($uuid[0], 16, 36);
-		$_2 = base_convert($uuid[1], 16, 36);
-		$_3 = base_convert($uuid[2], 16, 36);
-		$_4 = base_convert($uuid[3], 16, 36);
-		return ($_1 === '0' ? '' : $_1) . '-' . ($_2 === '0' ? '' : $_2) . '-' . ($_3 === '0' ? '' : $_3) . '-' . ($_4 === '0' ? '' : $_4);
+		static $chars;
+		if(isset($chars) === false){
+			$chars = str_split('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_');
+		}
+		$binary = '';
+		foreach(str_split(str_replace('-', '', $uuid), 8) as $v){
+			$binary .= str_pad(base_convert($v, 16, 2), 32, '0', STR_PAD_LEFT);
+		}
+		$binary = str_split($binary, 6);
+		$squish = '';
+		foreach($binary as $v){
+			$squish .= $chars[base_convert($v, 2, 10)];
+		}
+		return $squish;
 	}
 
 //!	Converts a squished UUID to a valid UUID string.
 /**
-*	The base-16 converted string needs to be padded left with zeroes so it can be easily reformated to represent a UUID string.
 *	@param string $string the squished UUID string.
 *	@return a valid UUID
 */
 	function unsquishUUID($string){
-		$string = explode('-', $string);
-		if(count($string) !== 4){
-			throw new InvalidArgumentException('Input value was not a valid squished UUID');
+		static $chars;
+		if(isset($chars) === false){
+			$chars = str_split('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_');
 		}
-		foreach($string as $k=>$v){
-			$string[$k] = str_pad(base_convert($string[$k], 36, 16), 8, '0', STR_PAD_LEFT);
+
+		$binary = '';
+		$parts = str_split($string);
+		$last = array_pop($parts);
+		foreach($parts as $v){
+			$binary .= str_pad(base_convert(array_search($v, $chars), 10, 2), 6, '0', STR_PAD_LEFT);
 		}
-		$string = str_split($string[0] . $string[1] . $string[2] . $string[3], 4);
-		$uuid   =
-			$string[0] . $string[1] . '-' .
-			$string[2] . '-' .
-			$string[3] . '-' .
-			$string[4] . '-' .
-			$string[5] . $string[6] . $string[7]
+		$binary .= str_pad(base_convert(array_search($last, $chars), 10, 2), 2, '0', STR_PAD_LEFT);
+
+		$uuid = '';
+		foreach(str_split($binary, 8) as $v){
+			$uuid .= str_pad(base_convert($v, 2, 16), 2, '0', STR_PAD_LEFT);
+		}
+		$uuid = str_split($uuid, 4);
+
+		$uuid =
+			$uuid[0] . $uuid[1] . '-' .
+			$uuid[2] . '-' .
+			$uuid[3] . '-' .
+			$uuid[4] . '-' .
+			$uuid[5] . $uuid[6] . $uuid[7]
 		;
 		if(Addon\is_uuid($uuid) === false){
 			throw new InvalidArgumentException('Input value was not a valid squished UUID');
