@@ -1183,15 +1183,20 @@ namespace Aurora\Addon{
 					'Count'=>$count,
 					'Query'=>$query
 				), array(
-					'Users' => array('array'=>array()),
+					'Users' => array('array'=>array(array(
+						'object' => array(array(
+							'PrincipalID' => array('string'=>array()),
+							'UserName'    => array('string'=>array()),
+							'Created'     => array('integer'=>array()),
+							'UserFlags'   => array('integer'=>array()),
+							'UserLevel'   => array('integer'=>array())
+						))
+					))),
 					'Total' => array('integer'=>array())
 				));
 
 				foreach($result->Users as $userdata){
-					if(isset($userdata->PrincipalID, $userdata->UserName, $userdata->Created, $userdata->UserFlags) === false){
-						throw new UnexpectedValueException('Call to API was successful but required response sub-properties were missing.');
-					}
-					$results[] = WebUI\SearchUser::r($userdata->PrincipalID, $userdata->UserName, $userdata->Created, $userdata->UserFlags);
+					$results[] = WebUI\SearchUser::r($userdata->PrincipalID, $userdata->UserName, $userdata->Created, $userdata->UserFlags, $userdata->UserLevel);
 				}
 			}
 

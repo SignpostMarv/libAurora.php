@@ -893,16 +893,20 @@ namespace Aurora\Addon\WebUI{
 *	@param string $name Account name
 *	@param integer $created unix timestamp of when the account was created
 *	@param integer $userFlags bitfield of user flags
+*	@param integer $userLevel user account level
 */
-		protected function __construct($uuid, $name, $created, $userFlags){
+		protected function __construct($uuid, $name, $created, $userFlags, $userLevel){
 			if(is_integer($created) === false){
 				throw new InvalidArgumentException('Created timestamp must be an integer.');
 			}else if(is_integer($userFlags) === false){
 				throw new InvalidArgumentException('User Flags must be an integer.');
+			}else if(is_integer($userLevel) === false){
+				throw new InvalidArgumentException('User Level must be an integer.');
 			}
 
 			$this->Created   = $created;
 			$this->UserFlags = $userFlags;
+			$this->UserLevel = $userLevel;
 			parent::__construct($uuid, $name);
 		}
 
@@ -912,9 +916,10 @@ namespace Aurora\Addon\WebUI{
 *	@param string $name Account name
 *	@param integer $created unix timestamp of when the account was created
 *	@param integer $userFlags bitfield of user flags
+*	@param integer $userLevel user account level
 *	@return object an instance of Aurora::Addon::WebUI::SearchUser
 */
-		public static function r($uuid, $name=null, $created=null, $userFlags=null){
+		public static function r($uuid, $name=null, $created=null, $userFlags=null, $userLevel=null){
 			if(is_string($uuid) === false){
 				throw new InvalidArgumentException('UUID must be a string.');
 			}else if(preg_match(\Aurora\Addon\WebUI::regex_UUID, $uuid) === false){
@@ -927,13 +932,13 @@ namespace Aurora\Addon\WebUI{
 
 			if($create === false && isset($name, $created, $userFlags) === true){
 				$user = $registry[$uuid];
-				$create = ($user->Name() !== $name || $user->Created() !== $created || $user->UserFlags !== $userFlags);
-			}else if($created === true && isset($name, $created, $userFlags) === false){
+				$create = ($user->Name() !== $name || $user->Created() !== $created || $user->UserFlags() !== $userFlags || $user->UserLevel() !== $userLevel);
+			}else if($created === true && isset($name, $created, $userFlags, $userLevel) === false){
 				throw new InvalidArgumentException('Cannot create an instance of Aurora::Addon::WebUI::SearchUser if no information is specified.');
 			}
 
 			if($create){
-				$registry[$uuid] = new static($uuid, $name, $created, $userFlags);
+				$registry[$uuid] = new static($uuid, $name, $created, $userFlags, $userLevel);
 			}
 
 			return $registry[$uuid];
@@ -953,6 +958,14 @@ namespace Aurora\Addon\WebUI{
 //!	@see Aurora::Addon::WebUI::SearchUser::$UserFlags
 		public function UserFlags(){
 			return $this->UserFlags;
+		}
+
+//!	integer user account level
+//!	@see Aurora::Addon::WebUI::SearchUser::UserLevel()
+		protected $UserLevel;
+//!	@see Aurora::Addon::WebUI::SearchUser::$UserLevel
+		public function UserLevel(){
+			return $this->UserLevel;
 		}
 	}
 
