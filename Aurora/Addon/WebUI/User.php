@@ -399,7 +399,7 @@ namespace Aurora\Addon\WebUI{
 *	@param mixed $RLCity NULL or string postal city
 *	@param mixed $RLCountry NULL or string postal country
 */
-		protected function __construct($uuid, $name='', $email='', $created=0, $allowPublish=false, $maturePublish=false, $wantToMask=0, $wantToText='', $canDoMask=0, $canDoText='', $languages='', $image='00000000-0000-0000-0000-000000000000', $aboutText='', $firstLifeImage='00000000-0000-0000-0000-000000000000', $firstLifeAboutText='', $webURL='', $displayName='', $partnerUUID='00000000-0000-0000-0000-000000000000', $visible=false, $customType='', $notes='', $userLevel=-1 , $RLName=null, $RLAddress=null, $RLZip=null, $RLCity=null, $RLCountry=null){
+		protected function __construct($uuid, $name='', $email='', $created=0, $allowPublish=false, $maturePublish=false, $wantToMask=0, $wantToText='', $canDoMask=0, $canDoText='', $languages='', $image='00000000-0000-0000-0000-000000000000', $aboutText='', $firstLifeImage='00000000-0000-0000-0000-000000000000', $firstLifeAboutText='', $webURL='', $displayName='', $partnerUUID='00000000-0000-0000-0000-000000000000', $visible=false, $customType='', $notes='', $userLevel=-1, $userFlags=0, $accountFlags=0 , $RLName=null, $RLAddress=null, $RLZip=null, $RLCity=null, $RLCountry=null){
 			if(is_string($created) === true && ctype_digit($created) === true){
 				$created = (integer)$created;
 			}
@@ -411,6 +411,12 @@ namespace Aurora\Addon\WebUI{
 			}
 			if(is_string($userLevel) === true && ctype_digit($userLevel) === true){
 				$userLevel = (integer)$userLevel;
+			}
+			if(is_string($userFlags) === true && ctype_digit($userFlags) === true){
+				$userFlags = (integer)$userFlags;
+			}
+			if(is_string($accountFlags) === true && ctype_digit($accountFlags) === true){
+				$accountFlags = (integer)$accountFlags;
 			}
 			if(is_string($webURL) === true && trim($webURL) !== '' && in_array(parse_url($webURL, \PHP_URL_SCHEME), array('http', 'https')) === false){
 				error_log('third-party user web profile must be either http or https url. Invalid url on user ' . (string)$uuid . ': ' . $webURL);
@@ -463,6 +469,8 @@ namespace Aurora\Addon\WebUI{
 				throw new InvalidArgumentException('notes must be a valid stringified JSON entity.');
 			}else if(is_integer($userLevel) === false){
 				throw new InvalidArgumentException('User Level must be an integer.');
+			}else if(is_integer($userFlags) === false){
+				throw new InvalidArgumentException('User Flags must be an integer.');
 			}
 			
 			$this->Created            = $created;
@@ -484,6 +492,8 @@ namespace Aurora\Addon\WebUI{
 			$this->CustomType         = trim($customType);
 			$this->Notes              = $notes;
 			$this->UserLevel          = $userLevel;
+			$this->UserFlags          = $userFlags;
+			$this->Flags              = $accountFlags;
 
 			if(isset($RLName, $RLAddress, $RLZip, $RLCity, $RLCountry) === true){
 				$this->RLInfo = new RLInfo($RLName, $RLAddress, $RLZip, $RLCity, $RLCountry);
@@ -525,14 +535,14 @@ namespace Aurora\Addon\WebUI{
 *	@param mixed $RLCountry NULL or string postal country
 *	@return object instance of UserProfile
 */
-		public static function r($uuid, $name=null, $email=null, $created=null, $allowPublish=null, $maturePublish=null, $wantToMask=null, $wantToText=null, $canDoMask=null, $canDoText=null, $languages=null, $image=null, $aboutText=null, $firstLifeImage=null, $firstLifeAboutText=null, $webURL=null, $displayName=null, $partnerUUID=null, $visible=null, $customType=null, $notes=null, $userLevel=null, $RLName=null, $RLAddress=null, $RLZip=null, $RLCity=null, $RLCountry=null){
+		public static function r($uuid, $name=null, $email=null, $created=null, $allowPublish=null, $maturePublish=null, $wantToMask=null, $wantToText=null, $canDoMask=null, $canDoText=null, $languages=null, $image=null, $aboutText=null, $firstLifeImage=null, $firstLifeAboutText=null, $webURL=null, $displayName=null, $partnerUUID=null, $visible=null, $customType=null, $notes=null, $userLevel=null, $userFlags=null, $accountFlags=null, $RLName=null, $RLAddress=null, $RLZip=null, $RLCity=null, $RLCountry=null){
 			if(is_string($uuid) === false){
 				throw new InvalidArgumentException('UUID must be a string.');
 			}else if(preg_match(\Aurora\Addon\WebUI::regex_UUID, $uuid) === false){
 				throw new InvalidArgumentException('UUID was not a valid UUID.');
 			}else if((
-				(isset($name) || isset($email) || isset($created) || isset($allowPublish) || isset($maturePublish) || isset($wantToMask) || isset($wantToText) || isset($canDoMask) || isset($canDoText) || isset($languages) || isset($image) || isset($aboutText) || isset($firstLifeImage) || isset($firstLifeAboutText) || isset($webURL) || isset($displayName) || isset($partnerUUID) || isset($visible) || isset($customType) || isset($notes) || isset($userLevel)) &&
-				isset($name, $email, $created, $allowPublish, $maturePublish, $wantToMask, $wantToText, $canDoMask, $canDoText, $languages, $image, $aboutText, $firstLifeImage, $firstLifeAboutText, $webURL, $displayName, $partnerUUID, $visible, $customType, $notes, $userLevel) === false) &&
+				(isset($name) || isset($email) || isset($created) || isset($allowPublish) || isset($maturePublish) || isset($wantToMask) || isset($wantToText) || isset($canDoMask) || isset($canDoText) || isset($languages) || isset($image) || isset($aboutText) || isset($firstLifeImage) || isset($firstLifeAboutText) || isset($webURL) || isset($displayName) || isset($partnerUUID) || isset($visible) || isset($customType) || isset($notes) || isset($userLevel) || isset($userFlags)) &&
+				isset($name, $email, $created, $allowPublish, $maturePublish, $wantToMask, $wantToText, $canDoMask, $canDoText, $languages, $image, $aboutText, $firstLifeImage, $firstLifeAboutText, $webURL, $displayName, $partnerUUID, $visible, $customType, $notes, $userLevel, $userFlags, $accountFlags) === false) &&
 				((isset($RLName) || isset($RLAddress) || isset($RLZip) || isset($RLCity) || isset($RLCountry)) && 
 				isset($RLName, $RLAddress, $RLZip, $RLCity, $RLCountry) === false)
 			){
@@ -566,11 +576,11 @@ namespace Aurora\Addon\WebUI{
 			$uuid = strtolower($uuid);
 			static $registry = array();
 			if(isset($registry[$uuid]) === false){
-				if(isset($name, $email, $created, $allowPublish, $maturePublish, $wantToMask, $wantToText, $canDoMask, $canDoText, $languages, $image, $aboutText, $firstLifeImage, $firstLifeAboutText, $webURL, $displayName, $partnerUUID, $visible, $customType, $notes) === false){
+				if(isset($name, $email, $created, $allowPublish, $maturePublish, $wantToMask, $wantToText, $canDoMask, $canDoText, $languages, $image, $aboutText, $firstLifeImage, $firstLifeAboutText, $webURL, $displayName, $partnerUUID, $visible, $customType, $notes, $userLevel, $userFlags, $accountFlags) === false){
 					throw new InvalidArgumentException('Cannot return profile for user by UUID, profile data has not been set.');
 				}
-				$registry[$uuid] = new static($uuid, $name, $email, $created, $allowPublish, $maturePublish, $wantToMask, $wantToText, $canDoMask, $canDoText, $languages, $image, $aboutText, $firstLifeImage, $firstLifeAboutText, $webURL, $displayName, $partnerUUID, $visible, $customType, $notes, $userLevel, $RLName, $RLAddress, $RLZip, $RLCity, $RLCountry);
-			}else if(isset($uuid, $name, $email, $created, $allowPublish, $maturePublish, $wantToMask, $wantToText, $canDoMask, $canDoText, $languages, $image, $aboutText, $firstLifeImage, $firstLifeAboutText, $webURL, $displayName, $partnerUUID, $visible, $customType, $notes) === true){
+				$registry[$uuid] = new static($uuid, $name, $email, $created, $allowPublish, $maturePublish, $wantToMask, $wantToText, $canDoMask, $canDoText, $languages, $image, $aboutText, $firstLifeImage, $firstLifeAboutText, $webURL, $displayName, $partnerUUID, $visible, $customType, $notes, $userLevel, $userFlags, $accountFlags, $RLName, $RLAddress, $RLZip, $RLCity, $RLCountry);
+			}else if(isset($uuid, $name, $email, $created, $allowPublish, $maturePublish, $wantToMask, $wantToText, $canDoMask, $canDoText, $languages, $image, $aboutText, $firstLifeImage, $firstLifeAboutText, $webURL, $displayName, $partnerUUID, $visible, $customType, $notes, $userLevel, $userFlags, $accountFlags) === true){
 				$info = $registry[$uuid];
 				if(
 					$info->Name()               !== $name               ||
@@ -594,9 +604,11 @@ namespace Aurora\Addon\WebUI{
 					$info->CustomType()         !== $customType         ||
 					$info->Notes()              !== $notes              ||
 					$info->UserLevel()          !== $userLevel          ||
+					$info->UserFlags()          !== $userFlags          ||
+					$info->Flags()              !== $accountFlags       ||
 					(string)$info->RLInfo()     !== trim(implode("\n", array($RLName, $RLAddress, $RLZip, $RLCity, $RLCountry)))
 				){
-					$registry[$uuid] = new static($uuid, $name, $email, $created, $allowPublish, $maturePublish, $wantToMask, $wantToText, $canDoMask, $canDoText, $languages, $image, $aboutText, $firstLifeImage, $firstLifeAboutText, $webURL, $displayName, $partnerUUID, $visible, $customType, $notes, $userLevel, $RLName, $RLAddress, $RLZip, $RLCity, $RLCountry);
+					$registry[$uuid] = new static($uuid, $name, $email, $created, $allowPublish, $maturePublish, $wantToMask, $wantToText, $canDoMask, $canDoText, $languages, $image, $aboutText, $firstLifeImage, $firstLifeAboutText, $webURL, $displayName, $partnerUUID, $visible, $customType, $notes, $userLevel, $userFlags, $accountFlags, $RLName, $RLAddress, $RLZip, $RLCity, $RLCountry);
 				}
 			}
 			return $registry[$uuid];
@@ -754,6 +766,22 @@ namespace Aurora\Addon\WebUI{
 			return $this->UserLevel;
 		}
 
+//!	integer User Flags
+//!	@see Aurora::Addon::WebUI::UserProfile::UserFlags()
+		protected $UserFlags;
+//!	@see Aurora::Addon::WebUI::UserProfile::$UserFlags
+		public function UserFlags(){
+			return $this->UserFlags;
+		}
+
+//!	integer bitfield of account flags
+//!	@see Aurora::Addon::WebUI::UserProfile::Flags()
+		protected $Flags;
+//!	@see Aurora::Addon::WebUI::UserProfile::$Flags
+		public function Flags(){
+			return $this->Flags;
+		}
+
 //!	mixed Either an instance of Aurora::Addon::WebUI::RLInfo or NULL.
 //!	@see Aurora::Addon::WebUI::UserProfile::RLInfo()
 		protected $RLInfo = null;
@@ -895,18 +923,21 @@ namespace Aurora\Addon\WebUI{
 *	@param integer $userFlags bitfield of user flags
 *	@param integer $userLevel user account level
 */
-		protected function __construct($uuid, $name, $created, $userFlags, $userLevel){
+		protected function __construct($uuid, $name, $created, $userFlags, $userLevel, $accountFlags){
 			if(is_integer($created) === false){
 				throw new InvalidArgumentException('Created timestamp must be an integer.');
 			}else if(is_integer($userFlags) === false){
 				throw new InvalidArgumentException('User Flags must be an integer.');
 			}else if(is_integer($userLevel) === false){
 				throw new InvalidArgumentException('User Level must be an integer.');
+			}else if(is_integer($accountFlags) === false){
+				throw new InvalidArgumentException('Account Flags must be an integer.');
 			}
 
 			$this->Created   = $created;
 			$this->UserFlags = $userFlags;
 			$this->UserLevel = $userLevel;
+			$this->Flags     = $accountFlags;
 			parent::__construct($uuid, $name);
 		}
 
@@ -919,7 +950,7 @@ namespace Aurora\Addon\WebUI{
 *	@param integer $userLevel user account level
 *	@return object an instance of Aurora::Addon::WebUI::SearchUser
 */
-		public static function r($uuid, $name=null, $created=null, $userFlags=null, $userLevel=null){
+		public static function r($uuid, $name=null, $created=null, $userFlags=null, $userLevel=null, $accountFlags=null){
 			if(is_string($uuid) === false){
 				throw new InvalidArgumentException('UUID must be a string.');
 			}else if(preg_match(\Aurora\Addon\WebUI::regex_UUID, $uuid) === false){
@@ -930,15 +961,15 @@ namespace Aurora\Addon\WebUI{
 			static $registry = array();
 			$create = (isset($registry[$uuid]) === false);
 
-			if($create === false && isset($name, $created, $userFlags) === true){
+			if($create === false && isset($name, $created, $userFlags, $userLevel, $accountFlags) === true){
 				$user = $registry[$uuid];
-				$create = ($user->Name() !== $name || $user->Created() !== $created || $user->UserFlags() !== $userFlags || $user->UserLevel() !== $userLevel);
-			}else if($created === true && isset($name, $created, $userFlags, $userLevel) === false){
+				$create = ($user->Name() !== $name || $user->Created() !== $created || $user->UserFlags() !== $userFlags || $user->UserLevel() !== $userLevel || $user->Flags() !== $accountFlags);
+			}else if($created === true && isset($name, $created, $userFlags, $userLevel, $accountFlags) === false){
 				throw new InvalidArgumentException('Cannot create an instance of Aurora::Addon::WebUI::SearchUser if no information is specified.');
 			}
 
 			if($create){
-				$registry[$uuid] = new static($uuid, $name, $created, $userFlags, $userLevel);
+				$registry[$uuid] = new static($uuid, $name, $created, $userFlags, $userLevel, $accountFlags);
 			}
 
 			return $registry[$uuid];
@@ -958,6 +989,14 @@ namespace Aurora\Addon\WebUI{
 //!	@see Aurora::Addon::WebUI::SearchUser::$UserFlags
 		public function UserFlags(){
 			return $this->UserFlags;
+		}
+
+//!	integer bitfield of account flags
+//!	@see Aurora::Addon::WebUI::UserProfile::Flags()
+		protected $Flags;
+//!	@see Aurora::Addon::WebUI::UserProfile::$Flags
+		public function Flags(){
+			return $this->Flags;
 		}
 
 //!	integer user account level

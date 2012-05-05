@@ -938,7 +938,8 @@ namespace Aurora\Addon{
 					'PrincipalID'      => array('string'=>array()),
 					'Email'            => array('string'=>array()),
 					'TimeSinceCreated' => array('string'=>array()),
-					'UserLevel'        => array('integer'=>array())
+					'UserLevel'        => array('integer'=>array()),
+					'UserFlags'        => array('integer'=>array())
 				)))
 			));
 
@@ -950,6 +951,8 @@ namespace Aurora\Addon{
 			$image        = $firstLifeImage = '00000000-0000-0000-0000-000000000000';
 			$notes        = json_encode('');
 			$userLevel    = $account->UserLevel;
+			$userFlags    = $account->UserFlags;
+			$accountFlags = 0;
 			if(isset($result->profile) === true){
 				$profile = $result->profile;
 				if(isset(
@@ -984,6 +987,7 @@ namespace Aurora\Addon{
 			if(isset($result->agent) === true){
 				$agent = $result->agent;
 				$properties = array(
+					'Flags',
 					'RLName',
 					'RLAddress',
 					'RLZip',
@@ -996,13 +1000,14 @@ namespace Aurora\Addon{
 					}
 				}
 
-				$RLName    = $agent->RLName;
-				$RLAddress = $agent->RLAddress;
-				$RLZip     = $agent->RLZip;
-				$RLCity    = $agent->RLCity;
-				$RLCountry = $agent->RLCountry;
+				$RLName       = $agent->RLName;
+				$RLAddress    = $agent->RLAddress;
+				$RLZip        = $agent->RLZip;
+				$RLCity       = $agent->RLCity;
+				$RLCountry    = $agent->RLCountry;
+				$accountFlags = $agent->Flags;
 			}
-			return WebUI\UserProfile::r($account->PrincipalID, $account->Name, $account->Email, $account->Created, $allowPublish, $maturePublish, $wantToMask, $wantToText, $canDoMask, $canDoText, $languages, $image, $aboutText, $firstLifeImage, $firstLifeAboutText, $webURL, $displayName, isset($account->PartnerUUID) ? $account->PartnerUUID : '00000000-0000-0000-0000-000000000000', $visible, $customType, $notes, $userLevel, $RLName, $RLAddress, $RLZip, $RLCity, $RLCountry);
+			return WebUI\UserProfile::r($account->PrincipalID, $account->Name, $account->Email, $account->Created, $allowPublish, $maturePublish, $wantToMask, $wantToText, $canDoMask, $canDoText, $languages, $image, $aboutText, $firstLifeImage, $firstLifeAboutText, $webURL, $displayName, isset($account->PartnerUUID) ? $account->PartnerUUID : '00000000-0000-0000-0000-000000000000', $visible, $customType, $notes, $userLevel, $userFlags, $accountFlags, $RLName, $RLAddress, $RLZip, $RLCity, $RLCountry);
 		}
 
 //!	Attempt to delete the user
@@ -1189,14 +1194,15 @@ namespace Aurora\Addon{
 							'UserName'    => array('string'=>array()),
 							'Created'     => array('integer'=>array()),
 							'UserFlags'   => array('integer'=>array()),
-							'UserLevel'   => array('integer'=>array())
+							'UserLevel'   => array('integer'=>array()),
+							'Flags'       => array('integer'=>array())
 						))
 					))),
 					'Total' => array('integer'=>array())
 				));
 
 				foreach($result->Users as $userdata){
-					$results[] = WebUI\SearchUser::r($userdata->PrincipalID, $userdata->UserName, $userdata->Created, $userdata->UserFlags, $userdata->UserLevel);
+					$results[] = WebUI\SearchUser::r($userdata->PrincipalID, $userdata->UserName, $userdata->Created, $userdata->UserFlags, $userdata->UserLevel, $userdata->Flags);
 				}
 			}
 
