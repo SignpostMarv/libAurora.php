@@ -107,6 +107,35 @@ namespace Aurora\Addon{
 		public function mapTextureURL(){
 			return $this->makeCallToAPI(__FUNCTION__, array(), array());
 		}
+
+//!	Attempt to get region details
+/**
+*	
+*/
+		public function RegionDetails($a, $b=null, $c=0){
+			if(is_string($a) === true && ctype_digit($a) === true){
+				$a = (integer)$a;
+			}
+			if(is_string($b) === true && ctype_digit($b) === true){
+				$b = (integer)$b;
+			}
+			if(is_string($c) === true && ctype_digit($c) === true){
+				$c = (integer)$c;
+			}
+
+			if(is_integer($a) === true && is_integer($b) === true){
+				if(is_integer($c) === false){
+					throw new InvalidArgumentException('If first and second arguments are integers, third argument must also be integer.');
+				}
+				return $this->makeCallToAPI(__FUNCTION__ . '/' . $a . '/' . $b . '/' . $c, array(), array());
+			}else if(is_string($a) === true && $b === null){
+				return $this->makeCallToAPI(__FUNCTION__ . '/' . rawurlencode($a), array(), array());
+			}else if(is_string($a) === true && is_string($b) === true){
+				return $this->makeCallToAPI(__FUNCTION__ . '/' . rawurlencode($a) . '/' . rawurlencode($b), array(), array());
+			}else{
+				throw new BadMethodCallException('RegionDetails must be called either with region coordinates, region name (scope ID optional) or region ID (scope ID optional).');
+			}
+		}
 	}
 }
 ?>
