@@ -113,7 +113,6 @@ namespace Aurora\Addon{
 				'Method'      => $method,
 				'WebPassword' => $this->password
 			), $arguments);
-			$arguments['foo'] = array('bar'=>array('baz'=>'bat'));
 			if($readOnly === true){
 				unset($arguments['Method']);
 				foreach($arguments as $k=>$v){
