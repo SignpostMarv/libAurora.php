@@ -99,11 +99,12 @@ namespace Aurora\Addon{
 //!	makes a call to the WebUI API end point running on an instance of Aurora.
 /**
 *	@param string $method
+*	@param boolean $readOnly TRUE if API method is read-only, FALSE otherwise
 *	@param array $arguments being lazy and future-proofing API methods that have no arguments.
 *	@param array $expectedResponse a specially-constructed array indicating the expected response format of the API call
 *	@return mixed All instances of do_post_request() in Aurora-WebUI that act upon the result call json_decode() on the $result prior to acting on it, so we save ourselves some time and execute json_decode() here.
 */
-		protected function makeCallToAPI($method, array $arguments=null, array $expectedResponse){
+		protected function makeCallToAPI($method, $readOnly=false, array $arguments=null, array $expectedResponse){
 			if(is_string($method) === false || ctype_graph($method) === false){
 				throw new InvalidArgumentException('API method parameter was invalid.');
 			}
@@ -112,13 +113,24 @@ namespace Aurora\Addon{
 				'Method'      => $method,
 				'WebPassword' => $this->password
 			), $arguments);
-			$ch = curl_init($this->serviceURL);
+			$arguments['foo'] = array('bar'=>array('baz'=>'bat'));
+			if($readOnly === true){
+				unset($arguments['Method']);
+				foreach($arguments as $k=>$v){
+					$arguments[$k] = json_encode($v);
+				}
+			}
+			$ch = curl_init($this->serviceURL . ($readOnly === true ? '/' . rawurlencode($method) . '?' . http_build_query($arguments) : ''));
 			curl_setopt_array($ch, array(
 				CURLOPT_HEADER         => false,
-				CURLOPT_POST           => true,
 				CURLOPT_RETURNTRANSFER => true,
-				CURLOPT_POSTFIELDS     => implode(',', array(json_encode($arguments)))
 			));
+			if($readOnly !== true){
+				curl_setopt_array($ch, array(
+					CURLOPT_POST           => true,
+					CURLOPT_POSTFIELDS     => implode(',', array(json_encode($arguments)))
+				));
+			}
 			$result = curl_exec($ch);
 			$error = $result ? null : curl_error($ch);
 			$info  = $result ? null : curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -264,7 +276,7 @@ namespace Aurora\Addon{
 				throw new InvalidArgumentException('Texture UUID was invalid.');
 			}
 
-			return $this->makeCallToAPI('SizeOfHTTPGetTextureImage', array(
+			return $this->makeCallToAPI('SizeOfHTTPGetTextureImage', true, array(
 				'Texture' => $uuid
 			), array(
 				'Size' => array('integer'=>array())
@@ -281,7 +293,7 @@ namespace Aurora\Addon{
 *	@see Aurora::Addon::WebUI::makeCallToAPI()
 */
 		public function OnlineStatus(){
-			$result = $this->makeCallToAPI('OnlineStatus', null, array(
+			$result = $this->makeCallToAPI('OnlineStatus', true, null, array(
 				'Online'       => array('boolean'=>array()),
 				'LoginEnabled' => array('boolean'=>array())
 			));
@@ -294,7 +306,7 @@ namespace Aurora\Addon{
 //!	Processes should not be long-lasting, so we only fetch this once.
 		public function get_grid_info($info=null){
 			if(isset($this->GridInfo) === false){
-				$result = $this->makeCallToAPI('get_grid_info', null, array(
+				$result = $this->makeCallToAPI('get_grid_info', true, null, array(
 					'GridInfo' => array('object'=>array())
 				));
 
@@ -323,7 +335,7 @@ namespace Aurora\Addon{
 			if(is_string($name) === false){
 				throw new InvalidArgumentException('Name should be a string');
 			}
-			return $this->makeCallToAPI('CheckIfUserExists', array('Name'=>$name), array('Verified'=>array('boolean'=>array())))->Verified;
+			return $this->makeCallToAPI('CheckIfUserExists', true, array('Name'=>$name), array('Verified'=>array('boolean'=>array())))->Verified;
 		}
 
 //!	Attempts to create an account with the specified details.
@@ -408,7 +420,7 @@ namespace Aurora\Addon{
 				$expectedResponse['WebUIActivationToken'] = array('string' => array());
 			}
 
-			$result = $this->makeCallToAPI('CreateAccount', array(
+			$result = $this->makeCallToAPI('CreateAccount', false, array(
 				'Name'               => $Name,
 				'PasswordHash'       => $Password,
 				'Email'              => $Email,
@@ -443,7 +455,7 @@ namespace Aurora\Addon{
 *	@return an instance of Aurora::Addon::WebUI::AvatarArchives corresponding to the result returned by the API end point.
 */
 		public function GetAvatarArchives(){
-			$result = $this->makeCallToAPI('GetAvatarArchives', null, array(
+			$result = $this->makeCallToAPI('GetAvatarArchives', false, null, array(
 				'names'    => array('array'=>array()),
 				'snapshot' => array('array'=>array())
 			));
@@ -474,7 +486,7 @@ namespace Aurora\Addon{
 			}else if(preg_match(self::regex_UUID, $uuid) !== 1){
 				throw new InvalidArgumentException('UUID supplied was not a valid UUID.');
 			}
-			$result = $this->makeCallToAPI('Authenticated', array('UUID'=>$uuid), array(
+			$result = $this->makeCallToAPI('Authenticated', false, array('UUID'=>$uuid), array(
 				'Verified' => array('boolean'=>array())
 			));
 			return $result->Verified;
@@ -500,7 +512,7 @@ namespace Aurora\Addon{
 			}
 			$password = '$1$' . md5($password);
 
-			$result = $this->makeCallToAPI('ActivateAccount', array('UserName' => $username, 'PasswordHash' => $password, 'ActivationToken' => $token), array(
+			$result = $this->makeCallToAPI('ActivateAccount', false, array('UserName' => $username, 'PasswordHash' => $password, 'ActivationToken' => $token), array(
 				'Verified' => array('boolean'=>array())
 			));
 
@@ -529,7 +541,7 @@ namespace Aurora\Addon{
 				throw new InvalidArgumentException('Password was an empty string');
 			}
 			$password = '$1$' . md5($password); // this is required so we don't have to transmit the plaintext password.
-			$result = $this->makeCallToAPI($asAdmin ? 'AdminLogin' : 'Login', array('Name' => $username, 'Password' => $password), array(
+			$result = $this->makeCallToAPI($asAdmin ? 'AdminLogin' : 'Login', false, array('Name' => $username, 'Password' => $password), array(
 				'Verified'  => array('boolean'=>array())
 			));
 			if($result->Verified === false){
@@ -572,7 +584,7 @@ namespace Aurora\Addon{
 			}else if(preg_match(self::regex_UUID, $for) !== 1){
 				throw new InvalidArgumentException('Specified string was not a valid UUID');
 			}
-			$result = $this->makeCallToAPI('SetWebLoginKey', array('PrincipalID'=>$for), array(
+			$result = $this->makeCallToAPI('SetWebLoginKey', false, array('PrincipalID'=>$for), array(
 				'WebLoginKey' => array('string'=>array())
 			));
 			if(preg_match(self::regex_UUID, $result->WebLoginKey) !== 1){
@@ -606,7 +618,7 @@ namespace Aurora\Addon{
 				throw new InvalidArgumentException('Email address was not valid.');
 			}
 
-			$result = $this->makeCallToAPI('SaveEmail', array('UUID' => $uuid, 'Email' => $email), array(
+			$result = $this->makeCallToAPI('SaveEmail', false, array('UUID' => $uuid, 'Email' => $email), array(
 				'Verified' => array('boolean'=>array())
 			));
 
@@ -634,7 +646,7 @@ namespace Aurora\Addon{
 				throw new InvalidArgumentException('Email address is invalid.');
 			}
 
-			$result = $this->makeCallToAPI('ConfirmUserEmailName', array('Name' => $name, 'Email' => $email), array(
+			$result = $this->makeCallToAPI('ConfirmUserEmailName', false, array('Name' => $name, 'Email' => $email), array(
 				'Verified'=>array('boolean'=>array())
 			));
 			if(isset($result->ErrorCode) === true && is_integer($result->ErrorCode) === false){
@@ -683,7 +695,7 @@ namespace Aurora\Addon{
 				throw new LengthException('New password cannot be less than 8 characters long.');
 			}
 
-			return $this->makeCallToAPI('ChangePassword', array(
+			return $this->makeCallToAPI('ChangePassword', false, array(
 				'UUID'        => $uuid,
 				'Password'    => '$1$' . (substr($oldPassword, 0, 3) === '$1$' ? substr($oldPassword, 3) : md5($oldPassword)),
 				'NewPassword' => '$1$' . (substr($newPassword, 0, 3) === '$1$' ? substr($newPassword, 3) : md5($newPassword))
@@ -714,7 +726,7 @@ namespace Aurora\Addon{
 				throw new LengthException('New password cannot be less than 8 characters long.');
 			}
 
-			return $this->makeCallToAPI('ForgotPassword', array(
+			return $this->makeCallToAPI('ForgotPassword', false, array(
 				'UUID'        => $uuid,
 				'Password' => '$1$' . (substr($newPassword, 0, 3) === '$1$' ? substr($newPassword, 3) : md5($newPassword))
 			), array(
@@ -751,7 +763,7 @@ namespace Aurora\Addon{
 				return true;
 			}
 
-			$result = $this->makeCallToAPI('ChangeName', array('UUID' => $uuid, 'Name' => $name), array(
+			$result = $this->makeCallToAPI('ChangeName', false, array('UUID' => $uuid, 'Name' => $name), array(
 				'Verified' => array('boolean'=>array()),
 				'Stored'   => array('boolean'=>array())
 			));
@@ -819,7 +831,7 @@ namespace Aurora\Addon{
 				$data['UserLevel'] = $userLevel;
 			}
 
-			$result = $this->makeCallToAPI('EditUser', $data, array(
+			$result = $this->makeCallToAPI('EditUser', false, $data, array(
 				'agent'   => array('boolean'=>array()),
 				'account' => array('boolean'=>array())
 			));
@@ -845,7 +857,7 @@ namespace Aurora\Addon{
 				throw new InvalidArgumentException('UUID was not a valid UUID.');
 			}
 
-			return $this->makeCallToAPI('ResetAvatar', array(
+			return $this->makeCallToAPI('ResetAvatar', false, array(
 				'User' => $uuid
 			), array(
 				'Success' => array('boolean' => array())
@@ -895,7 +907,7 @@ namespace Aurora\Addon{
 			}else if(preg_match(self::regex_UUID, $uuid) !== 1){
 				throw new InvalidArgumentException('UUID supplied was not a valid UUID.');
 			}
-			$result = $this->makeCallToAPI('GetGridUserInfo', array('UUID'=>$uuid), static::GridUserInfoValidator());
+			$result = $this->makeCallToAPI('GetGridUserInfo', true, array('UUID'=>$uuid), static::GridUserInfoValidator());
 			// this is where we get lazy and leave validation up to the GridUserInfo class.
 			return	WebUI\GridUserInfo::r(
 				$result->UUID,
@@ -931,7 +943,7 @@ namespace Aurora\Addon{
 				throw new InvalidArgumentException('Account UUID was not a valid UUID.');
 			}
 
-			$result = $this->makeCallToAPI('GetProfile', array('Name' => $name, 'UUID' => $uuid), array(
+			$result = $this->makeCallToAPI('GetProfile', true, array('Name' => $name, 'UUID' => $uuid), array(
 				'account'=> array('object'=>array(array(
 					'Created'          => array('integer'=>array()),
 					'Name'             => array('string'=>array()),
@@ -1030,7 +1042,7 @@ namespace Aurora\Addon{
 				throw new InvalidArgumentException('UUID was not a valid UUID.');
 			}
 
-			$result = $this->makeCallToAPI('DeleteUser', array('UserID' => $uuid), array(
+			$result = $this->makeCallToAPI('DeleteUser', false, array('UserID' => $uuid), array(
 				'Finished' => array('boolean'=>array())
 			));
 
@@ -1067,7 +1079,7 @@ namespace Aurora\Addon{
 				$input['LookAt'] = (string)$lookAt;
 			}
 
-			return $this->makeCallToAPI('SetHomeLocation', $input, array(
+			return $this->makeCallToAPI('SetHomeLocation', false, $input, array(
 				'Success' => array('boolean' => array())
 			))->Success;
 		}
@@ -1102,7 +1114,7 @@ namespace Aurora\Addon{
 				}
 			}
 
-			$result = $this->makeCallToAPI(isset($until) ? 'TempBanUser' : 'BanUser', array('UserID' => $uuid, 'BannedUntil' => $until), array(
+			$result = $this->makeCallToAPI(isset($until) ? 'TempBanUser' : 'BanUser', false, array('UserID' => $uuid, 'BannedUntil' => $until), array(
 				'Finished' => array('boolean'=>array())
 			));
 
@@ -1143,7 +1155,7 @@ namespace Aurora\Addon{
 				throw new InvalidArgumentException('UUID must be a valid UUID.');
 			}
 
-			$result = $this->makeCallToAPI('UnBanUser', array('UserID' => $uuid), array(
+			$result = $this->makeCallToAPI('UnBanUser', false, array('UserID' => $uuid), array(
 				'Finished' => array('boolean'=>array())
 			));
 
@@ -1183,7 +1195,7 @@ namespace Aurora\Addon{
 			$results = array();
 
 			if($asArray == true || $has === false){
-				$result = $this->makeCallToAPI('FindUsers', array(
+				$result = $this->makeCallToAPI('FindUsers', true, array(
 					'Start'=>$start,
 					'Count'=>$count,
 					'Query'=>$query
@@ -1225,7 +1237,7 @@ namespace Aurora\Addon{
 				$forUser = $this->GetProfile('', $forUser);
 			}
 
-			$result = $this->makeCallToAPI('GetFriends', array('UserID' => $forUser->PrincipalID()), array(
+			$result = $this->makeCallToAPI('GetFriends', true, array('UserID' => $forUser->PrincipalID()), array(
 				'Friends' => array('array'=>array())
 			));
 			$response = array();
@@ -1259,7 +1271,7 @@ namespace Aurora\Addon{
 			}else if(is_bool($stillOnline) === false){
 				throw new InvalidArgumentException('stillOnline must be specified as a boolean.');
 			}
-			return $this->makeCallToAPI('NumberOfRecentlyOnlineUsers', array(
+			return $this->makeCallToAPI('NumberOfRecentlyOnlineUsers', true, array(
 				'secondsAgo'  => $secondsAgo,
 				'stillOnline' => $stillOnline ? 1 : 0
 			), array(
@@ -1298,7 +1310,7 @@ namespace Aurora\Addon{
 			}else if(is_bool($stillOnline) === false){
 				throw new InvalidArgumentException('stillOnline must be specified as a boolean.');
 			}
-			$result = $this->makeCallToAPI('RecentlyOnlineUsers', array(
+			$result = $this->makeCallToAPI('RecentlyOnlineUsers', true, array(
 				'secondsAgo'  => $secondsAgo,
 				'stillOnline' => $stillOnline ? 1 : 0,
 				'Start'       => $start,
@@ -1380,7 +1392,7 @@ namespace Aurora\Addon{
 				throw new InvalidArgumentException('Activity flag must be a boolean.');
 			}
 
-			$result = $this->makeCallToAPI('GetAbuseReports', array('Start' => $start, 'Count' => $count, 'Active' => $active), array(
+			$result = $this->makeCallToAPI('GetAbuseReports', true, array('Start' => $start, 'Count' => $count, 'Active' => $active), array(
 				'AbuseReports' => array('array'=>array(array(
 					'object' => array(static::GetAbuseReportValidator())
 				)))
@@ -1408,7 +1420,7 @@ namespace Aurora\Addon{
 				throw new InvalidArgumentException('Abuse Report ID must be specified as integer.');
 			}
 
-			return WebUI\AbuseReport::r($this->makeCallToAPI('GetAbuseReport', array('AbuseReport' => $id), array(
+			return WebUI\AbuseReport::r($this->makeCallToAPI('GetAbuseReport', true, array('AbuseReport' => $id), array(
 					'AbuseReport' => array(array('object'=>static::GetAbuseReportValidator()))
 			))->AbuseReport);
 		}
@@ -1429,7 +1441,7 @@ namespace Aurora\Addon{
 				throw new InvalidArgumentException('Abuse report number must be specified as an integer.');
 			}
 
-			$result = $this->makeCallToAPI('AbuseReportMarkComplete', array('Number' => $abuseReport), array(
+			$result = $this->makeCallToAPI('AbuseReportMarkComplete', false, array('Number' => $abuseReport), array(
 				'Finished' => array('boolean'=>array())
 			));
 
@@ -1455,7 +1467,7 @@ namespace Aurora\Addon{
 				throw new InvalidArgumentException('Abuse report notes must be specified as a string.');
 			}
 
-			$result = $this->makeCallToAPI('AbuseReportSaveNotes', array('Number' => $abuseReport, 'Notes' => trim($notes)), array(
+			$result = $this->makeCallToAPI('AbuseReportSaveNotes', false, array('Number' => $abuseReport, 'Notes' => trim($notes)), array(
 				'Finished' => array('boolean'=>array())
 			));
 
@@ -1573,7 +1585,7 @@ namespace Aurora\Addon{
 				$input['BoolFields'] = $boolFields;
 			}
 
-			$Estates = $this->makeCallToAPI('GetEstates', $input, array(
+			$Estates = $this->makeCallToAPI('GetEstates', true, $input, array(
 				'Estates' => array('array' => array(
 					static::EstateSettingsValidator()
 				))
@@ -1604,7 +1616,7 @@ namespace Aurora\Addon{
 				throw new InvalidArgumentException('Estate must be specified as integer or string.');
 			}
 
-			return static::EstateSettingsFromResult($this->makeCallToAPI('GetEstate', array('Estate' => $Estate), array(
+			return static::EstateSettingsFromResult($this->makeCallToAPI('GetEstate', true, array('Estate' => $Estate), array(
 				'Estate' => static::EstateSettingsValidator()
 			))->Estate);
 		}
@@ -1728,7 +1740,7 @@ namespace Aurora\Addon{
 			}
 			$has = WebUI\GetRegions::hasInstance($this, $flags, $excludeFlags, $sortRegionName, $sortLocX, $sortLocY);
 			if($asArray === true || $has === false){
-				$result = $this->makeCallToAPI('GetRegions', $input, array(
+				$result = $this->makeCallToAPI('GetRegions', true, $input, array(
 					'Regions' => array('array'=>array(static::GridRegionValidator())),
 					'Total'   => array('integer'=>array())
 				));
@@ -1791,7 +1803,7 @@ namespace Aurora\Addon{
 				$input['ExcludeRegionFlags'] = $excludeFlags;
 			}
 
-			$result = $this->makeCallToAPI('GetRegionsByXY', $input, array(
+			$result = $this->makeCallToAPI('GetRegionsByXY', true, $input, array(
 				'Regions' => array('array'=>array(static::GridRegionValidator())),
 				'Total'   => array('integer'=>array())
 			));
@@ -1816,7 +1828,7 @@ namespace Aurora\Addon{
 			$has      = WebUI\GetRegionsInArea::hasInstance($this, $startX, $startY, $endX, $endY, $scopeID);
 			$response = array();
 			if($asArray === true || $has === false){
-				$result = $this->makeCallToAPI('GetRegionsInArea', array(
+				$result = $this->makeCallToAPI('GetRegionsInArea', true, array(
 					'StartX'  => $startX,
 					'StartY'  => $startY,
 					'EndX'    => $endX,
@@ -1899,7 +1911,7 @@ namespace Aurora\Addon{
 
 			$has = WebUI\GetRegions::hasInstance($this, $Estate, $flags, $sortRegionName, $sortLocX, $sortLocY);
 			if($asArray === true || $has === false){
-				$result = $this->makeCallToAPI('GetRegions', $input, array(
+				$result = $this->makeCallToAPI('GetRegions', true, $input, array(
 					'Regions' => array('array'=>array(static::GridRegionValidator())),
 					'Total'   => array('integer'=>array())
 				));
@@ -1938,7 +1950,7 @@ namespace Aurora\Addon{
 				$input['RegionID'] = $region;
 			}
 
-			return WebUI\GridRegion::fromEndPointResult($this->makeCallToAPI('GetRegion', $input, array(
+			return WebUI\GridRegion::fromEndPointResult($this->makeCallToAPI('GetRegion', true, $input, array(
 				'Region' => static::GridRegionValidator()
 			))->Region);
 		}
@@ -1974,7 +1986,7 @@ namespace Aurora\Addon{
 			$response = array();
 			$has = WebUI\GetRegionNeighbours::hasInstance($this, $region, $range=128, $scopeID='00000000-0000-0000-0000-000000000000');
 			if($asArray === true || $has === false){
-				$result = $this->makeCallToAPI('GetRegionNeighbours', array(
+				$result = $this->makeCallToAPI('GetRegionNeighbours', true, array(
 						'RegionID' => $region,
 						'ScopeID'  => $scopeID,
 						'Range'    => $range
@@ -2145,7 +2157,7 @@ namespace Aurora\Addon{
 				throw new InvalidArgumentException('scopeID must be valid UUID.');
 			}
 
-			$result = $this->makeCallToAPI('GetParcelsByRegion', array(
+			$result = $this->makeCallToAPI('GetParcelsByRegion', true, array(
 				'Start'   => $start,
 				'Count'   => $count,
 				'Region'  => $region->RegionID(),
@@ -2191,7 +2203,7 @@ namespace Aurora\Addon{
 				$input['ParcelInfoUUID'] = $parcel;
 			}
 
-			return self::ParcelResult2LandData($this->makeCallToAPI('GetParcel', $input, array(
+			return self::ParcelResult2LandData($this->makeCallToAPI('GetParcel', true, $input, array(
 				'Parcel' => self::ParcelResultValidatorArray()
 			))->Parcel);
 		}
@@ -2235,7 +2247,7 @@ namespace Aurora\Addon{
 				throw new InvalidArgumentException('Parcel name must not be empty string.');
 			}
 
-			$result = $this->makeCallToAPI('GetParcelsWithNameByRegion', array(
+			$result = $this->makeCallToAPI('GetParcelsWithNameByRegion', true, array(
 				'Start'   => $start,
 				'Count'   => $count,
 				'Region'  => $region->RegionID(),
@@ -2309,7 +2321,7 @@ namespace Aurora\Addon{
 				throw new InvalidArgumentException('flag must be a boolean.');
 			}
 
-			return $this->makeCallToAPI('GroupAsNewsSource', array(
+			return $this->makeCallToAPI('GroupAsNewsSource', true, array(
 				'Group' => $group->GroupID(),
 				'Use'   => $useAsNewsSource
 			), array(
@@ -2338,7 +2350,7 @@ namespace Aurora\Addon{
 				$input['BoolFields'] = $boolFields;
 			}
 
-			$result = $this->makeCallToAPI('GetGroups', $input, array(
+			$result = $this->makeCallToAPI('GetGroups', true, $input, array(
 				'Start'  => array('integer'=>array()),
 				'Total'  => array('integer'=>array()),
 				'Groups' => array('array'=>array(array('object'=>array()))),
@@ -2381,7 +2393,7 @@ namespace Aurora\Addon{
 
 			$response = array();
 			if($asArray === true || WebUI\GetNewsSources::hasInstance($this) === false){
-				$result = $this->makeCallToAPI('GetNewsSources', array(
+				$result = $this->makeCallToAPI('GetNewsSources', true, array(
 					'Start' => $start,
 					'Count' => $count
 				), array(
@@ -2437,7 +2449,7 @@ namespace Aurora\Addon{
 */
 		public function foreknowledgeGetGroupRecords(array $GroupIDs){
 
-			$result = $this->makeCallToAPI('GetGroups', array(
+			$result = $this->makeCallToAPI('GetGroups', true, array(
 				'Groups' => $GroupIDs
 			), array(
 				'Groups' => array('array'=>array(array('object'=>array()))),
@@ -2493,7 +2505,7 @@ namespace Aurora\Addon{
 				}
 			}
 
-			$result = $this->makeCallToAPI('GroupNotices', array(
+			$result = $this->makeCallToAPI('GroupNotices', true, array(
 				'Start' => $start,
 				'Count' => $count,
 				'Groups' => $groupIDs
@@ -2530,7 +2542,7 @@ namespace Aurora\Addon{
 */
 		public function NewsFromGroupNotices($start=0, $count=10, $asArray=false){
 
-			$result = $this->makeCallToAPI('NewsFromGroupNotices', array(
+			$result = $this->makeCallToAPI('NewsFromGroupNotices', true, array(
 				'Start' => $start,
 				'Count' => $count
 			), array(
@@ -2568,7 +2580,7 @@ namespace Aurora\Addon{
 			}else if(preg_match(self::regex_UUID, $uuid) !== 1){
 				throw new InvalidArgumentException('Group notice ID should be a valid UUID');
 			}
-			$groupNotice = $this->makeCallToAPI('GetGroupNotice', array(
+			$groupNotice = $this->makeCallToAPI('GetGroupNotice', true, array(
 				'NoticeID' => strtolower($uuid)
 			), array(
 				'GroupNotice' => self::GroupNoticeValidatorArray()
@@ -2626,7 +2638,7 @@ namespace Aurora\Addon{
 				$input['Message'] = trim($message);
 			}
 
-			return $this->makeCallToAPI('EditGroupNotice', $input, array('Success' => array('boolean'=>array())))->Success;
+			return $this->makeCallToAPI('EditGroupNotice', false, $input, array('Success' => array('boolean'=>array())))->Success;
 		}
 
 //!	Create a group notice.
@@ -2669,7 +2681,7 @@ namespace Aurora\Addon{
 				throw new InvalidArgumentException('Message must be specified as non-empty string.');
 			}
 
-			return $this->makeCallToAPI('AddGroupNotice', array(
+			return $this->makeCallToAPI('AddGroupNotice', false, array(
 				'GroupID'  => $group,
 				'AuthorID' => $author,
 				'Subject'  => $subject,
@@ -2698,7 +2710,7 @@ namespace Aurora\Addon{
 				throw new InvalidArgumentException('NoticeID must be a valid UUID.');
 			}
 
-			return $this->makeCallToAPI('RemoveGroupNotice', array(
+			return $this->makeCallToAPI('RemoveGroupNotice', false, array(
 				'GroupID'  => $group,
 				'NoticeID' => $notice
 			), array(
@@ -2771,7 +2783,7 @@ namespace Aurora\Addon{
 				$input['Sort'] = $sort;
 			}
 
-			$result = $this->makeCallToAPI('GetEvents', $input, array(
+			$result = $this->makeCallToAPI('GetEvents', true, $input, array(
 				'Events' => array('array'=>array( static::EventsResultValidatorArray())),
 				'Total'  => array('integer'=>array())
 			));
@@ -2863,7 +2875,7 @@ namespace Aurora\Addon{
 				throw new InvalidArgumentException('Category must be non-empty string.');
 			}
 
-			$event = $this->makeCallToAPI('CreateEvent', array(
+			$event = $this->makeCallToAPI('CreateEvent', false, array(
 				'Creator'     => $creator->PrincipalID(),
 				'Region'      => $region->RegionID(),
 				'Parcel'      => '00000000-0000-0000-0000-000000000000',

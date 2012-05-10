@@ -69,11 +69,12 @@ namespace Aurora\Addon{
 /**
 *	Unlike the WebUI API, the Map API will not return a map of keys & values, it may only return values.
 *	@param string $method the API method to call
+*	@param boolean $readOnly TRUE if API method is read-only, FALSE otherwise
 *	@param mixed $arguments NULL if a method is being called with no arguments or an array of named arguments
 *	@param array $expectedResponse a specially-constructed array indicating the expected response format of the API call
 *	@return mixed
 */
-		protected function makeCallToAPI($method, array $arguments=null, array $expectedResponse){
+		protected function makeCallToAPI($method, $readOnly=false, array $arguments=null, array $expectedResponse){
 			if(is_string($method) === false || ctype_graph($method) === false){
 				throw new InvalidArgumentException('API method parameter was invalid.');
 			}
@@ -97,7 +98,7 @@ namespace Aurora\Addon{
 *	@return array all regions in the grid
 */
 		public function MonolithicRegionLookup(){
-			return $this->makeCallToAPI(__FUNCTION__, array(), array());
+			return $this->makeCallToAPI(__FUNCTION__, true, array(), array());
 		}
 
 //!	Gets the formatting string for mapapi.js to generate tile urls.
@@ -105,7 +106,7 @@ namespace Aurora\Addon{
 *	@return string the url with replacable segments for tile urls
 */
 		public function mapTextureURL(){
-			return $this->makeCallToAPI(__FUNCTION__, array(), array());
+			return $this->makeCallToAPI(__FUNCTION__, true, array(), array());
 		}
 
 //!	Attempt to get region details
@@ -127,11 +128,11 @@ namespace Aurora\Addon{
 				if(is_integer($c) === false){
 					throw new InvalidArgumentException('If first and second arguments are integers, third argument must also be integer.');
 				}
-				return $this->makeCallToAPI(__FUNCTION__ . '/' . $a . '/' . $b . '/' . $c, array(), array());
+				return $this->makeCallToAPI(__FUNCTION__ . '/' . $a . '/' . $b . '/' . $c, true, array(), array());
 			}else if(is_string($a) === true && $b === null){
-				return $this->makeCallToAPI(__FUNCTION__ . '/' . rawurlencode($a), array(), array());
+				return $this->makeCallToAPI(__FUNCTION__ . '/' . rawurlencode($a), true, array(), array());
 			}else if(is_string($a) === true && is_string($b) === true){
-				return $this->makeCallToAPI(__FUNCTION__ . '/' . rawurlencode($a) . '/' . rawurlencode($b), array(), array());
+				return $this->makeCallToAPI(__FUNCTION__ . '/' . rawurlencode($a) . '/' . rawurlencode($b), true, array(), array());
 			}else{
 				throw new BadMethodCallException('RegionDetails must be called either with region coordinates, region name (scope ID optional) or region ID (scope ID optional).');
 			}

@@ -22,11 +22,12 @@ namespace Aurora\Addon{
 //!	makes a call to the API end point running on an instance of Aurora.
 /**
 *	@param string $method the API method to call
+*	@param boolean $readOnly TRUE if API method is read-only, FALSE otherwise
 *	@param mixed $arguments NULL if a method is being called with no arguments or an array of named arguments
 *	@param array $expectedResponse a specially-constructed array indicating the expected response format of the API call
 *	@return mixed API results should be JSON-encoded, implementations of Aurora::Addon::abstractAPI::makeCallToAPI() should perform json_decode()
 */
-		abstract protected function makeCallToAPI($method, array $arguments=null, array $expectedResponse);
+		abstract protected function makeCallToAPI($method, $readOnly=false, array $arguments=null, array $expectedResponse);
 
 //!	array stores attached APIs
 		protected $attachedAPIs = array();
