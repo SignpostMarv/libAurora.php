@@ -110,8 +110,7 @@ namespace Aurora\Addon{
 			}
 			$arguments = isset($arguments) ? $arguments : array();
 			$arguments = array_merge(array(
-				'Method'      => $method,
-				'WebPassword' => $this->password
+				'Method'      => $method
 			), $arguments);
 			if($readOnly === true){
 				unset($arguments['Method']);
@@ -123,6 +122,8 @@ namespace Aurora\Addon{
 			curl_setopt_array($ch, array(
 				CURLOPT_HEADER         => false,
 				CURLOPT_RETURNTRANSFER => true,
+				CURLOPT_HTTPAUTH       => CURLAUTH_DIGEST,
+				CURLOPT_USERPWD        => 'WebAPI:' . $this->password
 			));
 			if($readOnly !== true){
 				curl_setopt_array($ch, array(
