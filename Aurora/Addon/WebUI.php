@@ -109,16 +109,12 @@ namespace Aurora\Addon{
 				throw new InvalidArgumentException('API method parameter was invalid.');
 			}
 			$arguments = isset($arguments) ? $arguments : array();
-			$arguments = array_merge(array(
-				'Method'      => $method
-			), $arguments);
 			if($readOnly === true){
-				unset($arguments['Method']);
 				foreach($arguments as $k=>$v){
 					$arguments[$k] = json_encode($v);
 				}
 			}
-			$ch = curl_init($this->serviceURL . ($readOnly === true ? '/' . rawurlencode($method) . '?' . http_build_query($arguments) : ''));
+			$ch = curl_init($this->serviceURL . '/' . rawurlencode($method) . ($readOnly === true ? '?' . http_build_query($arguments) : ''));
 			curl_setopt_array($ch, array(
 				CURLOPT_HEADER         => false,
 				CURLOPT_RETURNTRANSFER => true,
