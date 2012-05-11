@@ -1388,7 +1388,12 @@ namespace Aurora\Addon{
 				throw new InvalidArgumentException('Activity flag must be a boolean.');
 			}
 
-			$result = $this->makeCallToAPI('GetAbuseReports', true, array('Start' => $start, 'Count' => $count, 'Active' => $active), array(
+			$result = $this->makeCallToAPI('GetAbuseReports', true, array(
+					'Start'       => $start,
+					'Count'       => $count,
+					'Active'      => $active,
+					'WebPassword' => $this->password
+				), array(
 				'AbuseReports' => array('array'=>array(array(
 					'object' => array(static::GetAbuseReportValidator())
 				)))
@@ -1416,7 +1421,10 @@ namespace Aurora\Addon{
 				throw new InvalidArgumentException('Abuse Report ID must be specified as integer.');
 			}
 
-			return WebUI\AbuseReport::r($this->makeCallToAPI('GetAbuseReport', true, array('AbuseReport' => $id), array(
+			return WebUI\AbuseReport::r($this->makeCallToAPI('GetAbuseReport', true, array(
+					'AbuseReport' => $id,
+					'WebPassword' => $this->password
+				), array(
 					'AbuseReport' => array(array('object'=>static::GetAbuseReportValidator()))
 			))->AbuseReport);
 		}
@@ -1437,7 +1445,10 @@ namespace Aurora\Addon{
 				throw new InvalidArgumentException('Abuse report number must be specified as an integer.');
 			}
 
-			$result = $this->makeCallToAPI('AbuseReportMarkComplete', false, array('Number' => $abuseReport), array(
+			$result = $this->makeCallToAPI('AbuseReportMarkComplete', false, array(
+				'Number' => $abuseReport,
+				'WebPassword' => $this->password
+			), array(
 				'Finished' => array('boolean'=>array())
 			));
 
@@ -1463,7 +1474,11 @@ namespace Aurora\Addon{
 				throw new InvalidArgumentException('Abuse report notes must be specified as a string.');
 			}
 
-			$result = $this->makeCallToAPI('AbuseReportSaveNotes', false, array('Number' => $abuseReport, 'Notes' => trim($notes)), array(
+			$result = $this->makeCallToAPI('AbuseReportSaveNotes', false, array(
+				'Number' => $abuseReport, 
+				'Notes' => trim($notes),
+				'WebPassword' => $this->password
+			), array(
 				'Finished' => array('boolean'=>array())
 			));
 
