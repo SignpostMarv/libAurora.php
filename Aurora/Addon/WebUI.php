@@ -56,23 +56,30 @@ namespace Aurora\Addon{
 //!	This is protected because we're going to use a registry method to access it.
 /**
 *	The WIREDUX_PASSWORD constant was never used without being passed as an md5() hash, so we immediately do this on instantiation.
-*	@param string $serviceURL WebUI API end point.
-*	@param string $password WebUI API password
+*	@param string $serviceURL WebAPI end point.
+*	@param string $username WebAPI username
+*	@param string $password WebAPI password
 */
-		protected function __construct($serviceURL, $password){
+		protected function __construct($serviceURL, $username, $password){
 			if(is_string($serviceURL) === false){
-				throw new InvalidArgumentException('WebUI API end point must be a string');
+				throw new InvalidArgumentException('WebAPI end point must be a string');
 			}else if(strpos($serviceURL, 'http://') === false && strpos($serviceURL, 'https://') === false){ // for now, we're not doing any paranoid regex-based validation.
-				throw new InvalidArgumentException('WebUI API end point must begin with http:// or https://');
+				throw new InvalidArgumentException('WebAPI end point must begin with http:// or https://');
+			}else if(is_string($username) === false){
+				throw new InvalidArgumentException('WebAPI username should be a string');
 			}else if(is_string($password) === false){
-				throw new InvalidArgumentException('WebUI API password should be a string');
+				throw new InvalidArgumentException('WebAPI password should be a string');
 			}
 			$this->serviceURL = $serviceURL;
-			$this->password   = md5($password); // I suppose we could be extremely paranoid and unset $password after this if we really wanted.
+			$this->username   = $username;
+			$this->password   = md5($password); // I suppose we could be extremely paranoid and unset $password after this if we really wanted. ~SignpostMarv
 		}
 
 //!	string WebUI API end point.
 		protected $serviceURL;
+
+//!	string WebAPI username
+		protected $username;
 
 //!	string WebUI API password
 		protected $password;
@@ -80,17 +87,18 @@ namespace Aurora\Addon{
 //!	registry method. Sets & gets instances of Aurora::Addon::WebUI
 /**
 *	@param string $serviceURL
+*	@param mixed $username should be NULL if getting, otherwise should be string. defaults to NULL.
 *	@param mixed $password should be NULL if getting, otherwise should be string. defaults to NULL.
 *	@return Aurora::Addon::WebUI
 *	@see Aurora::Addon::WebUI::__construct()
 */
-		public static function r($serviceURL, $password=null){
+		public static function r($serviceURL, $username=null, $password=null){
 			static $registry = array();
 			if(isset($registry[$serviceURL]) === false){
-				if(isset($password) === false){
-					throw new InvalidArgumentException('Cannot create an instance of WebUI API interface without a password');
+				if(isset($username, $password) === false){
+					throw new InvalidArgumentException('Cannot create an instance of WebAPI interface without a username & password');
 				}
-				$instance = new static($serviceURL, $password); // we're assigning it to a local variable as a lazy means of avoiding doing valid type checks for array keys. any errors that would crop up about that would trigger InvalidArgumentException in Aurora::Addon::WebUI::__construct()
+				$instance = new static($serviceURL, $username, $password); // we're assigning it to a local variable as a lazy means of avoiding doing valid type checks for array keys. any errors that would crop up about that would trigger InvalidArgumentException in Aurora::Addon::WebUI::__construct()
 				$registry[$serviceURL] = $instance; // any child implementation of Aurora::Addon::WebUI that breaks this laziness is on their own at this point.
 			}
 			return $registry[$serviceURL];
@@ -119,7 +127,7 @@ namespace Aurora\Addon{
 				CURLOPT_HEADER         => false,
 				CURLOPT_RETURNTRANSFER => true,
 				CURLOPT_HTTPAUTH       => CURLAUTH_DIGEST,
-				CURLOPT_USERPWD        => 'WebAPI:' . $this->password
+				CURLOPT_USERPWD        => $this->username . ':' . $this->password
 			));
 			if($readOnly !== true){
 				curl_setopt_array($ch, array(
