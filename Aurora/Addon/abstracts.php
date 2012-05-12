@@ -7,6 +7,43 @@ namespace Aurora\Addon{
 
 	class APIAccessFailedException extends RuntimeException{
 	}
+	
+	abstract class APIMethodException extends RuntimeException{
+
+//!	string name of API method that access was forbidden to.
+//!	@see Aurora::Addon::APIAccessForbiddenException::GetAPIMethod()
+		protected $method;
+//!	@see Aurora::Addon::APIAccessForbiddenException::$method
+		public function GetAPIMethod(){
+			return $this->method;
+		}
+
+//!	Since we want to allow exception handlers to know which method access was forbidden to, we need to override the default exception constructor
+/**
+*	@param string $method API method name
+*	@param string $message Exception message
+*	@param integer $code Exception code
+*/
+		public function __construct($method, $message, $code=0){
+			if(is_string($method) === true){
+				$method = trim($method);
+			}
+			if(is_string($method) === false){
+				throw new InvalidArgumentException('Method names should be strings.');
+			}else if(ctype_graph($method) === false){
+				throw new InvalidArgumentException('Method name should contain only visible characters.');
+			}
+			
+			$this->method = $method;
+			parent::__construct($message, $code);
+		}
+	}
+	
+	class APIAccessForbiddenException extends APIMethodException{
+	}
+	
+	class APIAccessRateLimitException extends APIMethodException{
+	}
 
 	use Iterator;
 	use SeekableIterator;

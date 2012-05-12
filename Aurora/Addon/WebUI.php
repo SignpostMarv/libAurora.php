@@ -137,9 +137,13 @@ namespace Aurora\Addon{
 			}
 			$result = curl_exec($ch);
 			$error = $result ? null : curl_error($ch);
-			$info  = $result ? null : curl_getinfo($ch, CURLINFO_HTTP_CODE);
+			$info  = $result ? curl_getinfo($ch, CURLINFO_HTTP_CODE) : 0;
 			curl_close($ch);
-			if(is_string($result) === true){
+			if($info === 403){
+				throw new APIAccessForbiddenException($method, sprintf('Access to the API method \'%s\' for the configured credentials has been denied.'));
+			}else if($info === 429){
+				throw new APIAccessRateLimitException($method, sprintf('Access to the API method \'%s\' for the configured credentials has been denied.'));
+			}else if(is_string($result) === true){
 				$result = json_decode($result);
 				if(is_object($result) === false){
 					throw new UnexpectedValueException('API result expected to be object, ' . gettype($result) . ' found.');
