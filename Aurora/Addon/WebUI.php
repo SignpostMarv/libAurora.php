@@ -1403,8 +1403,7 @@ namespace Aurora\Addon{
 			$result = $this->makeCallToAPI('GetAbuseReports', true, array(
 					'Start'       => $start,
 					'Count'       => $count,
-					'Active'      => $active,
-					'WebPassword' => $this->password
+					'Active'      => $active
 				), array(
 				'AbuseReports' => array('array'=>array(array(
 					'object' => array(static::GetAbuseReportValidator())
@@ -1434,8 +1433,7 @@ namespace Aurora\Addon{
 			}
 
 			return WebUI\AbuseReport::r($this->makeCallToAPI('GetAbuseReport', true, array(
-					'AbuseReport' => $id,
-					'WebPassword' => $this->password
+					'AbuseReport' => $id
 				), array(
 					'AbuseReport' => array(array('object'=>static::GetAbuseReportValidator()))
 			))->AbuseReport);
@@ -1458,8 +1456,7 @@ namespace Aurora\Addon{
 			}
 
 			$result = $this->makeCallToAPI('AbuseReportMarkComplete', false, array(
-				'Number' => $abuseReport,
-				'WebPassword' => $this->password
+				'Number' => $abuseReport
 			), array(
 				'Finished' => array('boolean'=>array())
 			));
@@ -1488,8 +1485,7 @@ namespace Aurora\Addon{
 
 			$result = $this->makeCallToAPI('AbuseReportSaveNotes', false, array(
 				'Number' => $abuseReport, 
-				'Notes' => trim($notes),
-				'WebPassword' => $this->password
+				'Notes' => trim($notes)
 			), array(
 				'Finished' => array('boolean'=>array())
 			));
