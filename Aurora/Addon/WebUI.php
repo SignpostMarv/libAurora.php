@@ -2455,7 +2455,7 @@ namespace Aurora\Addon{
 				);
 			}
 
-			$result = $this->makeCallToAPI('GetGroup', $input, array(
+			$result = $this->makeCallToAPI('GetGroup', true, $input, array(
 				'Group' => array(
 					'object'  => array(),
 					'boolean' => array(false)
