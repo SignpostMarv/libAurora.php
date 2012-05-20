@@ -11,9 +11,9 @@ namespace Aurora\Addon{
 	abstract class APIMethodException extends RuntimeException{
 
 //!	string name of API method that access was forbidden to.
-//!	@see Aurora::Addon::APIAccessForbiddenException::GetAPIMethod()
+//!	@see Aurora::Addon::APIMethodException::GetAPIMethod()
 		protected $method;
-//!	@see Aurora::Addon::APIAccessForbiddenException::$method
+//!	@see Aurora::Addon::APIMethodException::$method
 		public function GetAPIMethod(){
 			return $this->method;
 		}
@@ -366,9 +366,9 @@ namespace Aurora\Addon{
 			$info  = $result ? curl_getinfo($ch, CURLINFO_HTTP_CODE) : 0;
 			curl_close($ch);
 			if($info === 403){
-				throw new APIAccessForbiddenException($method, sprintf('Access to the API method \'%s\' for the configured credentials has been denied.'));
+				throw new APIAccessForbiddenException($method, sprintf('Access to the API method \'%s\' for the configured credentials has been denied.', $method));
 			}else if($info === 429){
-				throw new APIAccessRateLimitException($method, sprintf('Access to the API method \'%s\' for the configured credentials has been denied.'));
+				throw new APIAccessRateLimitException($method, sprintf('Access to the API method \'%s\' for the configured credentials has been denied.', $method));
 			}else if($result === false){
 				if($info === 0){
 					throw new APIAccessFailedException('API end-point is either not reachable or not online.');
