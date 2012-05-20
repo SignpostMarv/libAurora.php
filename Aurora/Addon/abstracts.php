@@ -7,7 +7,7 @@ namespace Aurora\Addon{
 
 	class APIAccessFailedException extends RuntimeException{
 	}
-	
+
 	abstract class APIMethodException extends RuntimeException{
 
 //!	string name of API method that access was forbidden to.
@@ -33,15 +33,15 @@ namespace Aurora\Addon{
 			}else if(ctype_graph($method) === false){
 				throw new InvalidArgumentException('Method name should contain only visible characters.');
 			}
-			
+
 			$this->method = $method;
 			parent::__construct($message, $code);
 		}
 	}
-	
+
 	class APIAccessForbiddenException extends APIMethodException{
 	}
-	
+
 	class APIAccessRateLimitException extends APIMethodException{
 	}
 
@@ -198,65 +198,139 @@ namespace Aurora\Addon{
 		}
 	}
 
-//!	class for APIs that user username & password-based authentication
-	abstract class abstractUsernamePasswordAPI extends abstractAPI{
+//!	class for APIs that user password-based authentication
+	abstract class abstractPasswordAPI extends abstractAPI{
 
 //!	This is protected because we're going to use a registry method to access it.
 /**
 *	The WIREDUX_PASSWORD constant was never used without being passed as an md5() hash, so we immediately do this on instantiation.
-*	@param string $serviceURL WebAPI end point.
-*	@param string $username WebAPI username
-*	@param string $password WebAPI password
+*	@param string $serviceURL API end point.
+*	@param string $password API password
 */
-		protected function __construct($serviceURL, $username, $password){
+		protected function __construct($serviceURL, $password){
 			if(is_string($serviceURL) === false){
-				throw new InvalidArgumentException('WebAPI end point must be a string');
+				throw new InvalidArgumentException('API end point must be a string');
 			}else if(strpos($serviceURL, 'http://') === false && strpos($serviceURL, 'https://') === false){ // for now, we're not doing any paranoid regex-based validation.
-				throw new InvalidArgumentException('WebAPI end point must begin with http:// or https://');
-			}else if(is_string($username) === false){
-				throw new InvalidArgumentException('WebAPI username should be a string');
+				throw new InvalidArgumentException('API end point must begin with http:// or https://');
 			}else if(is_string($password) === false){
-				throw new InvalidArgumentException('WebAPI password should be a string');
+				throw new InvalidArgumentException('API password should be a string');
 			}
 			$this->serviceURL = $serviceURL;
-			$this->username   = $username;
-			$this->password   = md5($password); // I suppose we could be extremely paranoid and unset $password after this if we really wanted. ~SignpostMarv
+			$this->password   = md5($password);
 		}
 
-//!	string WebAPI API end point.
+//!	string API end point.
 		protected $serviceURL;
 
-//!	string WebAPI username
-		protected $username;
-
-//!	string WebAPI API password
+//!	string API password
 		protected $password;
 
-//!	registry method. Sets & gets instances of Aurora::Addon::WebAPI
+//!	registry method. Sets & gets instances of Aurora::Addon::abstractPasswordAPI
+/**
+*	@param string $serviceURL
+*	@param mixed $password should be NULL if getting, otherwise should be string. defaults to NULL.
+*	@return Aurora::Addon::abstractPasswordAPI
+*	@see Aurora::Addon::abstractPasswordAPI::__construct()
+*/
+		public static function r($serviceURL, $password=null){
+			static $registry = array();
+			if(isset($registry[$serviceURL]) === false){
+				if(isset($password) === false){
+					throw new InvalidArgumentException('Cannot create an instance of abstractPasswordAPI interface without a password');
+				}
+				$instance = new static($serviceURL, $password); // we're assigning it to a local variable as a lazy means of avoiding doing valid type checks for array keys. any errors that would crop up about that would trigger InvalidArgumentException in Aurora::Addon::abstractUsernamePasswordAPI::__construct()
+				$registry[$serviceURL] = $instance; // any child implementation of Aurora::Addon::abstractPasswordAPI that breaks this laziness is on their own at this point.
+			}
+			return $registry[$serviceURL];
+		}
+
+//!	makes a call to the WebUI API end point running on an instance of Aurora.
+/**
+*	@param string $method
+*	@param bool $readOnly ignored.
+*	@param array $arguments being lazy and future-proofing API methods that have no arguments.
+*	@param array $expectedResponse a specially-constructed array indicating the expected response format of the API call
+*	@return mixed All instances of do_post_request() in Aurora-WebUI that act upon the result call json_decode() on the $result prior to acting on it, so we save ourselves some time and execute json_decode() here.
+*/
+		protected function makeCallToAPI($method, $readOnly=false, array $arguments=null, array $expectedResponse){
+			if(is_string($method) === false || ctype_graph($method) === false){
+				throw new InvalidArgumentException('API method parameter was invalid.');
+			}
+			$arguments = isset($arguments) ? $arguments : array();
+			$arguments = array_merge(array(
+				'Method'      => $method,
+				'WebPassword' => $this->password
+			), $arguments);
+			$ch = curl_init($this->serviceURL);
+			curl_setopt_array($ch, array(
+				CURLOPT_HEADER         => false,
+				CURLOPT_POST           => true,
+				CURLOPT_RETURNTRANSFER => true,
+				CURLOPT_POSTFIELDS     => implode(',', array(json_encode($arguments)))
+			));
+			$result = curl_exec($ch);
+			$error = $result ? null : curl_error($ch);
+			$info  = $result ? curl_getinfo($ch, CURLINFO_HTTP_CODE) : 0;
+			curl_close($ch);
+			if($info === 403){
+				throw new APIAccessForbiddenException($method, sprintf('Access to the API method \'%s\' for the configured credentials has been denied.'));
+			}else if($info === 429){
+				throw new APIAccessRateLimitException($method, sprintf('Access to the API method \'%s\' for the configured credentials has been denied.'));
+			}else if($result === false){
+				if($info === 0){
+					throw new APIAccessFailedException('API end-point is either not reachable or not online.');
+				}
+			}
+			return static::validateJSONResponse($result, $expectedResponse);
+		}
+	}
+
+//!	class for APIs that user username & password-based authentication
+	abstract class abstractUsernamePasswordAPI extends abstractPasswordAPI{
+
+//!	This is protected because we're going to use a registry method to access it.
+/**
+*	The WIREDUX_PASSWORD constant was never used without being passed as an md5() hash, so we immediately do this on instantiation.
+*	@param string $serviceURL API end point.
+*	@param string $username API username
+*	@param string $password API password
+*/
+		protected function __construct($serviceURL, $username, $password){
+			if(is_string($username) === false){
+				throw new InvalidArgumentException('API username should be a string');
+			}
+			parent::__construct($serviceURL, $password);
+			$this->username   = $username;
+		}
+
+//!	string username
+		protected $username;
+
+//!	registry method. Sets & gets instances of Aurora::Addon::abstractUsernamePasswordAPI
 /**
 *	@param string $serviceURL
 *	@param mixed $username should be NULL if getting, otherwise should be string. defaults to NULL.
 *	@param mixed $password should be NULL if getting, otherwise should be string. defaults to NULL.
-*	@return Aurora::Addon::WebAPI
-*	@see Aurora::Addon::WebAPI::__construct()
+*	@return Aurora::Addon::abstractUsernamePasswordAPI
+*	@see Aurora::Addon::abstractUsernamePasswordAPI::__construct()
 */
 		public static function r($serviceURL, $username=null, $password=null){
 			static $registry = array();
 			if(isset($registry[$serviceURL]) === false){
 				if(isset($username, $password) === false){
-					throw new InvalidArgumentException('Cannot create an instance of WebAPI interface without a username & password');
+					throw new InvalidArgumentException('Cannot create an instance of abstractUsernamePasswordAPI interface without a username & password');
 				}
-				$instance = new static($serviceURL, $username, $password); // we're assigning it to a local variable as a lazy means of avoiding doing valid type checks for array keys. any errors that would crop up about that would trigger InvalidArgumentException in Aurora::Addon::WebAPI::__construct()
-				$registry[$serviceURL] = $instance; // any child implementation of Aurora::Addon::WebAPI that breaks this laziness is on their own at this point.
+				$instance = new static($serviceURL, $username, $password); // we're assigning it to a local variable as a lazy means of avoiding doing valid type checks for array keys. any errors that would crop up about that would trigger InvalidArgumentException in Aurora::Addon::abstractUsernamePasswordAPI::__construct()
+				$registry[$serviceURL] = $instance; // any child implementation of Aurora::Addon::abstractUsernamePasswordAPI that breaks this laziness is on their own at this point.
 			}
 			return $registry[$serviceURL];
-		}	
+		}
 	}
 
 //!	class for APIs that use HTTP Digest Authentication
-	abstract class abstractAuthDigestAPI extends abstractAPI{
+	abstract class abstractAuthDigestAPI extends abstractUsernamePasswordAPI{
 
-//!	makes a call to the WebUI API end point running on an instance of Aurora.
+//!	makes a call to the API end point running on an instance of Aurora.
 /**
 *	@param string $method
 *	@param boolean $readOnly TRUE if API method is read-only, FALSE otherwise
@@ -400,7 +474,7 @@ namespace Aurora\Addon{
 			$this->pos = $to;
 		}
 	}
-	
+
 //!	abstract class for filterable iterators for API method results that use sort arrays and boolean field flags for output filters.
 	abstract class abstractSeekableFilterableIterator extends abstractSeekableIterator{
 
