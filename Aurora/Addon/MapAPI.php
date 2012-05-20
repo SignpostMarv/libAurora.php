@@ -87,8 +87,7 @@ namespace Aurora\Addon{
 			$result = curl_exec($ch);
 			curl_close($ch);
 			if(is_string($result) === true){
-				$result = json_decode($result);
-				return $result;
+				return static::validateJSONResponse($result, $expectedResponse);
 			}
 			throw new RuntimeException('API call failed to execute.'); // if this starts happening frequently, we'll add in some more debugging code.
 		}
