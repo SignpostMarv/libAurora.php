@@ -143,106 +143,12 @@ namespace Aurora\Addon{
 				throw new APIAccessForbiddenException($method, sprintf('Access to the API method \'%s\' for the configured credentials has been denied.'));
 			}else if($info === 429){
 				throw new APIAccessRateLimitException($method, sprintf('Access to the API method \'%s\' for the configured credentials has been denied.'));
-			}else if(is_string($result) === true){
-				$result = json_decode($result);
-				if(is_object($result) === false){
-					throw new UnexpectedValueException('API result expected to be object, ' . gettype($result) . ' found.');
-				}
-				$exprsp = 0;
-				foreach($expectedResponse as $k=>$v){
-					++$exprsp;
-					if(property_exists($result, $k) === false){
-						throw new UnexpectedValueException('Call to API was successful, but required response properties were missing.', $exprsp * 6);
-					}else if(in_array(gettype($result->{$k}), array_keys($v)) === false){
-						throw new UnexpectedValueException('Call to API was successful, but required response property was of unexpected type.', ($exprsp * 6) + 1);
-					}else if(count($v[gettype($result->{$k})]) > 0){
-						$validValue = false;
-						foreach($v[gettype($result->{$k})] as $_k => $possibleValue){
-							if(is_integer($_k) === true){
-								if(gettype($result->{$k}) === 'boolean'){
-									if(is_bool($possibleValue) === false){
-										throw new InvalidArgumentException('Only booleans can be given as valid values to a boolean type.');
-									}else if($result->{$k} === $possibleValue){
-										$validValue = true;
-										break;
-									}
-								}else{
-									$subPropertyKeys = array_keys($possibleValue);
-									switch(gettype($result->{$k})){
-										case 'array':
-											foreach($result->{$k} as $_v){
-												if(in_array(gettype($_v), $subPropertyKeys) === false){
-													throw new UnexpectedValueException('Call to API was successful, but required response sub-property was of unexpected type.', ($exprsp * 6) + 3);
-												}else if(gettype($_v) === 'object' && isset($possibleValue[gettype($_v)]) === true){
-													foreach($possibleValue[gettype($_v)] as $__k => $__v){
-														if(isset($__v['float']) == true){
-															$possibleValue[gettype($_v)]['double'] = $__v['float'];
-														}
-													}
-													$pos = $possibleValue[gettype($_v)];
-													if(gettype($_v) === 'object'){
-														$pos = current($pos);
-														if($pos !== false){
-															foreach($pos as $__k => $__v){
-																if(isset($__v['float']) === true){
-																	$pos[$__k]['double'] = $__v['float'];
-																}
-															}
-														}
-													}
-													if($pos !== false){
-														foreach($pos as $__k => $__v){
-															if(isset($_v->{$__k}) === false){
-																throw new UnexpectedValueException('Call to API was successful, but required response sub-property property was of missing.', ($exprsp * 6) + 4);
-															}else{
-																if(in_array(gettype($_v->{$__k}), array_keys($__v)) === false){
-																	throw new UnexpectedValueException('Call to API was successful, but required response sub-property was of unexpected type.', ($exprsp * 6) + 5);
-																}
-															}
-														}
-													}
-												}
-											}
-											$validValue = true;
-										break;
-										case 'object':
-											foreach($possibleValue as $_k => $_v){
-												if(isset($_v['float']) === true){
-													$possibleValue[$_k]['double'] = $_v['float'];
-												}
-											}
-											foreach($possibleValue as $_k => $_v){
-												if(isset($result->{$k}->{$_k}) === false){
-													throw new UnexpectedValueException('Call to API was successful, but required response sub-property property was of missing.', ($exprsp * 6) + 4);
-												}else{
-													if(in_array(gettype($result->{$k}->{$_k}), array_keys($possibleValue[$_k])) === false){
-														throw new UnexpectedValueException('Call to API was successful, but required response sub-property was of unexpected type.', ($exprsp * 6) + 5);
-													}
-												}
-											}
-											$validValue = true;
-										break;
-									}
-								}
-							}else if($result->{$k} === $possibleValue){
-								$validValue = true;
-								break;
-							}
-						}
-						if($validValue === false){
-							throw new UnexpectedValueException('Call to API was successful, but required response property had an unexpected value.', ($exprsp * 6) + 2);
-						}
-					}
-				}
-				return $result;
-			}
-
-			if($result === false){
+			}else if($result === false){
 				if($info === 0){
 					throw new APIAccessFailedException('API end-point is either not reachable or not online.');
 				}
 			}
-			throw new APIAccessFailedException('API call failed to execute.'); // if this starts happening frequently, we'll add in some more debugging code.
+			return static::validateJSONResponse($result, $expectedResponse);
 		}
 
 #region textures
