@@ -66,6 +66,109 @@ namespace Aurora\Addon{
 */
 		abstract protected function makeCallToAPI($method, $readOnly=false, array $arguments=null, array $expectedResponse);
 
+//!	Validates JSON API response
+/**
+*	@param string JSON response from API call
+*	@param array structured array defining the expected response
+*/
+		protected static function validateJSONResponse($result, array $expectedResponse){
+			if(is_string($result) === false){
+				throw new UnexpectedValueException('API result expected to be a string, ' . gettype($result) . ' found.');
+			}else{
+				$result = json_decode($result);
+				if(is_object($result) === false){
+					throw new UnexpectedValueException('API result expected to be object, ' . gettype($result) . ' found.');
+				}
+				$exprsp = 0;
+				foreach($expectedResponse as $k=>$v){
+					++$exprsp;
+					if(property_exists($result, $k) === false){
+						throw new UnexpectedValueException('Call to API was successful, but required response properties were missing.', $exprsp * 6);
+					}else if(in_array(gettype($result->{$k}), array_keys($v)) === false){
+						throw new UnexpectedValueException('Call to API was successful, but required response property was of unexpected type.', ($exprsp * 6) + 1);
+					}else if(count($v[gettype($result->{$k})]) > 0){
+						$validValue = false;
+						foreach($v[gettype($result->{$k})] as $_k => $possibleValue){
+							if(is_integer($_k) === true){
+								if(gettype($result->{$k}) === 'boolean'){
+									if(is_bool($possibleValue) === false){
+										throw new InvalidArgumentException('Only booleans can be given as valid values to a boolean type.');
+									}else if($result->{$k} === $possibleValue){
+										$validValue = true;
+										break;
+									}
+								}else{
+									$subPropertyKeys = array_keys($possibleValue);
+									switch(gettype($result->{$k})){
+										case 'array':
+											foreach($result->{$k} as $_v){
+												if(in_array(gettype($_v), $subPropertyKeys) === false){
+													throw new UnexpectedValueException('Call to API was successful, but required response sub-property was of unexpected type.', ($exprsp * 6) + 3);
+												}else if(gettype($_v) === 'object' && isset($possibleValue[gettype($_v)]) === true){
+													foreach($possibleValue[gettype($_v)] as $__k => $__v){
+														if(isset($__v['float']) == true){
+															$possibleValue[gettype($_v)]['double'] = $__v['float'];
+														}
+													}
+													$pos = $possibleValue[gettype($_v)];
+													if(gettype($_v) === 'object'){
+														$pos = current($pos);
+														if($pos !== false){
+															foreach($pos as $__k => $__v){
+																if(isset($__v['float']) === true){
+																	$pos[$__k]['double'] = $__v['float'];
+																}
+															}
+														}
+													}
+													if($pos !== false){
+														foreach($pos as $__k => $__v){
+															if(isset($_v->{$__k}) === false){
+																throw new UnexpectedValueException('Call to API was successful, but required response sub-property property was of missing.', ($exprsp * 6) + 4);
+															}else{
+																if(in_array(gettype($_v->{$__k}), array_keys($__v)) === false){
+																	throw new UnexpectedValueException('Call to API was successful, but required response sub-property was of unexpected type.', ($exprsp * 6) + 5);
+																}
+															}
+														}
+													}
+												}
+											}
+											$validValue = true;
+										break;
+										case 'object':
+											foreach($possibleValue as $_k => $_v){
+												if(isset($_v['float']) === true){
+													$possibleValue[$_k]['double'] = $_v['float'];
+												}
+											}
+											foreach($possibleValue as $_k => $_v){
+												if(isset($result->{$k}->{$_k}) === false){
+													throw new UnexpectedValueException('Call to API was successful, but required response sub-property property was of missing.', ($exprsp * 6) + 4);
+												}else{
+													if(in_array(gettype($result->{$k}->{$_k}), array_keys($possibleValue[$_k])) === false){
+														throw new UnexpectedValueException('Call to API was successful, but required response sub-property was of unexpected type.', ($exprsp * 6) + 5);
+													}
+												}
+											}
+											$validValue = true;
+										break;
+									}
+								}
+							}else if($result->{$k} === $possibleValue){
+								$validValue = true;
+								break;
+							}
+						}
+						if($validValue === false){
+							throw new UnexpectedValueException('Call to API was successful, but required response property had an unexpected value.', ($exprsp * 6) + 2);
+						}
+					}
+				}
+				return $result;
+			}
+		}
+
 //!	array stores attached APIs
 		protected $attachedAPIs = array();
 
@@ -92,6 +195,112 @@ namespace Aurora\Addon{
 */
 		public function getAttachedAPI($className){
 			return isset($this->attachedAPIs[$className]) ? $this->attachedAPIs[$className] : null;
+		}
+	}
+
+//!	class for APIs that user username & password-based authentication
+	abstract class abstractUsernamePasswordAPI extends abstractAPI{
+
+//!	This is protected because we're going to use a registry method to access it.
+/**
+*	The WIREDUX_PASSWORD constant was never used without being passed as an md5() hash, so we immediately do this on instantiation.
+*	@param string $serviceURL WebAPI end point.
+*	@param string $username WebAPI username
+*	@param string $password WebAPI password
+*/
+		protected function __construct($serviceURL, $username, $password){
+			if(is_string($serviceURL) === false){
+				throw new InvalidArgumentException('WebAPI end point must be a string');
+			}else if(strpos($serviceURL, 'http://') === false && strpos($serviceURL, 'https://') === false){ // for now, we're not doing any paranoid regex-based validation.
+				throw new InvalidArgumentException('WebAPI end point must begin with http:// or https://');
+			}else if(is_string($username) === false){
+				throw new InvalidArgumentException('WebAPI username should be a string');
+			}else if(is_string($password) === false){
+				throw new InvalidArgumentException('WebAPI password should be a string');
+			}
+			$this->serviceURL = $serviceURL;
+			$this->username   = $username;
+			$this->password   = md5($password); // I suppose we could be extremely paranoid and unset $password after this if we really wanted. ~SignpostMarv
+		}
+
+//!	string WebAPI API end point.
+		protected $serviceURL;
+
+//!	string WebAPI username
+		protected $username;
+
+//!	string WebAPI API password
+		protected $password;
+
+//!	registry method. Sets & gets instances of Aurora::Addon::WebAPI
+/**
+*	@param string $serviceURL
+*	@param mixed $username should be NULL if getting, otherwise should be string. defaults to NULL.
+*	@param mixed $password should be NULL if getting, otherwise should be string. defaults to NULL.
+*	@return Aurora::Addon::WebAPI
+*	@see Aurora::Addon::WebAPI::__construct()
+*/
+		public static function r($serviceURL, $username=null, $password=null){
+			static $registry = array();
+			if(isset($registry[$serviceURL]) === false){
+				if(isset($username, $password) === false){
+					throw new InvalidArgumentException('Cannot create an instance of WebAPI interface without a username & password');
+				}
+				$instance = new static($serviceURL, $username, $password); // we're assigning it to a local variable as a lazy means of avoiding doing valid type checks for array keys. any errors that would crop up about that would trigger InvalidArgumentException in Aurora::Addon::WebAPI::__construct()
+				$registry[$serviceURL] = $instance; // any child implementation of Aurora::Addon::WebAPI that breaks this laziness is on their own at this point.
+			}
+			return $registry[$serviceURL];
+		}	
+	}
+
+//!	class for APIs that use HTTP Digest Authentication
+	abstract class abstractAuthDigestAPI extends abstractAPI{
+
+//!	makes a call to the WebUI API end point running on an instance of Aurora.
+/**
+*	@param string $method
+*	@param boolean $readOnly TRUE if API method is read-only, FALSE otherwise
+*	@param array $arguments being lazy and future-proofing API methods that have no arguments.
+*	@param array $expectedResponse a specially-constructed array indicating the expected response format of the API call
+*	@return mixed API results are expected to be JSON-encoded, this method decodes them and libAurora methods will convert those to strongly-typed results as necessary.
+*/
+		protected function makeCallToAPI($method, $readOnly=false, array $arguments=null, array $expectedResponse){
+			if(is_string($method) === false || ctype_graph($method) === false){
+				throw new InvalidArgumentException('API method parameter was invalid.');
+			}
+			$arguments = isset($arguments) ? $arguments : array();
+			if($readOnly === true){
+				foreach($arguments as $k=>$v){
+					$arguments[$k] = json_encode($v);
+				}
+			}
+			$ch = curl_init($this->serviceURL . '/' . rawurlencode($method) . ($readOnly === true ? '?' . http_build_query($arguments) : ''));
+			curl_setopt_array($ch, array(
+				CURLOPT_HEADER         => false,
+				CURLOPT_RETURNTRANSFER => true,
+				CURLOPT_HTTPAUTH       => CURLAUTH_DIGEST,
+				CURLOPT_USERPWD        => $this->username . ':' . $this->password
+			));
+			if($readOnly !== true){
+				curl_setopt_array($ch, array(
+					CURLOPT_POST           => true,
+					CURLOPT_POSTFIELDS     => implode(',', array(json_encode($arguments)))
+				));
+			}
+			$result = curl_exec($ch);
+			$error = $result ? null : curl_error($ch);
+			$info  = $result ? curl_getinfo($ch, CURLINFO_HTTP_CODE) : 0;
+			curl_close($ch);
+			if($info === 403){
+				throw new APIAccessForbiddenException($method, sprintf('Access to the API method \'%s\' for the configured credentials has been denied.'));
+			}else if($info === 429){
+				throw new APIAccessRateLimitException($method, sprintf('Access to the API method \'%s\' for the configured credentials has been denied.'));
+			}else if($result === false){
+				if($info === 0){
+					throw new APIAccessFailedException('API end-point is either not reachable or not online.');
+				}
+			}
+			return static::validateJSONResponse($result, $expectedResponse);
 		}
 	}
 
